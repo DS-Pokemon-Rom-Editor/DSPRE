@@ -366,8 +366,8 @@ namespace DSPRE.Models
                 // The riser stands at the step's low edge.
                 float edge = rising ? c0 : c1;
                 // Each riser belongs to exactly one square: the one on its upper side.
-                bool mine = rising ? edge >= from - 1e-4f && edge < to - 1e-4f : edge > from + 1e-4f && edge <= to + 1e-4f;
-                if (mine)
+                bool inSpan = rising ? edge >= from - 1e-4f && edge < to - 1e-4f : edge > from + 1e-4f && edge <= to + 1e-4f;
+                if (inSpan)
                 {
                     (float x, float z)[] foot = new[] { At(edge, acrossFrom), At(edge, acrossTo) };
                     (float x, float y, float z)[] riser = new[]

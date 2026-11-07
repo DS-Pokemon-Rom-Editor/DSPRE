@@ -72,27 +72,27 @@ namespace DSPRE.Tracking
             // An edit from the common side survives unless either side dropped it.
             List<JsonObject> result = b.Where(x => l.Any(y => JsonNode.DeepEquals(x, y)) && r.Any(y => JsonNode.DeepEquals(x, y))).ToList();
             List<JsonObject> remoteTaken = new List<JsonObject>(remoteOnly);
-            foreach (JsonObject mine in localOnly)
+            foreach (JsonObject localEntry in localOnly)
             {
-                JsonObject twin = remoteTaken.FirstOrDefault(x => JsonNode.DeepEquals(x, mine));
+                JsonObject twin = remoteTaken.FirstOrDefault(x => JsonNode.DeepEquals(x, localEntry));
                 if (twin != null)
                 {
                     remoteTaken.Remove(twin);
-                    result.Add(mine);
+                    result.Add(localEntry);
                     continue;
                 }
-                List<JsonObject> clashes = remoteTaken.Where(x => Overlaps(mine, x)).ToList();
+                List<JsonObject> clashes = remoteTaken.Where(x => Overlaps(localEntry, x)).ToList();
                 if (clashes.Count == 0)
                 {
-                    result.Add(mine);
+                    result.Add(localEntry);
                     continue;
                 }
-                JsonArray theirs = new JsonArray(clashes.Select(c => (JsonNode)c.DeepClone()).ToArray());
-                JsonArray before = new JsonArray(b.Where(x => Overlaps(mine, x) || clashes.Any(c => Overlaps(c, x))).Select(x => (JsonNode)x.DeepClone()).ToArray());
-                string where = Join(path, Text(mine["at"]));
-                if (takeLocal(new FieldConflict(where, before.Count == 0 ? null : before, new JsonArray(mine.DeepClone()), theirs)))
+                JsonArray remoteClashes = new JsonArray(clashes.Select(c => (JsonNode)c.DeepClone()).ToArray());
+                JsonArray before = new JsonArray(b.Where(x => Overlaps(localEntry, x) || clashes.Any(c => Overlaps(c, x))).Select(x => (JsonNode)x.DeepClone()).ToArray());
+                string where = Join(path, Text(localEntry["at"]));
+                if (takeLocal(new FieldConflict(where, before.Count == 0 ? null : before, new JsonArray(localEntry.DeepClone()), remoteClashes)))
                 {
-                    result.Add(mine);
+                    result.Add(localEntry);
                     foreach (JsonObject c in clashes) remoteTaken.Remove(c);
                 }
             }

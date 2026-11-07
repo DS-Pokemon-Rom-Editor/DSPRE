@@ -152,18 +152,18 @@ namespace DSPRE.Avalonia.Data
 
             new BattleAnimFunc { Id = 43, Name = "Fake Out", Summary = "Only Fake Out uses this.", Source = "BattleAnimScriptFunc_FakeOut" },
 
-            new BattleAnimFunc { Id = 44, Name = "Scrolling background", Summary = "Scrolls a background behind the battle.", Labels = new[] { "Background", "Start across", "Start down", "Speed across", "Speed down", "Flip for foe", "Opacity", "Slowdown frames" },
+            new BattleAnimFunc { Id = 44, Name = "Scrolling background", Summary = "Scrolls a background behind the battle.", Labels = new[] { "Background", "Start across", "Start down", "Speed across", "Speed down", "Flip for opponent", "Opacity", "Slowdown frames" },
                 Source = "BattleAnimScriptFunc_ScrollCustomBg",
                 Words = new[] { "which background to use", "how far across it starts", "how far down it starts",
                                 "how fast it moves across", "how fast it moves down",
-                                "whether to turn it around when the enemy is attacking",
+                                "whether to turn it around when the opponent is attacking",
                                 "how solid it is", "how many frames between slowdowns" } },
 
-            new BattleAnimFunc { Id = 45, Name = "Muddy Water", Summary = "Scrolls a background behind the battle.", Labels = new[] { "Background", "Start across", "Start down", "Speed across", "Speed down", "Flip for foe", "", "Slowdown frames" },
+            new BattleAnimFunc { Id = 45, Name = "Muddy Water", Summary = "Scrolls a background behind the battle.", Labels = new[] { "Background", "Start across", "Start down", "Speed across", "Speed down", "Flip for opponent", "", "Slowdown frames" },
                 Source = "BattleAnimScriptFunc_MuddyWater",
                 Words = new[] { "which background to use", "how far across it starts", "how far down it starts",
                                 "how fast it moves across", "how fast it moves down",
-                                "whether to turn it around when the enemy is attacking",
+                                "whether to turn it around when the opponent is attacking",
                                 "", "how many frames between slowdowns" } },
 
             new BattleAnimFunc { Id = 47, Name = "Megahorn attacker", Summary = "Only Megahorn uses this.", Source = "BattleAnimScriptFunc_MegahornAttacker" },

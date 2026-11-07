@@ -35,7 +35,7 @@ namespace DSPRE.Avalonia.Data
         private static readonly (int PtY, int HgY)[] PpRows = { (62, 61), (62, 60), (126, 124), (126, 123) };
         private static readonly (int X, int PtY, int HgY)[] MoveTypeIcons = { (32, 62, 61), (160, 62, 60), (32, 126, 124), (160, 126, 123) };
 
-        // The player's first Pokémon at bottom left, a foe at top right, the partner at bottom right and the other foe at top left.
+        // The player's first Pokémon at bottom left, an opponent at top right, the partner at bottom right and the other opponent at top left.
         private static readonly (int X, int Y)[] TargetSpots = { (60, 116), (196, 32), (196, 116), (60, 32) };
         private static readonly int[] SampleFoes = { 74, 41 };
 
@@ -122,7 +122,7 @@ namespace DSPRE.Avalonia.Data
             return left <= max / 4 ? 5 : left <= max / 2 ? 3 : 1;
         }
 
-        // Foes use colours 1 to 3 and the player's side 4 to 6; male marks use 7 and 8, female 9 and 10.
+        // Opponents use colours 1 to 3 and the player's side 4 to 6; male marks use 7 and 8, female 9 and 10.
         private static void TargetPage(byte[] rgba, FieldFont font, ushort[] row, Func<int, int, int, (int X, int Y)?> spot)
         {
             int[] species = { PartySample.Party[0].Species, SampleFoes[0], PartySample.Party[1].Species, SampleFoes[1] };
@@ -130,8 +130,8 @@ namespace DSPRE.Avalonia.Data
             for (int slot = 0; slot < TargetSpots.Length; slot++)
             {
                 if (species[slot] <= 0) continue;
-                bool foe = slot % 2 == 1;
-                int ink = foe ? 1 : 4;
+                bool opponent = slot % 2 == 1;
+                int ink = opponent ? 1 : 4;
                 string name = Line(PokemonNamesTextNumbers[0], species[slot]);
                 string mark = genders[slot] switch { 0 => "♂", 1 => "♀", _ => "" };
                 int width = DsBgScreen.MeasureText(font, name + mark);
@@ -141,7 +141,7 @@ namespace DSPRE.Avalonia.Data
                 int markInk = genders[slot] == 0 ? 7 : 9;
                 DsBgScreen.DrawText(rgba, font, mark, left + DsBgScreen.MeasureText(font, name), top, row[markInk], row[markInk + 1], row[ink + 2]);
                 (int ix, int iy) = spot(2, slot, 1) ?? (x, 56);
-                if (foe) PartyIcon(rgba, species[slot], ix, iy);
+                if (opponent) PartyIcon(rgba, species[slot], ix, iy);
             }
         }
 

@@ -160,8 +160,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             for (int y = 0; y < h; y++)
                 Array.Copy(bg.Rgba, y * bg.Width * 4, outp, y * w * 4, w * 4);
 
-            (BattleGroundRenderer.GroundImage mine, BattleGroundRenderer.GroundImage enemy) = _grounds.Build(_terrainIndex, _timeOfDay);
-            foreach (BattleGroundRenderer.GroundImage piece in new[] { enemy, mine })
+            (BattleGroundRenderer.GroundImage playerGround, BattleGroundRenderer.GroundImage opponent) = _grounds.Build(_terrainIndex, _timeOfDay);
+            foreach (BattleGroundRenderer.GroundImage piece in new[] { opponent, playerGround })
             {
                 if (piece?.Rgba == null) continue;
                 for (int y = 0; y < piece.Height; y++)

@@ -257,7 +257,7 @@ namespace DSPRE.Avalonia.Data
             ["CancelTrackingTask"] = new[] { "Copy ID" },
             ["SetCameraProjection"] = new[] { "Camera", "Mode" },
             ["SetCameraFlip"] = new[] { "Camera", "Flag" },
-            ["JumpIfBattlerSide"] = new[] { "Pokémon", "If player", "If enemy" },
+            ["JumpIfBattlerSide"] = new[] { "Pokémon", "If player", "If opponent" },
             ["PlayPokemonCry"] = new[] { "Pokémon", "Pan", "Volume" },
             ["WaitForPokemonCries"] = new[] { "Frames" },
             ["StartTransform"] = new[] { "Type" },

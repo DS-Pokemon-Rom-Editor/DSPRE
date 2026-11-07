@@ -217,15 +217,15 @@
                         </TransformGroup>
                       </Image.RenderTransform>
                     </Image>
-                    <Image Source="{Binding GaugeEnemyImage}"  Canvas.Left="-70" Canvas.Top="-92" Width="256" Height="256"
+                    <Image Source="{Binding GaugeOpponentImage}"  Canvas.Left="-70" Canvas.Top="-92" Width="256" Height="256"
                            IsVisible="{Binding RealGaugesVisible}" RenderOptions.BitmapInterpolationMode="None"/>
                     <Image Source="{Binding GaugePlayerImage}" Canvas.Left="{Binding PlayerGaugeImageLeft}" Canvas.Top="-12" Width="256" Height="256"
                            IsVisible="{Binding RealGaugesVisible}" RenderOptions.BitmapInterpolationMode="None"/>
                     <Image Source="{x:Static views:BattleSceneControl.HealthOpponentAsset}" Canvas.Left="0"   Canvas.Top="18"  IsVisible="{Binding PlaceholderGaugesVisible}"/>
-                    <Image Source="{x:Static views:BattleSceneControl.HealthYouAsset}"      Canvas.Left="129" Canvas.Top="95"  IsVisible="{Binding PlaceholderGaugesVisible}"/>
+                    <Image Source="{x:Static views:BattleSceneControl.HealthPlayerAsset}"      Canvas.Left="129" Canvas.Top="95"  IsVisible="{Binding PlaceholderGaugesVisible}"/>
                     <Canvas IsVisible="{Binding GaugesVisible}">
                       <!-- Measured from Platinum battles: the frame has the HP label, so the fill, the groove rows and the text go on top. -->
-                      <!-- enemy (upper-left) -->
+                      <!-- opponent (upper-left) -->
                       <TextBlock Canvas.Left="3"  Canvas.Top="24" Text="{Binding GaugeNameText}"  FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
                       <TextBlock Canvas.Left="78" Canvas.Top="24" Text="{Binding GaugeLevelText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
                       <Rectangle Canvas.Left="50" Canvas.Top="42" Width="48" Height="1" Fill="#FBFBFB"/>
@@ -241,7 +241,7 @@
                       <Rectangle Canvas.Left="{Binding PlayerHealthFillLeft}" Canvas.Top="119" Width="{Binding GaugeHpBarWidth}" Height="2" Fill="{Binding GaugeHpBrush}"/>
                       <Rectangle Canvas.Left="{Binding PlayerHealthFillLeft}" Canvas.Top="121" Width="48" Height="1" Fill="#FBFBFB"/>
                       <Rectangle Canvas.Left="{Binding PlayerHealthFillLeft}" Canvas.Top="122" Width="48" Height="1" Fill="#000000"/>
-                      <!-- Only your own bar shows HP numbers. -->
+                      <!-- Only the player's bar shows HP numbers. -->
                       <TextBlock Canvas.Left="210" Canvas.Top="121" Text="{Binding GaugeHpText}" FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>
                     </Canvas>
                     <Image Source="{x:Static views:BattleSceneControl.TextBarAsset}"        Canvas.Left="0"   Canvas.Top="144"
@@ -272,7 +272,7 @@
                       VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
           <StackPanel x:Name="SceneOptions" Spacing="6">
             <TextBlock Text="Scene" FontWeight="SemiBold"/>
-            <CheckBox Content="Performed by enemy" IsChecked="{Binding AttackerIsEnemy}"/>
+            <CheckBox Content="Performed by opponent" IsChecked="{Binding AttackerIsOpponent}"/>
             <CheckBox Content="Second animation" IsChecked="{Binding SecondTurnVariant}" IsVisible="{Binding HasTurnCheck}"/>
             <CheckBox Content="Contest" IsChecked="{Binding Contest}" IsVisible="{Binding HasContestCheck}"
                       ToolTip.Tip="Plays the contest branch"/>

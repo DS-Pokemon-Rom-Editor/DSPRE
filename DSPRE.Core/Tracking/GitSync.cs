@@ -86,9 +86,9 @@ namespace DSPRE.Tracking
             GitCli.Status status = await GitCli.ReadStatusAsync(folder).ConfigureAwait(false);
             string common = await GitCli.MergeBaseAsync(folder, "HEAD", "MERGE_HEAD").ConfigureAwait(false);
             if (common == null) return null;
-            IReadOnlyList<string> mine = await GitCli.ChangedBetweenAsync(folder, common, "HEAD").ConfigureAwait(false);
-            IReadOnlyList<string> theirs = await GitCli.ChangedBetweenAsync(folder, common, "MERGE_HEAD").ConfigureAwait(false);
-            HashSet<string> both = new HashSet<string>(mine.Intersect(theirs, StringComparer.Ordinal), StringComparer.Ordinal);
+            IReadOnlyList<string> localChanged = await GitCli.ChangedBetweenAsync(folder, common, "HEAD").ConfigureAwait(false);
+            IReadOnlyList<string> remoteChanged = await GitCli.ChangedBetweenAsync(folder, common, "MERGE_HEAD").ConfigureAwait(false);
+            HashSet<string> both = new HashSet<string>(localChanged.Intersect(remoteChanged, StringComparer.Ordinal), StringComparer.Ordinal);
             foreach (GitCli.Entry e in status?.Entries ?? Array.Empty<GitCli.Entry>()) if (e.Conflicted) both.Add(e.Path);
 
             ChangeContext ctx = tracker.Context();

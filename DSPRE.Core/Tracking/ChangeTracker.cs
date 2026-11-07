@@ -230,25 +230,25 @@ namespace DSPRE.Tracking
         // these changes already holds them; only a project record that holds something else is a clash.
         private bool DiffersHere(ChangeKind kind, string id, ChangeContext ctx)
         {
-            RecordFiles mine;
-            try { mine = kind.Export(id, ctx); }
+            RecordFiles exportedNow;
+            try { exportedNow = kind.Export(id, ctx); }
             catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is InvalidOperationException) { return true; }
             bool firstScan = kind.Files(id, ctx).All(f => !_state.Files.ContainsKey(f.Key));
-            if (mine == null && firstScan) return false;
-            RecordFiles theirs;
-            try { theirs = ReadRecord(kind, id); }
+            if (exportedNow == null && firstScan) return false;
+            RecordFiles onDisk;
+            try { onDisk = ReadRecord(kind, id); }
             catch (Exception ex) when (ex is IOException || ex is System.Text.Json.JsonException) { return true; }
-            if (mine == null || theirs == null) return mine != null || theirs != null;
-            return !JsonNode.DeepEquals(WithoutFileNames(mine.Json["changes"]), WithoutFileNames(theirs.Json["changes"]));
+            if (exportedNow == null || onDisk == null) return exportedNow != null || onDisk != null;
+            return !JsonNode.DeepEquals(WithoutFileNames(exportedNow.Json["changes"]), WithoutFileNames(onDisk.Json["changes"]));
         }
 
         private bool SameAsProject(ChangeKind kind, string id, ChangeContext ctx)
         {
             try
             {
-                RecordFiles mine = kind.Export(id, ctx), theirs = ReadRecord(kind, id);
-                if (mine == null || theirs == null) return mine == null && theirs == null;
-                return JsonNode.DeepEquals(WithoutFileNames(mine.Json["changes"]), WithoutFileNames(theirs.Json["changes"]));
+                RecordFiles exportedNow = kind.Export(id, ctx), onDisk = ReadRecord(kind, id);
+                if (exportedNow == null || onDisk == null) return exportedNow == null && onDisk == null;
+                return JsonNode.DeepEquals(WithoutFileNames(exportedNow.Json["changes"]), WithoutFileNames(onDisk.Json["changes"]));
             }
             catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is InvalidOperationException || ex is System.Text.Json.JsonException)
             {

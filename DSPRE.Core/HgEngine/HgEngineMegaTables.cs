@@ -47,7 +47,7 @@ namespace DSPRE.HgEngine
             List<Row> waiting = rows.ToList();
             bool Same(CInitItem item, Row row) => Number(item, "targetForm") == row.TargetForm && Number(item, "baseForm") == row.BaseForm;
 
-            // Unchanged rows claim their match first, so a changed row can't take one of theirs.
+            // Unchanged rows claim their match first, so a changed row can't take an unchanged row's match.
             List<CInitItem> unmatched = new List<CInitItem>();
             foreach (CInitItem item in declaration.Init.Items.Where(i => Number(i, "monindex") == species))
             {

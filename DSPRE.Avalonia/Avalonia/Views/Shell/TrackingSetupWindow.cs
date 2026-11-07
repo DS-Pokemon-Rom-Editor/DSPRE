@@ -138,7 +138,7 @@ namespace DSPRE.Avalonia.Views.Shell
             }
             else
             {
-                repoText = "Create a new private repo, or pick one of yours.";
+                repoText = "Create a new private repo, or pick an existing one.";
                 if (_account != null) repoButtons.Add(Action("Choose…", ChooseRepoAsync));
                 repoButtons.Add(Action("Add by address…", _vm.IsTracking ? AddRemoteAsync : async () => await TrackingActions.CloneAsync(this, _vm)));
             }
@@ -174,8 +174,8 @@ namespace DSPRE.Avalonia.Views.Shell
                 return;
             }
             // The repo may be ahead, so it's pulled before anything is pushed.
-            JsonObject theirs = await GitHubCli.ManifestOfAsync(picked.NameWithOwner);
-            if (theirs?["project"]?["id"]?.GetValue<string>() != ChangeTracker.Current?.Manifest.ProjectId)
+            JsonObject remoteManifest = await GitHubCli.ManifestOfAsync(picked.NameWithOwner);
+            if (remoteManifest?["project"]?["id"]?.GetValue<string>() != ChangeTracker.Current?.Manifest.ProjectId)
             {
                 await DialogHelper.ShowErrorAsync("That repo isn't for this project. Pick an empty one.", "Choose a repo", this);
                 return;

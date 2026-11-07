@@ -145,16 +145,16 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             set { if (Set(ref _arenaTypeIndex, value)) ApplyArena(); }
         }
 
-        private Bitmap _arenaBackdrop, _arenaGroundMine, _arenaGroundEnemy;
+        private Bitmap _arenaBackdrop, _arenaGroundPlayer, _arenaGroundOpponent;
         public Bitmap ArenaBackdrop     { get => _arenaBackdrop;     private set => Set(ref _arenaBackdrop, value); }
-        public Bitmap ArenaGroundMine   { get => _arenaGroundMine;   private set => Set(ref _arenaGroundMine, value); }
-        public Bitmap ArenaGroundEnemy  { get => _arenaGroundEnemy;  private set => Set(ref _arenaGroundEnemy, value); }
+        public Bitmap ArenaGroundPlayer   { get => _arenaGroundPlayer;   private set => Set(ref _arenaGroundPlayer, value); }
+        public Bitmap ArenaGroundOpponent  { get => _arenaGroundOpponent;  private set => Set(ref _arenaGroundOpponent, value); }
 
-        private double _arenaGroundMineLeft, _arenaGroundMineTop, _arenaGroundEnemyLeft, _arenaGroundEnemyTop;
-        public double ArenaGroundMineLeft   { get => _arenaGroundMineLeft;   private set { if (Set(ref _arenaGroundMineLeft, value)) OnPropertyChanged(nameof(ArenaGroundMineX)); } }
-        public double ArenaGroundMineTop    { get => _arenaGroundMineTop;    private set => Set(ref _arenaGroundMineTop, value); }
-        public double ArenaGroundEnemyLeft  { get => _arenaGroundEnemyLeft;  private set { if (Set(ref _arenaGroundEnemyLeft, value)) OnPropertyChanged(nameof(ArenaGroundEnemyX)); } }
-        public double ArenaGroundEnemyTop   { get => _arenaGroundEnemyTop;   private set => Set(ref _arenaGroundEnemyTop, value); }
+        private double _arenaGroundPlayerLeft, _arenaGroundPlayerTop, _arenaGroundOpponentLeft, _arenaGroundOpponentTop;
+        public double ArenaGroundPlayerLeft   { get => _arenaGroundPlayerLeft;   private set { if (Set(ref _arenaGroundPlayerLeft, value)) OnPropertyChanged(nameof(ArenaGroundPlayerX)); } }
+        public double ArenaGroundPlayerTop    { get => _arenaGroundPlayerTop;    private set => Set(ref _arenaGroundPlayerTop, value); }
+        public double ArenaGroundOpponentLeft  { get => _arenaGroundOpponentLeft;  private set { if (Set(ref _arenaGroundOpponentLeft, value)) OnPropertyChanged(nameof(ArenaGroundOpponentX)); } }
+        public double ArenaGroundOpponentTop   { get => _arenaGroundOpponentTop;   private set => Set(ref _arenaGroundOpponentTop, value); }
 
         private bool _hasArenaGraphics;
         public bool HasArenaGraphics { get => _hasArenaGraphics; private set => Set(ref _hasArenaGraphics, value); }
@@ -164,17 +164,17 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             try
             {
                 BattleGroundRenderer ground = _groundRenderer ??= new BattleGroundRenderer();
-                (BattleGroundRenderer.GroundImage mine, BattleGroundRenderer.GroundImage enemy) = ground.Build(_arenaTypeIndex);
+                (BattleGroundRenderer.GroundImage playerGround, BattleGroundRenderer.GroundImage opponent) = ground.Build(_arenaTypeIndex);
                 int bg = BattleGroundRenderer.BackdropForTerrain(_arenaTypeIndex);
                 BattleBgRenderer.BgImage backdropImg = bg >= 0 ? (_bgRenderer ??= new BattleBgRenderer()).BuildBackdrop(bg) : null;
 
-                bool ok = mine?.Rgba != null && enemy?.Rgba != null && backdropImg?.Rgba != null;
+                bool ok = playerGround?.Rgba != null && opponent?.Rgba != null && backdropImg?.Rgba != null;
                 if (ok)
                 {
-                    ArenaGroundMine = ImageConverter.FromRgba(mine.Rgba, mine.Width, mine.Height);
-                    ArenaGroundMineLeft = mine.Left; ArenaGroundMineTop = mine.Top;
-                    ArenaGroundEnemy = ImageConverter.FromRgba(enemy.Rgba, enemy.Width, enemy.Height);
-                    ArenaGroundEnemyLeft = enemy.Left; ArenaGroundEnemyTop = enemy.Top;
+                    ArenaGroundPlayer = ImageConverter.FromRgba(playerGround.Rgba, playerGround.Width, playerGround.Height);
+                    ArenaGroundPlayerLeft = playerGround.Left; ArenaGroundPlayerTop = playerGround.Top;
+                    ArenaGroundOpponent = ImageConverter.FromRgba(opponent.Rgba, opponent.Width, opponent.Height);
+                    ArenaGroundOpponentLeft = opponent.Left; ArenaGroundOpponentTop = opponent.Top;
                     // Crop to the top 256×192: some backdrops are taller and squish into bands when stretched.
                     // Two copies side by side so the intro scroll wraps without a seam.
                     _backdropWidth = Math.Max(256, backdropImg.Width);
@@ -189,10 +189,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         // Real HP-gauge frames out of the ROM, so a hack's own edited gauge graphic shows here. Same
         // decode as BattleScriptEditorViewModel.RenderGauges; the placeholder art covers a failed decode.
-        private Bitmap _gaugePlayerImage, _gaugeEnemyImage;
+        private Bitmap _gaugePlayerImage, _gaugeOpponentImage;
         public Bitmap GaugePlayerImage { get => _gaugePlayerImage; private set => Set(ref _gaugePlayerImage, value); }
-        public Bitmap GaugeEnemyImage { get => _gaugeEnemyImage; private set => Set(ref _gaugeEnemyImage, value); }
-        public bool HasRealGauges => _gaugePlayerImage != null || _gaugeEnemyImage != null;
+        public Bitmap GaugeOpponentImage { get => _gaugeOpponentImage; private set => Set(ref _gaugeOpponentImage, value); }
+        public bool HasRealGauges => _gaugePlayerImage != null || _gaugeOpponentImage != null;
         public bool PlaceholderGaugesVisible => !HasRealGauges;
         /// <summary>The gauge picture is 256 wide, centred on the bar.</summary>
         public double PlayerGaugeImageLeft => Data.BattleGaugeComposer.CentreOf(Data.BattleGaugeComposer.Kind.PlayerSingle).X - 128;
@@ -230,10 +230,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 BattleGroundRenderer r = _groundRenderer ??= new BattleGroundRenderer();
                 GaugePlayerImage = Data.GaugeTextImages.Bar(true, GaugeNameText, 5)
                                 ?? GaugeToBitmap(r.BuildGauge(true));
-                GaugeEnemyImage = Data.GaugeTextImages.Bar(false, GaugeNameText, 5)
+                GaugeOpponentImage = Data.GaugeTextImages.Bar(false, GaugeNameText, 5)
                                ?? GaugeToBitmap(r.BuildGauge(false));
             }
-            catch (Exception ex) { AppLogger.WarnOnce("BattleDisplayEditorViewModel.RenderGauges", ex); GaugePlayerImage = GaugeEnemyImage = null; }
+            catch (Exception ex) { AppLogger.WarnOnce("BattleDisplayEditorViewModel.RenderGauges", ex); GaugePlayerImage = GaugeOpponentImage = null; }
             OnPropertyChanged(nameof(HasRealGauges));
             OnPropertyChanged(nameof(PlaceholderGaugesVisible));
             OnPropertyChanged(nameof(PlayerGaugeImageLeft));
@@ -272,7 +272,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 SendOutMessage.Challenged => $"You are challenged by\n{trainer}!",
                 SendOutMessage.WildAppeared => $"A wild {mon} appeared!",
-                SendOutMessage.EnemySentOut => $"{trainer} sent\nout {mon}!",
+                SendOutMessage.OpponentSentOut => $"{trainer} sent\nout {mon}!",
                 SendOutMessage.Go => $"Go! {mon}!",
                 _ => "",
             };
@@ -329,9 +329,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             return outp;
         }
 
-        // ── Battle mock (shows the mon vs itself: enemy = front sprite, player = back sprite) ──────
+        // ── Battle mock (shows the mon vs itself: opponent = front sprite, player = back sprite) ──────
         // Layout/coords mirror PokEditor's battle scene (256×192): front sprite at (152, 10 − spriteY),
-        // back sprite at (23, 72), enemy shadow at size-specific X (179/174/167 + shadowX), Y 83/83/82.
+        // back sprite at (23, 72), opponent shadow at size-specific X (179/174/167 + shadowX), Y 83/83/82.
         private readonly PokemonSpriteEditorViewModel _sprites;
 
         // The sheet is two 80×80 frames; each side plays its own frame run once.
@@ -400,11 +400,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
 
         // Gender-selected (separate display) + explicit per-gender (unified side-by-side display).
-        public Bitmap EnemySprite => Front(ShowFemale);
+        public Bitmap OpponentSprite => Front(ShowFemale);
         public Bitmap PlayerSprite => Back(ShowFemale);
-        public Bitmap EnemySpriteM => Front(false);
+        public Bitmap OpponentSpriteM => Front(false);
         public Bitmap PlayerSpriteM => Back(false);
-        public Bitmap EnemySpriteF => Front(true);
+        public Bitmap OpponentSpriteF => Front(true);
         public Bitmap PlayerSpriteF => Back(true);
 
         // Frame warnings reuse the Sprite tab's blank-frame check (FrameCellState) on the pattern data this preview uses.
@@ -467,18 +467,18 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             return "animation never shows a real frame, which is likely a mistake";
         }
 
-        public bool EnemyFrameWarning => FrameWarning(true, ShowFemale);
-        public bool EnemyFrameWarningSevere => FrameWarningSevere(true, ShowFemale);
-        public string EnemyFrameWarningText => FrameWarningText(true, ShowFemale);
+        public bool OpponentFrameWarning => FrameWarning(true, ShowFemale);
+        public bool OpponentFrameWarningSevere => FrameWarningSevere(true, ShowFemale);
+        public string OpponentFrameWarningText => FrameWarningText(true, ShowFemale);
         public bool PlayerFrameWarning => FrameWarning(false, ShowFemale);
         public bool PlayerFrameWarningSevere => FrameWarningSevere(false, ShowFemale);
         public string PlayerFrameWarningText => FrameWarningText(false, ShowFemale);
-        public bool EnemyFrameWarningM => FrameWarning(true, false);
-        public bool EnemyFrameWarningSevereM => FrameWarningSevere(true, false);
-        public string EnemyFrameWarningTextM => FrameWarningText(true, false);
-        public bool EnemyFrameWarningF => FrameWarning(true, true);
-        public bool EnemyFrameWarningSevereF => FrameWarningSevere(true, true);
-        public string EnemyFrameWarningTextF => FrameWarningText(true, true);
+        public bool OpponentFrameWarningM => FrameWarning(true, false);
+        public bool OpponentFrameWarningSevereM => FrameWarningSevere(true, false);
+        public string OpponentFrameWarningTextM => FrameWarningText(true, false);
+        public bool OpponentFrameWarningF => FrameWarning(true, true);
+        public bool OpponentFrameWarningSevereF => FrameWarningSevere(true, true);
+        public string OpponentFrameWarningTextF => FrameWarningText(true, true);
         public bool PlayerFrameWarningM => FrameWarning(false, false);
         public bool PlayerFrameWarningSevereM => FrameWarningSevere(false, false);
         public string PlayerFrameWarningTextM => FrameWarningText(false, false);
@@ -488,10 +488,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void RaiseFrameWarnings()
         {
-            OnPropertyChanged(nameof(EnemyFrameWarning)); OnPropertyChanged(nameof(EnemyFrameWarningSevere)); OnPropertyChanged(nameof(EnemyFrameWarningText));
+            OnPropertyChanged(nameof(OpponentFrameWarning)); OnPropertyChanged(nameof(OpponentFrameWarningSevere)); OnPropertyChanged(nameof(OpponentFrameWarningText));
             OnPropertyChanged(nameof(PlayerFrameWarning)); OnPropertyChanged(nameof(PlayerFrameWarningSevere)); OnPropertyChanged(nameof(PlayerFrameWarningText));
-            OnPropertyChanged(nameof(EnemyFrameWarningM)); OnPropertyChanged(nameof(EnemyFrameWarningSevereM)); OnPropertyChanged(nameof(EnemyFrameWarningTextM));
-            OnPropertyChanged(nameof(EnemyFrameWarningF)); OnPropertyChanged(nameof(EnemyFrameWarningSevereF)); OnPropertyChanged(nameof(EnemyFrameWarningTextF));
+            OnPropertyChanged(nameof(OpponentFrameWarningM)); OnPropertyChanged(nameof(OpponentFrameWarningSevereM)); OnPropertyChanged(nameof(OpponentFrameWarningTextM));
+            OnPropertyChanged(nameof(OpponentFrameWarningF)); OnPropertyChanged(nameof(OpponentFrameWarningSevereF)); OnPropertyChanged(nameof(OpponentFrameWarningTextF));
             OnPropertyChanged(nameof(PlayerFrameWarningM)); OnPropertyChanged(nameof(PlayerFrameWarningSevereM)); OnPropertyChanged(nameof(PlayerFrameWarningTextM));
             OnPropertyChanged(nameof(PlayerFrameWarningF)); OnPropertyChanged(nameof(PlayerFrameWarningSevereF)); OnPropertyChanged(nameof(PlayerFrameWarningTextF));
         }
@@ -507,12 +507,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private double BackTopFor(int h) => 72 + (HeightsActive ? h : 0);
 
         // A frame's horizontalShift moves the sprite and its shadow together (both read transforms.xOffset).
-        public double EnemyLeft => 152 + _frontShift;
+        public double OpponentLeft => 152 + _frontShift;
         public double PlayerLeft => 23 + _backShift;
-        public double EnemyTop => FrontTopFor(ActFrontH(ShowFemale));
+        public double OpponentTop => FrontTopFor(ActFrontH(ShowFemale));
         public double PlayerTop => BackTopFor(ActBackH(ShowFemale));
-        public double EnemyTopM => FrontTopFor(ActFrontH(false));
-        public double EnemyTopF => FrontTopFor(ActFrontH(true));
+        public double OpponentTopM => FrontTopFor(ActFrontH(false));
+        public double OpponentTopF => FrontTopFor(ActFrontH(true));
         public double PlayerTopM => BackTopFor(ActBackH(false));
         public double PlayerTopF => BackTopFor(ActBackH(true));
 
@@ -526,18 +526,18 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void RaiseLayout()
         {
-            OnPropertyChanged(nameof(EnemyLeft)); OnPropertyChanged(nameof(PlayerLeft));
-            OnPropertyChanged(nameof(EnemyTop)); OnPropertyChanged(nameof(PlayerTop));
-            OnPropertyChanged(nameof(EnemyTopM)); OnPropertyChanged(nameof(EnemyTopF)); OnPropertyChanged(nameof(PlayerTopM)); OnPropertyChanged(nameof(PlayerTopF));
+            OnPropertyChanged(nameof(OpponentLeft)); OnPropertyChanged(nameof(PlayerLeft));
+            OnPropertyChanged(nameof(OpponentTop)); OnPropertyChanged(nameof(PlayerTop));
+            OnPropertyChanged(nameof(OpponentTopM)); OnPropertyChanged(nameof(OpponentTopF)); OnPropertyChanged(nameof(PlayerTopM)); OnPropertyChanged(nameof(PlayerTopF));
             OnPropertyChanged(nameof(ShadowSmallVisible)); OnPropertyChanged(nameof(ShadowMediumVisible)); OnPropertyChanged(nameof(ShadowLargeVisible));
             OnPropertyChanged(nameof(ShadowSmallLeft)); OnPropertyChanged(nameof(ShadowMediumLeft)); OnPropertyChanged(nameof(ShadowLargeLeft));
         }
         private void RaiseSprites()
         {
             RefreshGenderChoices();
-            OnPropertyChanged(nameof(EnemySprite)); OnPropertyChanged(nameof(PlayerSprite));
-            OnPropertyChanged(nameof(EnemySpriteM)); OnPropertyChanged(nameof(PlayerSpriteM));
-            OnPropertyChanged(nameof(EnemySpriteF)); OnPropertyChanged(nameof(PlayerSpriteF));
+            OnPropertyChanged(nameof(OpponentSprite)); OnPropertyChanged(nameof(PlayerSprite));
+            OnPropertyChanged(nameof(OpponentSpriteM)); OnPropertyChanged(nameof(PlayerSpriteM));
+            OnPropertyChanged(nameof(OpponentSpriteF)); OnPropertyChanged(nameof(PlayerSpriteF));
             RaiseFrameWarnings();
         }
 
@@ -1094,7 +1094,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public bool CanPlay => _hasAnimData;
 
         /// <summary>Which sprites the three Play buttons drive. Shared, so the choice follows between tabs.</summary>
-        public IReadOnlyList<string> SideOptions { get; } = new[] { "Both sides", "Theirs (front)", "Yours (back)" };
+        public IReadOnlyList<string> SideOptions { get; } = new[] { "Both sides", "Opponent (front)", "Player (back)" };
         private int _sideIndex;
         public int SideIndex { get => _sideIndex; set { if (value >= 0 && Set(ref _sideIndex, value)) { StopPlayback(); RaiseAdvanced(); } } }
         private PreviewSides Sides => (PreviewSides)_sideIndex;
@@ -1123,7 +1123,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public int BallIndex { get => _ballIndex; set { if (value >= 0 && Set(ref _ballIndex, value)) StopPlayback(); } }
         private int SelectedBall => _ballIndex >= 0 && _ballIndex < _ballIds.Count ? _ballIds[_ballIndex] : 4;
         /// <summary>A ball is thrown in a trainer battle, and by you in a wild one.</summary>
-        public bool BallMatters => IsTrainerBattle || Sides != PreviewSides.Theirs;
+        public bool BallMatters => IsTrainerBattle || Sides != PreviewSides.Opponent;
 
         private void LoadBallOptions()
         {
@@ -1248,20 +1248,20 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private object _musicHandle;
         private int _musicVersion;
 
-        public SceneSprite EnemyTrainerSprite { get; } = new SceneSprite();
+        public SceneSprite OpponentTrainerSprite { get; } = new SceneSprite();
         public SceneSprite PlayerTrainerSprite { get; } = new SceneSprite();
-        public SceneSprite EnemyBallSprite { get; } = new SceneSprite();
+        public SceneSprite OpponentBallSprite { get; } = new SceneSprite();
         public SceneSprite PlayerBallSprite { get; } = new SceneSprite();
 
         private Bitmap _enemyBurstImage, _playerBurstImage, _enemySparkleImage, _playerSparkleImage, _partyRowsImage;
-        public Bitmap EnemyBurstImage { get => _enemyBurstImage; private set => Set(ref _enemyBurstImage, value); }
+        public Bitmap OpponentBurstImage { get => _enemyBurstImage; private set => Set(ref _enemyBurstImage, value); }
         public Bitmap PlayerBurstImage { get => _playerBurstImage; private set => Set(ref _playerBurstImage, value); }
-        public Bitmap EnemySparkleImage { get => _enemySparkleImage; private set => Set(ref _enemySparkleImage, value); }
+        public Bitmap OpponentSparkleImage { get => _enemySparkleImage; private set => Set(ref _enemySparkleImage, value); }
         public Bitmap PlayerSparkleImage { get => _playerSparkleImage; private set => Set(ref _playerSparkleImage, value); }
         public Bitmap PartyRowsImage { get => _partyRowsImage; private set => Set(ref _partyRowsImage, value); }
 
         private bool _enemyShown = true, _playerShown = true;
-        public bool EnemyShown { get => _enemyShown; private set { if (Set(ref _enemyShown, value)) RaiseShadows(); } }
+        public bool OpponentShown { get => _enemyShown; private set { if (Set(ref _enemyShown, value)) RaiseShadows(); } }
         public bool PlayerShown { get => _playerShown; private set => Set(ref _playerShown, value); }
 
         // The wild slide moves the sprite and its shadow; the grow-in scales both.
@@ -1271,15 +1271,15 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private int _enemyPlatformX, _playerPlatformX, _backdropX, _enemyGaugeX, _playerGaugeX;
         private bool _enemyGaugeShown = true, _playerGaugeShown = true;
-        public double ArenaGroundEnemyX => _arenaGroundEnemyLeft + _enemyPlatformX;
-        public double ArenaGroundMineX => _arenaGroundMineLeft + _playerPlatformX;
-        public double PlaceholderEnemyPlatformX => 129 + _enemyPlatformX;
+        public double ArenaGroundOpponentX => _arenaGroundOpponentLeft + _enemyPlatformX;
+        public double ArenaGroundPlayerX => _arenaGroundPlayerLeft + _playerPlatformX;
+        public double PlaceholderOpponentPlatformX => 129 + _enemyPlatformX;
         public double PlaceholderPlayerPlatformX => -42 + _playerPlatformX;
         public double BackdropX => _backdropX - _backdropWidth;
         private int _backdropWidth = 256;
-        public double EnemyGaugeX => _enemyGaugeX;
+        public double OpponentGaugeX => _enemyGaugeX;
         public double PlayerGaugeX => _playerGaugeX;
-        public bool EnemyGaugeShown => _enemyGaugeShown;
+        public bool OpponentGaugeShown => _enemyGaugeShown;
         public bool PlayerGaugeShown => _playerGaugeShown;
 
         public double ShadowGrow => _enemyGrow;
@@ -1425,8 +1425,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             else
             {
                 bool frames = mode == PreviewMode.Frames, movement = mode == PreviewMode.Animation;
-                if (Sides != PreviewSides.Yours) StartFront(frames, movement);
-                if (Sides != PreviewSides.Theirs) StartBack(frames, movement);
+                if (Sides != PreviewSides.Player) StartFront(frames, movement);
+                if (Sides != PreviewSides.Opponent) StartBack(frames, movement);
                 PushFrames();
                 PushTransforms();
                 if (!SpritesPlaying) return;
@@ -1476,11 +1476,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 PartyBalls = _partyBallCount,
                 Shiny = _isShiny,
                 Speed = (TextSpeed)_textSpeedIndex,
-                EnemyCryDelay = _animFrontCryDelay,
+                OpponentCryDelay = _animFrontCryDelay,
                 PlayerCryDelay = _animBackCryDelay,
                 CryZeroIsEight = GameFamily == GameFamilies.HGSS,
-                TrainerSequences = trainer ? _gfx.EnemyTrainerSequenceCount(trainerClass) : 1,
-                TrainerLandingTicks = trainer ? _gfx.EnemyTrainerSequenceTicks(trainerClass, 1) : 0,
+                TrainerSequences = trainer ? _gfx.OpponentTrainerSequenceCount(trainerClass) : 1,
+                TrainerLandingTicks = trainer ? _gfx.OpponentTrainerSequenceTicks(trainerClass, 1) : 0,
                 Text = MessageFor,
             };
             _sendOut = new SendOutSequence(options);
@@ -1514,10 +1514,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public BallCapsule Capsule { get; set; }
 
         private IReadOnlyList<BallSeal> _seals;
-        private sealed class WaitingSeal { public int Ticks; public BallSeal Seal; public int X, Y; public bool Enemy; }
+        private sealed class WaitingSeal { public int Ticks; public BallSeal Seal; public int X, Y; public bool Opponent; }
         private readonly List<WaitingSeal> _waitingSeals = new();
 
-        private bool OpenWithCapsule(bool enemySide)
+        private bool OpenWithCapsule(bool opponentSide)
         {
             if (Capsule == null || Capsule.IsEmpty) return false;
             _seals ??= BallSeals.Read();
@@ -1527,7 +1527,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 BallSeal seal = _seals[placed.Seal];
                 _waitingSeals.Add(new WaitingSeal
                 {
-                    Ticks = SealEffect.DelayTicks(seal, placed.X, placed.Y), Seal = seal, X = placed.X, Y = placed.Y, Enemy = enemySide,
+                    Ticks = SealEffect.DelayTicks(seal, placed.X, placed.Y), Seal = seal, X = placed.X, Y = placed.Y, Opponent = opponentSide,
                 });
             }
             return true;
@@ -1539,7 +1539,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 WaitingSeal w = _waitingSeals[i];
                 if (w.Ticks-- > 0) continue;
-                _gfx.AddSeal(w.Enemy ? _enemyBurst : _playerBurst, w.Seal, w.X, w.Y, w.Enemy);
+                _gfx.AddSeal(w.Opponent ? _enemyBurst : _playerBurst, w.Seal, w.X, w.Y, w.Opponent);
                 _waitingSeals.RemoveAt(i);
             }
         }
@@ -1554,29 +1554,29 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _progBack?.Step();
             _frontFrames.Tick();
             _backFrames.Tick();
-            bool enemyBursting = _enemyBurst.Active || _waitingSeals.Exists(w => w.Enemy);
-            bool playerBursting = _playerBurst.Active || _waitingSeals.Exists(w => !w.Enemy);
-            StepSparkle(ref _enemySparkle, img => EnemySparkleImage = img);
+            bool opponentBursting = _enemyBurst.Active || _waitingSeals.Exists(w => w.Opponent);
+            bool playerBursting = _playerBurst.Active || _waitingSeals.Exists(w => !w.Opponent);
+            StepSparkle(ref _enemySparkle, img => OpponentSparkleImage = img);
             StepSparkle(ref _playerSparkle, img => PlayerSparkleImage = img);
 
             SendOutSequence s = _sendOut;
-            s.EnemyBusy = FrontBusy;
+            s.OpponentBusy = FrontBusy;
             s.PlayerBusy = BackBusy;
-            s.EnemyBurstBusy = enemyBursting;
+            s.OpponentBurstBusy = opponentBursting;
             s.PlayerBurstBusy = playerBursting;
-            s.EnemySparkleBusy = _enemySparkle != null;
+            s.OpponentSparkleBusy = _enemySparkle != null;
             s.PlayerSparkleBusy = _playerSparkle != null;
             s.Step();
 
-            if (s.EnemyAnimStarts) StartFront(frames: true, movement: true);
+            if (s.OpponentAnimStarts) StartFront(frames: true, movement: true);
             if (s.PlayerAnimStarts) StartBack(frames: true, movement: true);
-            if (s.EnemyBallOpens) { if (!OpenWithCapsule(enemySide: true)) _gfx.AddBurst(_enemyBurst, _sendOutBall, enemySide: true); PlaySound(_ballOpenSound); }
-            if (s.PlayerBallOpens) { if (!OpenWithCapsule(enemySide: false)) _gfx.AddBurst(_playerBurst, _sendOutBall, enemySide: false); PlaySound(_ballOpenSound); }
+            if (s.OpponentBallOpens) { if (!OpenWithCapsule(opponentSide: true)) _gfx.AddBurst(_enemyBurst, _sendOutBall, opponentSide: true); PlaySound(_ballOpenSound); }
+            if (s.PlayerBallOpens) { if (!OpenWithCapsule(opponentSide: false)) _gfx.AddBurst(_playerBurst, _sendOutBall, opponentSide: false); PlaySound(_ballOpenSound); }
             LaunchDueSeals();
-            if (s.EnemyCry) PlaySound(_cry);
+            if (s.OpponentCry) PlaySound(_cry);
             if (s.PlayerCry) PlaySound(_cry);
-            if (s.EnemySparkleStarts) _enemySparkle = StartSparkle(enemySide: true);
-            if (s.PlayerSparkleStarts) _playerSparkle = StartSparkle(enemySide: false);
+            if (s.OpponentSparkleStarts) _enemySparkle = StartSparkle(opponentSide: true);
+            if (s.PlayerSparkleStarts) _playerSparkle = StartSparkle(opponentSide: false);
             foreach (string name in s.Sounds) PlaySound(_gfx.SoundAsync(name));
 
             ApplySendOut();
@@ -1584,7 +1584,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             PushTransforms();
 
             // Particles are drawn where they are, then moved, once a tick.
-            EnemyBurstImage = _enemyBurst.Step();
+            OpponentBurstImage = _enemyBurst.Step();
             PlayerBurstImage = _playerBurst.Step();
 
             if (s.Done && !SpritesPlaying && _enemySparkle == null && _playerSparkle == null && _waitingSeals.Count == 0
@@ -1592,12 +1592,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 StopPlayback();
         }
 
-        private BattleAnimPlayer StartSparkle(bool enemySide)
+        private BattleAnimPlayer StartSparkle(bool opponentSide)
         {
             // On the battler's centre, the way the effect's own emitters are placed.
-            double x = enemySide ? EnemyLeft + 40 : PlayerLeft + 40;
-            double y = enemySide ? EnemyTop + 40 : PlayerTop + 40;
-            BattleAnimPlayer player = _gfx.Sparkle(enemySide, x, y);
+            double x = opponentSide ? OpponentLeft + 40 : PlayerLeft + 40;
+            double y = opponentSide ? OpponentTop + 40 : PlayerTop + 40;
+            BattleAnimPlayer player = _gfx.Sparkle(opponentSide, x, y);
             if (player != null) player.PlaySound = id => PlaySound(_gfx.SoundAsync(id));
             return player;
         }
@@ -1618,24 +1618,24 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private void ApplySendOut()
         {
             SendOutSequence s = _sendOut;
-            EnemyShown = s.Enemy.Visible;
+            OpponentShown = s.Opponent.Visible;
             PlayerShown = s.Player.Visible;
-            _enemySlideX = s.Enemy.OffsetX;
-            _enemyGrow = s.Enemy.Scale; _playerGrow = s.Player.Scale;
-            _enemyTint = s.Enemy.Tint; _enemyTintRgb = s.Enemy.TintRgb;
+            _enemySlideX = s.Opponent.OffsetX;
+            _enemyGrow = s.Opponent.Scale; _playerGrow = s.Player.Scale;
+            _enemyTint = s.Opponent.Tint; _enemyTintRgb = s.Opponent.TintRgb;
             _playerTint = s.Player.Tint; _playerTintRgb = s.Player.TintRgb;
-            SetSceneOffsets(s.EnemyPlatformOffsetX, s.PlayerPlatformOffsetX, s.BackdropScrollX,
-                s.EnemyGaugeOffsetX, s.PlayerGaugeOffsetX, s.EnemyGaugeVisible, s.PlayerGaugeVisible);
+            SetSceneOffsets(s.OpponentPlatformOffsetX, s.PlayerPlatformOffsetX, s.BackdropScrollX,
+                s.OpponentGaugeOffsetX, s.PlayerGaugeOffsetX, s.OpponentGaugeVisible, s.PlayerGaugeVisible);
 
-            SendOutSequence.TrainerState et = s.EnemyTrainer;
-            ApplyTrainer(EnemyTrainerSprite, et, et.Visible ? _gfx.EnemyTrainer(Math.Max(0, _trainer.Class), et.Sequence, et.SequenceTicks) : null);
+            SendOutSequence.TrainerState et = s.OpponentTrainer;
+            ApplyTrainer(OpponentTrainerSprite, et, et.Visible ? _gfx.OpponentTrainer(Math.Max(0, _trainer.Class), et.Sequence, et.SequenceTicks) : null);
             ApplyTrainer(PlayerTrainerSprite, s.PlayerTrainer, s.PlayerTrainer.Visible ? _gfx.PlayerTrainer(s.PlayerTrainer.AnimTicks) : null);
-            ApplyBall(EnemyBallSprite, s.EnemyBall, _enemyBallActor, ref _enemyBallRolling);
+            ApplyBall(OpponentBallSprite, s.OpponentBall, _enemyBallActor, ref _enemyBallRolling);
             ApplyBall(PlayerBallSprite, s.PlayerBall, _playerBallActor, ref _playerBallRolling);
-            ApplyRow(s.EnemyRow, _enemyRowActors);
+            ApplyRow(s.OpponentRow, _enemyRowActors);
             ApplyRow(s.PlayerRow, _playerRowActors);
-            PartyRowsImage = s.EnemyRow.Visible || s.PlayerRow.Visible
-                ? _gfx.ComposeRows((s.EnemyRow, _enemyRowActors, false), (s.PlayerRow, _playerRowActors, true))
+            PartyRowsImage = s.OpponentRow.Visible || s.PlayerRow.Visible
+                ? _gfx.ComposeRows((s.OpponentRow, _enemyRowActors, false), (s.PlayerRow, _playerRowActors, true))
                 : null;
 
             MessageBoxDim = 1 - s.TextBox;
@@ -1683,22 +1683,22 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             view.Flash = b.Flash;
         }
 
-        private void SetSceneOffsets(int enemyPlatform, int playerPlatform, int backdrop, int enemyGauge, int playerGauge, bool enemyGaugeShown, bool playerGaugeShown)
+        private void SetSceneOffsets(int opponentPlatform, int playerPlatform, int backdrop, int opponentGauge, int playerGauge, bool opponentGaugeShown, bool playerGaugeShown)
         {
-            if (_enemyPlatformX != enemyPlatform)
+            if (_enemyPlatformX != opponentPlatform)
             {
-                _enemyPlatformX = enemyPlatform;
-                OnPropertyChanged(nameof(ArenaGroundEnemyX)); OnPropertyChanged(nameof(PlaceholderEnemyPlatformX));
+                _enemyPlatformX = opponentPlatform;
+                OnPropertyChanged(nameof(ArenaGroundOpponentX)); OnPropertyChanged(nameof(PlaceholderOpponentPlatformX));
             }
             if (_playerPlatformX != playerPlatform)
             {
                 _playerPlatformX = playerPlatform;
-                OnPropertyChanged(nameof(ArenaGroundMineX)); OnPropertyChanged(nameof(PlaceholderPlayerPlatformX));
+                OnPropertyChanged(nameof(ArenaGroundPlayerX)); OnPropertyChanged(nameof(PlaceholderPlayerPlatformX));
             }
             if (_backdropX != backdrop) { _backdropX = backdrop; OnPropertyChanged(nameof(BackdropX)); }
-            if (_enemyGaugeX != enemyGauge) { _enemyGaugeX = enemyGauge; OnPropertyChanged(nameof(EnemyGaugeX)); }
+            if (_enemyGaugeX != opponentGauge) { _enemyGaugeX = opponentGauge; OnPropertyChanged(nameof(OpponentGaugeX)); }
             if (_playerGaugeX != playerGauge) { _playerGaugeX = playerGauge; OnPropertyChanged(nameof(PlayerGaugeX)); }
-            if (_enemyGaugeShown != enemyGaugeShown) { _enemyGaugeShown = enemyGaugeShown; OnPropertyChanged(nameof(EnemyGaugeShown)); }
+            if (_enemyGaugeShown != opponentGaugeShown) { _enemyGaugeShown = opponentGaugeShown; OnPropertyChanged(nameof(OpponentGaugeShown)); }
             if (_playerGaugeShown != playerGaugeShown) { _playerGaugeShown = playerGaugeShown; OnPropertyChanged(nameof(PlayerGaugeShown)); }
         }
 
@@ -1708,11 +1708,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _sendOut = null;
             _enemyBurst = _playerBurst = null;
             _enemySparkle = _playerSparkle = null;
-            EnemyBurstImage = PlayerBurstImage = EnemySparkleImage = PlayerSparkleImage = PartyRowsImage = null;
-            EnemyShown = PlayerShown = true;
+            OpponentBurstImage = PlayerBurstImage = OpponentSparkleImage = PlayerSparkleImage = PartyRowsImage = null;
+            OpponentShown = PlayerShown = true;
             _enemySlideX = 0; _enemyGrow = _playerGrow = 1; _enemyTint = _playerTint = 0;
             SetSceneOffsets(0, 0, 0, 0, 0, true, true);
-            EnemyTrainerSprite.Visible = PlayerTrainerSprite.Visible = EnemyBallSprite.Visible = PlayerBallSprite.Visible = false;
+            OpponentTrainerSprite.Visible = PlayerTrainerSprite.Visible = OpponentBallSprite.Visible = PlayerBallSprite.Visible = false;
             MessageBoxDim = 0;
             RaiseMessage();
             RaiseShadows();

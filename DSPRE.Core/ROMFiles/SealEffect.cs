@@ -24,12 +24,12 @@ namespace DSPRE.ROMFiles
         private const double PixelsPerUnit = 4096.0 / 172.0;
 
         /// <summary>Where a seal's emitter sits on the 256 by 192 top screen.</summary>
-        public static (double X, double Y) ScreenPosition(int x, int y, bool enemySide)
+        public static (double X, double Y) ScreenPosition(int x, int y, bool opponentSide)
         {
-            // Orthographic world position of the single player and enemy battler.
-            double worldX = enemySide ? 2.5 : -2.5, worldY = enemySide ? 0.75 : -1.5625;
-            // Lift in pixels: (10, 32) plus (0, -16) for the player or (-15, -25) for the enemy.
-            double liftX = enemySide ? 10 - 15 : 10, liftY = enemySide ? 32 - 25 : 32 - 16;
+            // Orthographic world position of the single player and opponent battler.
+            double worldX = opponentSide ? 2.5 : -2.5, worldY = opponentSide ? 0.75 : -1.5625;
+            // Lift in pixels: (10, 32) plus (0, -16) for the player or (-15, -25) for the opponent.
+            double liftX = opponentSide ? 10 - 15 : 10, liftY = opponentSide ? 32 - 25 : 32 - 16;
 
             double px = worldX * PixelsPerUnit - liftX + (x - BallCapsule.BoardCentreX);
             double py = worldY * PixelsPerUnit - liftY + (BallCapsule.BoardCentreY - y + 30);

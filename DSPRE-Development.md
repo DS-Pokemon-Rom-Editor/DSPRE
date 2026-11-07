@@ -34,6 +34,8 @@ class split over several files uses `<Class>.<Part>.cs`, like `RomLocator.Tables
 Names use the game's words, or a player's, like `FriendshipChanges`. Enum members whose names are shown in
 editors or written to exports, like `MoveFlags.MAGIC_COAT`, keep their spelling.
 
+The two battle sides are Player and Opponent (or Enemy) in names, comments and text: `Kind.PlayerSingle`, "Opponent HP bar".
+
 ### Layout
 
 Braces go on their own line, namespaces included, and indentation is four spaces. A file is named after its main

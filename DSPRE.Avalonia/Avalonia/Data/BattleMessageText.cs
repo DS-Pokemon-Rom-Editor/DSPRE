@@ -26,15 +26,15 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>The move's "X used Y!" line in its message box, on an otherwise clear 256 by 192 picture; null when
         /// this ROM's line or letters can't be read.</summary>
-        /// <param name="foe">The opponent's Pokémon is using the move; otherwise yours.</param>
-        public static byte[] MoveUsed(int move, bool foe, string pokemon, int windowStyle)
+        /// <param name="opponent">The opponent's Pokémon is using the move; otherwise the player's.</param>
+        public static byte[] MoveUsed(int move, bool opponent, string pokemon, int windowStyle)
         {
             if (RomInfo.MovesUsedTextNumber < 0 || move < 0 || !FieldFontCharacters.Ready) return null;
             List<string> lines;
             try { lines = new TextArchive(RomInfo.MovesUsedTextNumber).Messages; }
             catch (Exception ex) { AppLogger.WarnOnce("BattleMessageText.MoveUsed", ex); return null; }
-            // Three lines a move: your Pokémon, a wild one, the foe's.
-            int line = move * 3 + (foe ? 2 : 0);
+            // Three lines a move: the player's Pokémon, a wild one, the opponent's.
+            int line = move * 3 + (opponent ? 2 : 0);
             if (lines == null || line >= lines.Count) return null;
             BattleScreenRenderer.Piece box = BattleScreenRenderer.BuildMessageBox(windowStyle);
             if (box.Rgba == null) return null;

@@ -80,7 +80,7 @@ namespace DSPRE.Avalonia.Data
 
             /// <summary>
             /// How many files a thing takes, when that differs by game. Diamond and Pearl keep two files
-            /// a trainer class where Platinum keeps five, so a fixed number groups theirs wrongly.
+            /// a trainer class where Platinum keeps five, so a fixed number groups Platinum's wrongly.
             /// </summary>
             public Func<int> StrideNow;
             public Func<string[]> PartNamesNow;

@@ -36,7 +36,7 @@ namespace DSPRE
             foreach (KeyValuePair<string, JsonNode> section in current)
             {
                 if (section.Value is not JsonObject upstream) continue;
-                if (project[section.Key] is not JsonObject mine)
+                if (project[section.Key] is not JsonObject local)
                 {
                     if (project[section.Key] != null) continue;
                     project[section.Key] = upstream.DeepClone();
@@ -45,10 +45,10 @@ namespace DSPRE
                 }
                 foreach (KeyValuePair<string, JsonNode> entry in upstream)
                 {
-                    JsonNode have = mine[entry.Key];
+                    JsonNode have = local[entry.Key];
                     if (have == null)
                     {
-                        mine[entry.Key] = entry.Value?.DeepClone();
+                        local[entry.Key] = entry.Value?.DeepClone();
                         updated++;
                         continue;
                     }
@@ -56,7 +56,7 @@ namespace DSPRE
                     if (haveText == entry.Value?.ToJsonString()) continue;
                     if (known.TryGetValue((section.Key, entry.Key), out HashSet<string> versions) && versions.Contains(haveText))
                     {
-                        mine[entry.Key] = entry.Value?.DeepClone();
+                        local[entry.Key] = entry.Value?.DeepClone();
                         updated++;
                     }
                 }

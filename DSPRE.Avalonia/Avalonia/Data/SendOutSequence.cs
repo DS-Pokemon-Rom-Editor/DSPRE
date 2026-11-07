@@ -5,9 +5,9 @@ using DSPRE.ROMFiles;
 namespace DSPRE.Avalonia.Data
 {
     public enum SendOutKind { Wild, Trainer }
-    public enum PreviewSides { Both, Theirs, Yours }
+    public enum PreviewSides { Both, Opponent, Player }
     public enum TextSpeed { Slow, Mid, Fast, Instant }
-    public enum SendOutMessage { None, Challenged, WildAppeared, EnemySentOut, Go }
+    public enum SendOutMessage { None, Challenged, WildAppeared, OpponentSentOut, Go }
 
     /// <summary>What a send-out preview plays.</summary>
     public sealed class SendOutOptions
@@ -23,10 +23,10 @@ namespace DSPRE.Avalonia.Data
         public int PartyBalls = 3;
         public bool Shiny;
         public TextSpeed Speed = TextSpeed.Mid;
-        public int EnemyCryDelay, PlayerCryDelay;
+        public int OpponentCryDelay, PlayerCryDelay;
         /// <summary>HeartGold and SoulSilver never play a send-out cry with no delay.</summary>
         public bool CryZeroIsEight;
-        /// <summary>How many animations the enemy trainer's class has, and how long its second one runs.</summary>
+        /// <summary>How many animations the opponent trainer's class has, and how long its second one runs.</summary>
         public int TrainerSequences = 1, TrainerLandingTicks;
         public Func<SendOutMessage, string> Text = m => "";
     }
@@ -60,7 +60,7 @@ namespace DSPRE.Avalonia.Data
         {
             public bool Visible;
             public int X, Y;
-            public int Sequence;          // the class animation shown (enemy)
+            public int Sequence;          // the class animation shown (opponent)
             public int SequenceTicks;     // ticks into it
             public int AnimTicks = -1;    // ticks into the throw (player), -1 for the resting pose
         }
@@ -81,21 +81,21 @@ namespace DSPRE.Avalonia.Data
             public readonly RowBall[] Balls = { new(), new(), new(), new(), new(), new() };
         }
 
-        public MonState Enemy { get; } = new MonState();
+        public MonState Opponent { get; } = new MonState();
         public MonState Player { get; } = new MonState();
-        public BallState EnemyBall { get; } = new BallState();
+        public BallState OpponentBall { get; } = new BallState();
         public BallState PlayerBall { get; } = new BallState();
-        public TrainerState EnemyTrainer { get; } = new TrainerState();
+        public TrainerState OpponentTrainer { get; } = new TrainerState();
         public TrainerState PlayerTrainer { get; } = new TrainerState();
-        public RowState EnemyRow { get; } = new RowState();
+        public RowState OpponentRow { get; } = new RowState();
         public RowState PlayerRow { get; } = new RowState();
 
-        public int EnemyPlatformOffsetX { get; private set; }
+        public int OpponentPlatformOffsetX { get; private set; }
         public int PlayerPlatformOffsetX { get; private set; }
         public int BackdropScrollX { get; private set; }
-        public int EnemyGaugeOffsetX { get; private set; }
+        public int OpponentGaugeOffsetX { get; private set; }
         public int PlayerGaugeOffsetX { get; private set; }
-        public bool EnemyGaugeVisible { get; private set; }
+        public bool OpponentGaugeVisible { get; private set; }
         public bool PlayerGaugeVisible { get; private set; }
         /// <summary>0 black to 1 normal: the text box's colours fade in from black during an intro.</summary>
         public double TextBox { get; private set; } = 1;
@@ -104,22 +104,22 @@ namespace DSPRE.Avalonia.Data
         public string MessageText { get; private set; } = "";
 
         // Things that happen on the tick just stepped.
-        public bool EnemyAnimStarts { get; private set; }
+        public bool OpponentAnimStarts { get; private set; }
         public bool PlayerAnimStarts { get; private set; }
-        public bool EnemyBallOpens { get; private set; }
+        public bool OpponentBallOpens { get; private set; }
         public bool PlayerBallOpens { get; private set; }
-        public bool EnemyCry { get; private set; }
+        public bool OpponentCry { get; private set; }
         public bool PlayerCry { get; private set; }
-        public bool EnemySparkleStarts { get; private set; }
+        public bool OpponentSparkleStarts { get; private set; }
         public bool PlayerSparkleStarts { get; private set; }
         public List<string> Sounds { get; } = new List<string>();
 
         /// <summary>Set by the host before each step: that side's frame run or movement script is still going.</summary>
-        public bool EnemyBusy, PlayerBusy;
+        public bool OpponentBusy, PlayerBusy;
         /// <summary>Set by the host before each step: that side's shiny sparkle is still going.</summary>
-        public bool EnemySparkleBusy, PlayerSparkleBusy;
+        public bool OpponentSparkleBusy, PlayerSparkleBusy;
         /// <summary>Set by the host before each step: that side's ball burst still has particles.</summary>
-        public bool EnemyBurstBusy, PlayerBurstBusy;
+        public bool OpponentBurstBusy, PlayerBurstBusy;
 
         public int Tick { get; private set; } = -1;
         public bool Done => _script == null && _tasks.Count == 0 && _starting.Count == 0 && !_printing;
@@ -137,16 +137,16 @@ namespace DSPRE.Avalonia.Data
         private bool _startedEarly;
 
         // Screen positions and speeds, the same in both games.
-        private const int EnemyRestX = 192, PlayerRestX = 64;
-        private const int EnemyTrainerY = 50, PlayerTrainerY = 112;
-        private const int EnemyBallX = 192, EnemyBallY = 86;
+        private const int OpponentRestX = 192, PlayerRestX = 64;
+        private const int OpponentTrainerY = 50, PlayerTrainerY = 112;
+        private const int OpponentBallX = 192, OpponentBallY = 86;
         private const int PlayerBallEndX = 64, PlayerBallEndY = 144, ArcHeight = 48, ArcSteps = 20;
         private const int SlideDistance = 272, SlideStart = 26, Landing = 60;
 
         // In ticks: after something finishes, the next command lands on the third tick. After "appeared!" and
         // the challenge, a 31-pass button wait puts the next message 18 ticks on.
         private const int NextCommand = 3, AfterButtonWait = 18;
-        private const int EnemyHealthbarDelay = 56, PlayerHealthbarDelay = 48, MidBattleHealthbarDelay = 36;
+        private const int OpponentHealthbarDelay = 56, PlayerHealthbarDelay = 48, MidBattleHealthbarDelay = 36;
         // A message ending in a scroll mark holds this many printer runs.
         private const int AutoScrollRuns = 101;
 
@@ -154,26 +154,26 @@ namespace DSPRE.Avalonia.Data
         {
             Options = options ?? new SendOutOptions();
             BallColor = BallFadeColor(Options.Ball);
-            _enemy = Options.Sides != PreviewSides.Yours;
-            _player = Options.Sides != PreviewSides.Theirs;
-            _enemyCryDelay = CryDelay(Options.EnemyCryDelay, Options.CryZeroIsEight);
+            _enemy = Options.Sides != PreviewSides.Player;
+            _player = Options.Sides != PreviewSides.Opponent;
+            _enemyCryDelay = CryDelay(Options.OpponentCryDelay, Options.CryZeroIsEight);
             _playerCryDelay = CryDelay(Options.PlayerCryDelay, Options.CryZeroIsEight);
 
             // What is on screen before anything moves: the side not being sent out is already in battle.
-            Enemy.Visible = EnemyGaugeVisible = !_enemy;
+            Opponent.Visible = OpponentGaugeVisible = !_enemy;
             Player.Visible = PlayerGaugeVisible = !_player;
             bool intro = Options.Kind == SendOutKind.Wild || Options.TrainerIntro;
             if (intro)
             {
                 TextBox = 0;
-                EnemyPlatformOffsetX = _enemy ? -SlideDistance : 0;
+                OpponentPlatformOffsetX = _enemy ? -SlideDistance : 0;
                 PlayerPlatformOffsetX = _player ? SlideDistance : 0;
                 BackdropScrollX = _player ? 132 : 0;
             }
             _script = intro ? IntroScript() : MidBattleScript();
             if (intro && Options.Kind == SendOutKind.Wild)
             {
-                // The script's first run starts the wild slide and your trainer on tick 0 itself.
+                // The script's first run starts the wild slide and the player's trainer on tick 0 itself.
                 _script.MoveNext();
                 _tasks.AddRange(_starting);
                 _starting.Clear();
@@ -207,8 +207,8 @@ namespace DSPRE.Avalonia.Data
         public void Step()
         {
             Tick++;
-            EnemyAnimStarts = PlayerAnimStarts = EnemyBallOpens = PlayerBallOpens = EnemyCry = PlayerCry = false;
-            EnemySparkleStarts = PlayerSparkleStarts = false;
+            OpponentAnimStarts = PlayerAnimStarts = OpponentBallOpens = PlayerBallOpens = OpponentCry = PlayerCry = false;
+            OpponentSparkleStarts = PlayerSparkleStarts = false;
             Sounds.Clear();
 
             // A task first runs on the tick after it was started.
@@ -244,14 +244,14 @@ namespace DSPRE.Avalonia.Data
         private IEnumerator<int> IntroScript()
         {
             bool wild = Options.Kind == SendOutKind.Wild;
-            bool enemySlides = wild || Options.SlideIn;
+            bool opponentSlides = wild || Options.SlideIn;
             bool rows = !wild && Options.ShowPartyBalls;
-            int enemyDone = _enemy ? -1 : 0, gaugeDone = _enemy ? -1 : 0, rowsDone = rows ? -1 : 0;
+            int opponentDone = _enemy ? -1 : 0, gaugeDone = _enemy ? -1 : 0, rowsDone = rows ? -1 : 0;
 
             if (_enemy)
             {
-                if (enemySlides) Start(WildSlideTask(), t => enemyDone = t);
-                else Start(EnemyTrainerSlideTask(), t => enemyDone = t);
+                if (opponentSlides) Start(WildSlideTask(), t => opponentDone = t);
+                else Start(OpponentTrainerSlideTask(), t => opponentDone = t);
             }
             if (_player) Start(PlayerTrainerSlideTask());
             Start(TextBoxFadeTask());
@@ -261,18 +261,18 @@ namespace DSPRE.Avalonia.Data
                 foreach (int _ in Until(48)) yield return 0;
                 int pending = (_enemy ? 1 : 0) + (_player ? 1 : 0);
                 if (pending == 0) rowsDone = Tick;
-                if (_enemy) Start(RowShowTask(EnemyRow, player: false, midBattle: false), t => { if (--pending == 0) rowsDone = t; });
+                if (_enemy) Start(RowShowTask(OpponentRow, player: false, midBattle: false), t => { if (--pending == 0) rowsDone = t; });
                 if (_player) Start(RowShowTask(PlayerRow, player: true, midBattle: false), t => { if (--pending == 0) rowsDone = t; });
             }
 
-            if (enemySlides)
+            if (opponentSlides)
             {
                 if (_enemy)
                 {
                     foreach (int _ in Until(Landing)) yield return 0;
-                    Start(HealthbarTask(enemySide: true), t => gaugeDone = t);
-                    foreach (int _ in UntilSet(() => enemyDone >= 0 && gaugeDone >= 0 && rowsDone >= 0)) yield return 0;
-                    foreach (int _ in Until(Math.Max(Math.Max(enemyDone, gaugeDone), rowsDone) + NextCommand)) yield return 0;
+                    Start(HealthbarTask(opponentSide: true), t => gaugeDone = t);
+                    foreach (int _ in UntilSet(() => opponentDone >= 0 && gaugeDone >= 0 && rowsDone >= 0)) yield return 0;
+                    foreach (int _ in Until(Math.Max(Math.Max(opponentDone, gaugeDone), rowsDone) + NextCommand)) yield return 0;
                     Print(wild ? SendOutMessage.WildAppeared : SendOutMessage.Challenged);
                     foreach (int _ in UntilSet(() => !_printing)) yield return 0;
                     if (!_player) yield break;
@@ -295,17 +295,17 @@ namespace DSPRE.Avalonia.Data
                 {
                     foreach (int _ in Until(50)) yield return 0;
                     Print(SendOutMessage.Challenged);
-                    foreach (int _ in UntilSet(() => !_printing && enemyDone >= 0 && rowsDone >= 0)) yield return 0;
-                    int cleared = Math.Max(PrintFinishedTick, Math.Max(enemyDone, rowsDone)) + 1;
+                    foreach (int _ in UntilSet(() => !_printing && opponentDone >= 0 && rowsDone >= 0)) yield return 0;
+                    int cleared = Math.Max(PrintFinishedTick, Math.Max(opponentDone, rowsDone)) + 1;
                     foreach (int _ in Until(cleared + AfterButtonWait - 1)) yield return 0;
 
                     // The throw's task runs from the next tick, alongside "sent out" printing.
-                    Print(SendOutMessage.EnemySentOut);
+                    Print(SendOutMessage.OpponentSentOut);
                     int throwDone = -1;
-                    if (rows) Start(RowHideTask(EnemyRow, player: false, midBattle: false));
-                    Start(EnemyThrowTask(), t => throwDone = t);
-                    foreach (int _ in Until(Tick + EnemyHealthbarDelay)) yield return 0;
-                    Start(HealthbarTask(enemySide: true), t => gaugeDone = t);
+                    if (rows) Start(RowHideTask(OpponentRow, player: false, midBattle: false));
+                    Start(OpponentThrowTask(), t => throwDone = t);
+                    foreach (int _ in Until(Tick + OpponentHealthbarDelay)) yield return 0;
+                    Start(HealthbarTask(opponentSide: true), t => gaugeDone = t);
                     foreach (int _ in UntilSet(() => throwDone >= 0 && gaugeDone >= 0)) yield return 0;
                     if (!_player) yield break;
                     foreach (int _ in Until(Math.Max(throwDone, gaugeDone) + 2)) yield return 0;
@@ -317,18 +317,18 @@ namespace DSPRE.Avalonia.Data
                 }
             }
 
-            // Your throw. A trainer's throw task runs from the tick "Go!" starts printing.
+            // The player's throw. A trainer's throw task runs from the tick "Go!" starts printing.
             int playerDone = -1, playerGauge = -1;
             Start(PlayerThrowTask(), t => playerDone = t);
             int throwStart = Tick + 1;
-            if (!enemySlides)
+            if (!opponentSlides)
             {
                 yield return 0;
                 Print(SendOutMessage.Go);
                 if (rows) Start(RowHideTask(PlayerRow, player: true, midBattle: false));
             }
             foreach (int _ in Until(throwStart + PlayerHealthbarDelay - 1)) yield return 0;
-            Start(HealthbarTask(enemySide: false), t => playerGauge = t);
+            Start(HealthbarTask(opponentSide: false), t => playerGauge = t);
             foreach (int _ in UntilSet(() => playerDone >= 0 && playerGauge >= 0)) yield return 0;
         }
 
@@ -340,39 +340,39 @@ namespace DSPRE.Avalonia.Data
             {
                 if (rows)
                 {
-                    Start(RowShowTask(EnemyRow, player: false, midBattle: true), t => done = t);
+                    Start(RowShowTask(OpponentRow, player: false, midBattle: true), t => done = t);
                     foreach (int _ in UntilSet(() => done >= 0)) yield return 0;
                     foreach (int _ in Until(done + NextCommand)) yield return 0;
                 }
-                Print(SendOutMessage.EnemySentOut);
+                Print(SendOutMessage.OpponentSentOut);
                 foreach (int _ in UntilSet(() => !_printing)) yield return 0;
                 foreach (int _ in Until(PrintFinishedTick + NextCommand)) yield return 0;
                 if (rows)
                 {
                     done = -1;
-                    Start(RowHideTask(EnemyRow, player: false, midBattle: true), t => done = t);
+                    Start(RowHideTask(OpponentRow, player: false, midBattle: true), t => done = t);
                     foreach (int _ in UntilSet(() => done >= 0)) yield return 0;
                     foreach (int _ in Until(done + NextCommand)) yield return 0;
                 }
-                foreach (int _ in SendOutAndHealthbar(enemySide: true)) yield return 0;
+                foreach (int _ in SendOutAndHealthbar(opponentSide: true)) yield return 0;
             }
             if (_player)
             {
-                // Your row is never drawn mid-battle.
+                // The player's row is never drawn mid-battle.
                 Print(SendOutMessage.Go);
                 foreach (int _ in UntilSet(() => !_printing)) yield return 0;
                 foreach (int _ in Until(PrintFinishedTick + NextCommand)) yield return 0;
-                foreach (int _ in SendOutAndHealthbar(enemySide: false)) yield return 0;
+                foreach (int _ in SendOutAndHealthbar(opponentSide: false)) yield return 0;
             }
         }
 
-        private IEnumerable<int> SendOutAndHealthbar(bool enemySide)
+        private IEnumerable<int> SendOutAndHealthbar(bool opponentSide)
         {
             int shown = -1, gauge = -1;
-            Start(ShowPokemonTask(enemySide), t => shown = t);
+            Start(ShowPokemonTask(opponentSide), t => shown = t);
             int sent = Tick;
             foreach (int _ in Until(sent + MidBattleHealthbarDelay)) yield return 0;
-            Start(HealthbarTask(enemySide), t => gauge = t);
+            Start(HealthbarTask(opponentSide), t => gauge = t);
             foreach (int _ in UntilSet(() => shown >= 0 && gauge >= 0)) yield return 0;
             foreach (int _ in Until(Math.Max(shown, gauge) + NextCommand)) yield return 0;
         }
@@ -454,18 +454,18 @@ namespace DSPRE.Avalonia.Data
             }
         }
 
-        private IEnumerable<int> EnemyTrainerSlideTask()
+        private IEnumerable<int> OpponentTrainerSlideTask()
         {
-            TrainerState tr = EnemyTrainer;
+            TrainerState tr = OpponentTrainer;
             tr.Visible = true;
-            tr.Y = EnemyTrainerY;
+            tr.Y = OpponentTrainerY;
             // A class with a third animation holds its first frame during the slide.
             tr.Sequence = Options.TrainerSequences > 2 ? 2 : 0;
             tr.SequenceTicks = 0;
             for (int t = 0; t <= Landing; t++)
             {
-                EnemyPlatformOffsetX = SlideOffset(t, -1);
-                tr.X = EnemyRestX + EnemyPlatformOffsetX;
+                OpponentPlatformOffsetX = SlideOffset(t, -1);
+                tr.X = OpponentRestX + OpponentPlatformOffsetX;
                 yield return 0;
             }
             // On landing the second animation plays once, and the intro waits for it.
@@ -483,7 +483,7 @@ namespace DSPRE.Avalonia.Data
             for (int t = 0; t <= Landing; t++)
             {
                 PlayerPlatformOffsetX = SlideOffset(t, 1);
-                // Your side's intro starts the backdrop 132 px to the right and scrolls it home 4 px a tick.
+                // The player's side intro starts the backdrop 132 px to the right and scrolls it home 4 px a tick.
                 BackdropScrollX = Math.Max(0, 132 - 4 * Math.Max(0, t - 27));
                 tr.X = PlayerRestX + PlayerPlatformOffsetX;
                 yield return 0;
@@ -492,27 +492,27 @@ namespace DSPRE.Avalonia.Data
 
         private IEnumerable<int> WildSlideTask()
         {
-            MonState mon = Enemy;
+            MonState mon = Opponent;
             mon.Visible = true;
             mon.Scale = 1;
             mon.TintRgb = 0x000000;
             for (int t = 0; t < Landing; t++)
             {
-                EnemyPlatformOffsetX = SlideOffset(t, -1);
-                mon.OffsetX = EnemyPlatformOffsetX;
+                OpponentPlatformOffsetX = SlideOffset(t, -1);
+                mon.OffsetX = OpponentPlatformOffsetX;
                 mon.Tint = 8 / 16.0;
                 yield return 0;
             }
-            EnemyPlatformOffsetX = 0;
+            OpponentPlatformOffsetX = 0;
             mon.OffsetX = 0;
-            EnemyAnimStarts = true;
-            if (_enemyCryDelay == 0) EnemyCry = true;
+            OpponentAnimStarts = true;
+            if (_enemyCryDelay == 0) OpponentCry = true;
             Start(FadeTask(mon, from: 8, everyTicks: 1));
-            if (_enemyCryDelay > 0) Start(CryTask(_enemyCryDelay, enemySide: true));
+            if (_enemyCryDelay > 0) Start(CryTask(_enemyCryDelay, opponentSide: true));
             // The task holds until the frame run and movement script are over.
             yield return 0;
-            while (EnemyBusy) yield return 0;
-            foreach (int _ in Finish(enemySide: true)) yield return 0;
+            while (OpponentBusy) yield return 0;
+            foreach (int _ in Finish(opponentSide: true)) yield return 0;
         }
 
         private IEnumerator<int> FadeTask(MonState mon, int from, int everyTicks)
@@ -527,53 +527,53 @@ namespace DSPRE.Avalonia.Data
             }
         }
 
-        private IEnumerator<int> CryTask(int delay, bool enemySide)
+        private IEnumerator<int> CryTask(int delay, bool opponentSide)
         {
             for (int t = 1; t < delay; t++) yield return 0;
-            if (enemySide) EnemyCry = true; else PlayerCry = true;
+            if (opponentSide) OpponentCry = true; else PlayerCry = true;
         }
 
         // The task notices the animation ended a tick late, then plays the sparkle if shiny.
-        private IEnumerable<int> Finish(bool enemySide)
+        private IEnumerable<int> Finish(bool opponentSide)
         {
             yield return 0;
             if (!Options.Shiny) yield break;
-            if (enemySide) EnemySparkleStarts = true; else PlayerSparkleStarts = true;
+            if (opponentSide) OpponentSparkleStarts = true; else PlayerSparkleStarts = true;
             yield return 0;
-            while (enemySide ? EnemySparkleBusy : PlayerSparkleBusy) yield return 0;
+            while (opponentSide ? OpponentSparkleBusy : PlayerSparkleBusy) yield return 0;
         }
 
-        private IEnumerable<int> HealthbarTask(bool enemySide)
+        private IEnumerable<int> HealthbarTask(bool opponentSide)
         {
             for (int k = 0; ; k++)
             {
                 int offset = Math.Max(0, 160 - 24 * k);
-                if (enemySide) { EnemyGaugeVisible = true; EnemyGaugeOffsetX = -offset; }
+                if (opponentSide) { OpponentGaugeVisible = true; OpponentGaugeOffsetX = -offset; }
                 else { PlayerGaugeVisible = true; PlayerGaugeOffsetX = offset; }
                 if (offset == 0) yield break;
                 yield return 0;
             }
         }
 
-        private IEnumerable<int> EnemyThrowTask()
+        private IEnumerable<int> OpponentThrowTask()
         {
-            TrainerState tr = EnemyTrainer;
+            TrainerState tr = OpponentTrainer;
             for (int e = 0; ; e++)
             {
                 tr.Visible = e <= 20;
-                tr.X = EnemyRestX + 5 * e;
-                StepEnemyBall(EnemyBall, e);
-                if (e >= 23 && !StepAppearance(Enemy, e - 23, _enemyCryDelay, enemySide: true)) break;
+                tr.X = OpponentRestX + 5 * e;
+                StepOpponentBall(OpponentBall, e);
+                if (e >= 23 && !StepAppearance(Opponent, e - 23, _enemyCryDelay, opponentSide: true)) break;
                 yield return 0;
             }
-            EnemyBall.Visible = false;
-            foreach (int _ in Finish(enemySide: true)) yield return 0;
+            OpponentBall.Visible = false;
+            foreach (int _ in Finish(opponentSide: true)) yield return 0;
         }
 
-        private static void StepEnemyBall(BallState ball, int e)
+        private static void StepOpponentBall(BallState ball, int e)
         {
             ball.Visible = e >= 1 && e <= 32;
-            ball.X = EnemyBallX; ball.Y = EnemyBallY; ball.Rotation = 0;
+            ball.X = OpponentBallX; ball.Y = OpponentBallY; ball.Rotation = 0;
             ball.Sequence = 1;
             ball.Animating = e >= 16;
             ball.Flash = e >= 23 && e <= 30 ? (e - 23) * 2 / 16.0 : e > 30 ? 14 / 16.0 : 0;
@@ -610,21 +610,21 @@ namespace DSPRE.Avalonia.Data
                 }
                 else ball.Visible = false;
 
-                if (p >= 47 && !StepAppearance(Player, p - 47, _playerCryDelay, enemySide: false)) break;
+                if (p >= 47 && !StepAppearance(Player, p - 47, _playerCryDelay, opponentSide: false)) break;
                 yield return 0;
             }
-            foreach (int _ in Finish(enemySide: false)) yield return 0;
+            foreach (int _ in Finish(opponentSide: false)) yield return 0;
         }
 
-        // Mid-battle: the enemy's ball appears where it opens, yours is thrown in from the left edge.
-        private IEnumerable<int> ShowPokemonTask(bool enemySide)
+        // Mid-battle: the opponent's ball appears where it opens, the player's is thrown in from the left edge.
+        private IEnumerable<int> ShowPokemonTask(bool opponentSide)
         {
             for (int f = 0; ; f++)
             {
-                if (enemySide)
+                if (opponentSide)
                 {
-                    StepEnemyBall(EnemyBall, f);
-                    if (f >= 23 && !StepAppearance(Enemy, f - 23, _enemyCryDelay, enemySide: true)) break;
+                    StepOpponentBall(OpponentBall, f);
+                    if (f >= 23 && !StepAppearance(Opponent, f - 23, _enemyCryDelay, opponentSide: true)) break;
                 }
                 else
                 {
@@ -637,39 +637,39 @@ namespace DSPRE.Avalonia.Data
                     const int quarter = 0x2000;
                     ball.Rotation = (quarter * Math.Min(f, 21) + 2 * quarter * Math.Max(0, f - 21)) & 0xFFFF;
                     ball.Flash = f >= 23 && f <= 30 ? (f - 22) * 2 / 16.0 : f > 30 ? 1 : 0;
-                    if (f >= 32 && !StepAppearance(Player, f - 32, _playerCryDelay, enemySide: false)) break;
+                    if (f >= 32 && !StepAppearance(Player, f - 32, _playerCryDelay, opponentSide: false)) break;
                 }
                 yield return 0;
             }
-            (enemySide ? EnemyBall : PlayerBall).Visible = false;
-            foreach (int _ in Finish(enemySide)) yield return 0;
+            (opponentSide ? OpponentBall : PlayerBall).Visible = false;
+            foreach (int _ in Finish(opponentSide)) yield return 0;
         }
 
         // Ticks from the ball opening: 8 to grow, then the animation, cry and tint fade (slower while the burst
         // lasts). False once the burst and the animation are over.
-        private bool StepAppearance(MonState mon, int a, int cryDelay, bool enemySide)
+        private bool StepAppearance(MonState mon, int a, int cryDelay, bool opponentSide)
         {
             mon.Visible = true;
             mon.OffsetX = 0;
             mon.TintRgb = BallColor;
             mon.Scale = Math.Min(1.0, a * 0x20 / 256.0);
             if (a <= 9) mon.Tint = 1.0;
-            if (a == 0) { if (enemySide) EnemyBallOpens = true; else PlayerBallOpens = true; }
+            if (a == 0) { if (opponentSide) OpponentBallOpens = true; else PlayerBallOpens = true; }
             if (a == 9)
             {
-                if (enemySide) EnemyAnimStarts = true; else PlayerAnimStarts = true;
-                if (cryDelay == 0) { if (enemySide) EnemyCry = true; else PlayerCry = true; }
-                else Start(CryTask(cryDelay + 1, enemySide));
-                bool burst = enemySide ? EnemyBurstBusy : PlayerBurstBusy;
+                if (opponentSide) OpponentAnimStarts = true; else PlayerAnimStarts = true;
+                if (cryDelay == 0) { if (opponentSide) OpponentCry = true; else PlayerCry = true; }
+                else Start(CryTask(cryDelay + 1, opponentSide));
+                bool burst = opponentSide ? OpponentBurstBusy : PlayerBurstBusy;
                 Start(FadeTask(mon, from: 16, everyTicks: burst ? 2 : 1));
             }
-            bool busy = enemySide ? EnemyBusy || EnemyBurstBusy : PlayerBusy || PlayerBurstBusy;
+            bool busy = opponentSide ? OpponentBusy || OpponentBurstBusy : PlayerBusy || PlayerBurstBusy;
             return a <= 10 || busy;
         }
 
         // ── Party ball rows ────────────────────────────────────────────────────────────────────────
         private const double PlayerBarRestX = 224, PlayerBarY = 120, PlayerRowBallY = 114;
-        private const double EnemyBarRestX = 32, EnemyBarY = 56, EnemyRowBallY = 50;
+        private const double OpponentBarRestX = 32, OpponentBarY = 56, OpponentRowBallY = 50;
         private static double RestX(bool player, int slot) => player ? 162 + 16 * slot : 94 - 16 * slot;
         private static double OvershootX(bool player, int slot) => player ? 156 + 15 * slot : 100 - 15 * slot;
         private static int HealthySeq(bool player) => player ? 3 : 0;
@@ -679,15 +679,15 @@ namespace DSPRE.Avalonia.Data
         {
             row.Visible = true;
             row.Alpha = 1;
-            row.BarY = player ? PlayerBarY : EnemyBarY;
+            row.BarY = player ? PlayerBarY : OpponentBarY;
             row.BarX = player ? 352 : -96;
-            double barRest = player ? PlayerBarRestX : EnemyBarRestX;
+            double barRest = player ? PlayerBarRestX : OpponentBarRestX;
             for (int s = 0; s < 6; s++)
             {
                 RowBall b = row.Balls[s];
                 b.Visible = true;
                 b.X = player ? 276 : -20;
-                b.Y = player ? PlayerRowBallY : EnemyRowBallY;
+                b.Y = player ? PlayerRowBallY : OpponentRowBallY;
                 b.Sequence = SlotSeq(player, s);
                 b.Animating = false;
             }

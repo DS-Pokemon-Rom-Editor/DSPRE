@@ -476,7 +476,7 @@ namespace DSPRE
                 return false;
             }
             if (!ConfirmYesNo("Each party member's ball capsule becomes a Poké Ball, picked in the Trainer editor; zero keeps the " +
-                "default Poké Ball. Enemy trainers can no longer use ball capsule seals, and capsule values already set are read " +
+                "default Poké Ball. Opponent trainers can no longer use ball capsule seals, and capsule values already set are read " +
                 "as items, so check them in the Trainer editor." + BackupNote("the ARM9") +
                 "\n\nApply this patch?" + CreditNote("trainerCustomPokeballs"), "Confirm to proceed"))
                 return false;
@@ -1121,7 +1121,7 @@ namespace DSPRE
             }
             if (PlacementNote(new[] { BattleGaugeTextPatch.BlockLength }, out int[] offsets) is not string placement) return false;
             int overlay = RomLocator.HpBarTextSites.Overlay;
-            if (!ConfirmYesNo("Removes the white box behind the name, level, HP, gender symbol and \"Lv\" in battle, so your HP bar art shows behind them." +
+            if (!ConfirmYesNo("Removes the white box behind the name, level, HP, gender symbol and \"Lv\" in battle, so the HP bar art shows behind them." +
                 placement + BackupNote($"overlay {overlay} and the synthetic overlay") +
                 "\n\nApply this patch?" + CreditNote("hpBarText"), "Confirm to proceed"))
                 return false;
@@ -1129,7 +1129,7 @@ namespace DSPRE
             PlainFiles.Copy(overlayPath, overlayPath + BackupSuffix, overwrite: true);
             PlainFiles.Copy(Filesystem.ExpArmPath, Filesystem.ExpArmPath + BackupSuffix, overwrite: true);
             BattleGaugeTextPatch.Apply(offsets[0]);
-            ShowInfo("Your HP bar art now shows behind the name, level and HP.", "Patch applied");
+            ShowInfo("The HP bar art now shows behind the name, level and HP.", "Patch applied");
             return true;
         }
 

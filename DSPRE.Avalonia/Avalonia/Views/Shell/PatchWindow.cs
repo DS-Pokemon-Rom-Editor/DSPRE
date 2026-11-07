@@ -121,13 +121,13 @@ namespace DSPRE.Avalonia.Views.Shell
                     (string, string) key = (record.Title, c.Path);
                     string group = record.Title + "|" + c.Path;
                     bool usePatch = _usePatch.TryGetValue(key, out bool u) && u;
-                    RadioButton mine = new RadioButton { Content = "Local", GroupName = group, IsChecked = !usePatch };
-                    RadioButton theirs = new RadioButton { Content = "Incoming", GroupName = group, IsChecked = usePatch };
-                    mine.IsCheckedChanged += (_, _) => { if (mine.IsChecked == true) _usePatch[key] = false; };
-                    theirs.IsCheckedChanged += (_, _) => { if (theirs.IsChecked == true) _usePatch[key] = true; };
+                    RadioButton localPick = new RadioButton { Content = "Local", GroupName = group, IsChecked = !usePatch };
+                    RadioButton incomingPick = new RadioButton { Content = "Incoming", GroupName = group, IsChecked = usePatch };
+                    localPick.IsCheckedChanged += (_, _) => { if (localPick.IsChecked == true) _usePatch[key] = false; };
+                    incomingPick.IsCheckedChanged += (_, _) => { if (incomingPick.IsChecked == true) _usePatch[key] = true; };
                     StackPanel pick = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-                    pick.Children.Add(mine);
-                    pick.Children.Add(theirs);
+                    pick.Children.Add(localPick);
+                    pick.Children.Add(incomingPick);
                     AddRow(clashes, Cell(FieldName(c.Path)), Cell(Value(c.Was)), Cell(Value(c.Now)), Cell(Value(c.Rom)), pick);
                 }
                 _detail.Children.Add(clashes);

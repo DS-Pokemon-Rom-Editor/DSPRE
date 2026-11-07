@@ -183,7 +183,7 @@ namespace DSPRE
         /// <summary>The font archive file of special characters, such as the "Lv" glyph.</summary>
         public static int SpecialGlyphsFontEntry(bool hgss) => hgss ? 5 : 4;
 
-        /// <summary>"X used Y!" for each move, three lines a move: your Pokémon, a wild one, the foe's. -1 when unknown.</summary>
+        /// <summary>"X used Y!" for each move, three lines a move: the player's Pokémon, a wild one, the opponent's. -1 when unknown.</summary>
         public static int MovesUsedTextNumber { get; private set; } = -1;
 
         /// <summary>The four archives GetStdMsgNaix picks between, in order. Empty when unknown.</summary>

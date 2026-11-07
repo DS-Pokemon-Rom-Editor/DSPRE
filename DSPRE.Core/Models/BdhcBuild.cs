@@ -21,7 +21,7 @@ namespace DSPRE.Models
             public float AtY;
 
             // Made or edited by the user; proposals leave its squares alone.
-            public bool Mine;
+            public bool Kept;
 
             public float CentreX => (MinX + MaxX) / 2f;
             public float CentreZ => (MinZ + MaxZ) / 2f;
@@ -61,11 +61,11 @@ namespace DSPRE.Models
 
         /// <summary>Plates for a map: the user's own kept as they are, the rest proposed from the model.</summary>
         /// <param name="want">Height in map units a square should be walked at, where the caller knows it; wins over the current terrain.</param>
-        public static List<Piece> Propose(MapMesh mesh, byte[,] collisions, byte[] terrainNow, IReadOnlyList<Piece> mine = null,
+        public static List<Piece> Propose(MapMesh mesh, byte[,] collisions, byte[] terrainNow, IReadOnlyList<Piece> keptPlates = null,
                                           Func<int, int, bool> changed = null, Func<int, int, float?> want = null)
         {
             // Plates lying only over unchanged squares stay exactly as the map has them.
-            List<Piece> keep = new List<Piece>(mine ?? Array.Empty<Piece>());
+            List<Piece> keep = new List<Piece>(keptPlates ?? Array.Empty<Piece>());
             if (changed != null)
                 foreach (Piece p in Read(terrainNow))
                 {
@@ -83,7 +83,7 @@ namespace DSPRE.Models
                         keep.Add(part);
                     }
                 }
-            mine = keep;
+            keptPlates = keep;
             Func<int, int, bool> blocked = collisions == null ? null : (c, r) => (collisions[r, c] & 0x80) != 0;
             Func<int, int, float?> guide = null;
             if (terrainNow != null && BdhcFile.TryParse(terrainNow, out BdhcFile now))
@@ -93,7 +93,7 @@ namespace DSPRE.Models
                 Func<int, int, float?> was = guide;
                 guide = (c, r) => want(c, r) ?? was?.Invoke(c, r);
             }
-            return Squares(PiecesOf(mesh, mesh?.ModelScale ?? 0f), blocked, guide, mine);
+            return Squares(PiecesOf(mesh, mesh?.ModelScale ?? 0f), blocked, guide, keptPlates);
         }
 
         public static List<Piece> PiecesOf(MapMesh mesh, float modelScale, float steepest = 0.5f)
@@ -209,9 +209,9 @@ namespace DSPRE.Models
         }
 
         public static byte[] ForMap(MapMesh mesh, byte[,] collisions, byte[] terrainNow, out string whynot,
-                                    IReadOnlyList<Piece> mine = null, Func<int, int, bool> changed = null,
+                                    IReadOnlyList<Piece> keptPlates = null, Func<int, int, bool> changed = null,
                                     Func<int, int, float?> want = null)
-            => From(Propose(mesh, collisions, terrainNow, mine, changed, want), out whynot);
+            => From(Propose(mesh, collisions, terrainNow, keptPlates, changed, want), out whynot);
 
         /// <summary>Blocks walkable squares no plate covers, since the game won't let anyone stand there.</summary>
         public static int BlockUngrounded(byte[] terrain, byte[,] collisions)
@@ -273,14 +273,14 @@ namespace DSPRE.Models
         /// <summary>Plates the way hand-made terrain is laid: square-aligned rectangles, one ground per square.</summary>
         /// <param name="guide">Height the square is walked at now; its nearest surface becomes the ground.</param>
         public static List<Piece> Squares(List<Piece> pieces, Func<int, int, bool> blocked = null,
-                                          Func<int, int, float?> guide = null, IReadOnlyList<Piece> mine = null)
+                                          Func<int, int, float?> guide = null, IReadOnlyList<Piece> keptPlates = null)
         {
             blocked ??= (_, _) => false;
-            mine ??= Array.Empty<Piece>();
+            keptPlates ??= Array.Empty<Piece>();
             bool Kept(int c, int r)
             {
                 float x = -HalfMap + (c + 0.5f) * SquareSize, z = -HalfMap + (r + 0.5f) * SquareSize;
-                return mine.Any(p => p.Covers(x, z));
+                return keptPlates.Any(p => p.Covers(x, z));
             }
             Piece[,] ground = new Piece[Across, Across];
             float[,] groundY = new float[Across, Across];
@@ -359,7 +359,7 @@ namespace DSPRE.Models
                 levels.AddRange(at.Select(s => Over(p, s.c, s.r, 1, 1)));
             }
             done.AddRange(Merged(levels));
-            done.AddRange(mine.Select(p => p.Copy()));
+            done.AddRange(keptPlates.Select(p => p.Copy()));
             return done;
         }
 

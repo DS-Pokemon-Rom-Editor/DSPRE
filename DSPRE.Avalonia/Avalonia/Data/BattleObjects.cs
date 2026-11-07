@@ -79,8 +79,8 @@ namespace DSPRE.Avalonia.Data
                 case "Platform" when w.Length == 3:
                     return w[2] switch
                     {
-                        "Yours" => $"Your platform {w[1]}",
-                        "Theirs" => $"Their platform {w[1]}",
+                        "Player" => $"Player platform {w[1]}",
+                        "Opponent" => $"Opponent platform {w[1]}",
                         _ => $"Platform {w[1]} {w[2].ToLowerInvariant()} colours",
                     };
                 case "ThrownBall" when w.Length == 2:
@@ -161,12 +161,12 @@ namespace DSPRE.Avalonia.Data
             ("HpBar.Shared", "Shared HP bar colours"),
 
             // Which file is whose comes from the games' own gauge tables, not from the names.
-            ("HpBar.Yours", "Your HP bar"),
-            ("HpBar.Theirs", "Their HP bar"),
-            ("HpBar.YoursDouble", "Your HP bar (double battle)"),
-            ("HpBar.YourPartner", "Your partner's HP bar (double battle)"),
-            ("HpBar.TheirsDouble", "Their HP bar (double battle)"),
-            ("HpBar.TheirPartner", "Their partner's HP bar (double battle)"),
+            ("HpBar.Player", "Player HP bar"),
+            ("HpBar.Opponent", "Opponent HP bar"),
+            ("HpBar.PlayerDouble", "Player HP bar (double battle)"),
+            ("HpBar.PlayerPartner", "Player partner HP bar (double battle)"),
+            ("HpBar.OpponentDouble", "Opponent HP bar (double battle)"),
+            ("HpBar.OpponentPartner", "Opponent partner HP bar (double battle)"),
 
             // Nothing in the games ever loads these four.
             ("HpBar.SpareA", "Unused spare HP bar"),
@@ -175,8 +175,8 @@ namespace DSPRE.Avalonia.Data
             ("NameBox.SpareB", "Unused spare name box"),
             ("HpBar.CaughtBall", "Caught ball on the bar"),
             ("CaughtBall.Unused", "Caught ball"),
-            ("PartyBalls.Yours", "Your six balls"),
-            ("PartyBalls.Theirs", "Their six balls"),
+            ("PartyBalls.Player", "Player party balls"),
+            ("PartyBalls.Opponent", "Opponent party balls"),
             ("MessageFrame.Debug", "Unused message frame colours"),
             ("MessageFrame.Shared", "Message frame colours"),
             ("Cursor.Choice", "Choice cursor"),

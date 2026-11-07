@@ -1363,18 +1363,18 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private IBrush _tintBrush = Brushes.Transparent;
         public double PlayerOffsetX { get => _pDX; private set => Set(ref _pDX, value); }
         public double PlayerOffsetY { get => _pDY; private set => Set(ref _pDY, value); }
-        public double EnemyOffsetX { get => _eDX; private set => Set(ref _eDX, value); }
-        public double EnemyOffsetY { get => _eDY; private set => Set(ref _eDY, value); }
+        public double OpponentOffsetX { get => _eDX; private set => Set(ref _eDX, value); }
+        public double OpponentOffsetY { get => _eDY; private set => Set(ref _eDY, value); }
         public double PlayerRotation { get => _pRot; private set => Set(ref _pRot, value); }
         public double PlayerScaleX { get => _pScaleX; private set => Set(ref _pScaleX, value); }
         public double PlayerScaleY { get => _pScaleY; private set => Set(ref _pScaleY, value); }
         public bool PlayerVisible { get => _pVis; private set => Set(ref _pVis, value); }
         public double PlayerTintOpacity { get => _pTintA; private set => Set(ref _pTintA, value); }
-        public double EnemyRotation { get => _eRot; private set => Set(ref _eRot, value); }
-        public double EnemyScaleX { get => _eScaleX; private set => Set(ref _eScaleX, value); }
-        public double EnemyScaleY { get => _eScaleY; private set => Set(ref _eScaleY, value); }
-        public bool EnemyVisible { get => _eVis; private set => Set(ref _eVis, value); }
-        public double EnemyTintOpacity { get => _eTintA; private set => Set(ref _eTintA, value); }
+        public double OpponentRotation { get => _eRot; private set => Set(ref _eRot, value); }
+        public double OpponentScaleX { get => _eScaleX; private set => Set(ref _eScaleX, value); }
+        public double OpponentScaleY { get => _eScaleY; private set => Set(ref _eScaleY, value); }
+        public bool OpponentVisible { get => _eVis; private set => Set(ref _eVis, value); }
+        public double OpponentTintOpacity { get => _eTintA; private set => Set(ref _eTintA, value); }
         public IBrush TintBrush { get => _tintBrush; private set => Set(ref _tintBrush, value); }
 
         // Backdrop + mon sprites are positioned like the Battle display tab (sprite-Y offset + heights),
@@ -1386,22 +1386,22 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private bool _sceneLoaded;
         private Bitmap _enemySprite, _playerSprite;
-        public Bitmap EnemySprite { get => _enemySprite; private set => Set(ref _enemySprite, value); }
+        public Bitmap OpponentSprite { get => _enemySprite; private set => Set(ref _enemySprite, value); }
         public Bitmap PlayerSprite { get => _playerSprite; private set => Set(ref _playerSprite, value); }
-        public double EnemyLeft { get; private set; } = 152;
+        public double OpponentLeft { get; private set; } = 152;
         public double PlayerLeft { get; private set; } = 23;
-        public double EnemyTop { get; private set; } = 24;
+        public double OpponentTop { get; private set; } = 24;
         public double PlayerTop { get; private set; } = 84;
 
         // Emitter screen anchors = sprite centres (80×80 cell → +40), derived from the loaded positions.
         private double _atX = 63, _atY = 124, _dfX = 192, _dfY = 64;
         private int _backYOffset, _frontYOffset;
 
-        private bool _attackerIsEnemy;
-        public bool AttackerIsEnemy
+        private bool _attackerIsOpponent;
+        public bool AttackerIsOpponent
         {
-            get => _attackerIsEnemy;
-            set { if (Set(ref _attackerIsEnemy, value)) { bool was = IsCellPlaying; SetupCellPreview(); if (was) ToggleCellPlay(); } }
+            get => _attackerIsOpponent;
+            set { if (Set(ref _attackerIsOpponent, value)) { bool was = IsCellPlaying; SetupCellPreview(); if (was) ToggleCellPlay(); } }
         }
 
         /// <summary>The weather the move's weather check sees, in the game's order.</summary>
@@ -1490,21 +1490,21 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 bd.LoadMon(id);
                 bd.Detach();       // we only want its computed positions, stop its preview timer
 
-                EnemySprite = bd.EnemySprite ?? First(sv.BattleFrontM) ?? First(sv.BattleFrontF);
+                OpponentSprite = bd.OpponentSprite ?? First(sv.BattleFrontM) ?? First(sv.BattleFrontF);
                 PlayerSprite = bd.PlayerSprite ?? First(sv.BattleBackM) ?? First(sv.BattleBackF);
-                EnemyLeft = bd.EnemyLeft; EnemyTop = bd.EnemyTop;
+                OpponentLeft = bd.OpponentLeft; OpponentTop = bd.OpponentTop;
                 PlayerLeft = bd.PlayerLeft; PlayerTop = bd.PlayerTop;
-                _dfX = EnemyLeft + 40; _dfY = EnemyTop + 40;
+                _dfX = OpponentLeft + 40; _dfY = OpponentTop + 40;
                 _atX = PlayerLeft + 40; _atY = PlayerTop + 40;
                 _backYOffset = bd.HasHeights ? bd.BackHeightM : 0;
                 _frontYOffset = bd.HasHeights ? bd.FrontHeightM : 0;
 
-                OnPropertyChanged(nameof(EnemySprite)); OnPropertyChanged(nameof(PlayerSprite));
-                OnPropertyChanged(nameof(EnemyLeft)); OnPropertyChanged(nameof(EnemyTop));
+                OnPropertyChanged(nameof(OpponentSprite)); OnPropertyChanged(nameof(PlayerSprite));
+                OnPropertyChanged(nameof(OpponentLeft)); OnPropertyChanged(nameof(OpponentTop));
                 OnPropertyChanged(nameof(PlayerLeft)); OnPropertyChanged(nameof(PlayerTop));
 
                 if (PlayerSprite != null) { (byte[] px, int pw, int ph) = ToRgba(PlayerSprite); _compositor.SetPlayer(px, pw, ph, (int)PlayerLeft, (int)PlayerTop); }
-                if (EnemySprite != null) { (byte[] ex, int ew, int eh) = ToRgba(EnemySprite); _compositor.SetEnemy(ex, ew, eh, (int)EnemyLeft, (int)EnemyTop); }
+                if (OpponentSprite != null) { (byte[] ex, int ew, int eh) = ToRgba(OpponentSprite); _compositor.SetOpponent(ex, ew, eh, (int)OpponentLeft, (int)OpponentTop); }
                 if (IsAnimation && _sceneLoaded && !IsCellPlaying) SceneComposite = _compositor.Render(null);
             }
             catch { /* no ROM / sprite, backdrop just shows the scene without the mons */ }
@@ -1575,7 +1575,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
 
         /// <summary>Rebuilds the ground platforms: the bundled placeholder PNGs for index 0, otherwise the real
-        /// pl_batt_obj terrain "tray" (mine + enemy, at the game's platform positions). Falls back to the
+        /// pl_batt_obj terrain "tray" (player and opponent, at the game's platform positions). Falls back to the
         /// placeholders if the ROM/NARC is unavailable so the scene always has a floor.</summary>
         private void ApplyGround()
         {
@@ -1585,9 +1585,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 try
                 {
-                    (BattleGroundRenderer.GroundImage mine, BattleGroundRenderer.GroundImage enemy) = (_groundRenderer ??= new DSPRE.Avalonia.Data.BattleGroundRenderer()).Build(_terrainIndex - 1);
-                    if (enemy?.Rgba != null) { _compositor.AddStatic(enemy.Rgba, enemy.Width, enemy.Height, enemy.Left, enemy.Top); placed = true; }
-                    if (mine?.Rgba != null) { _compositor.AddStatic(mine.Rgba, mine.Width, mine.Height, mine.Left, mine.Top); placed = true; }
+                    (BattleGroundRenderer.GroundImage player, BattleGroundRenderer.GroundImage opponent) = (_groundRenderer ??= new DSPRE.Avalonia.Data.BattleGroundRenderer()).Build(_terrainIndex - 1);
+                    if (opponent?.Rgba != null) { _compositor.AddStatic(opponent.Rgba, opponent.Width, opponent.Height, opponent.Left, opponent.Top); placed = true; }
+                    if (player?.Rgba != null) { _compositor.AddStatic(player.Rgba, player.Width, player.Height, player.Left, player.Top); placed = true; }
                 }
                 catch (Exception ex) { AppLogger.WarnOnce("BattleScriptEditorViewModel.ApplyGround", ex); placed = false; }
             }
@@ -1595,10 +1595,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
 
         // ── Real HP gauges (pl_batt_obj frames) + configurable readout + per-move UI-hide ──────────────────────────
-        private Bitmap _gaugePlayerImage, _gaugeEnemyImage;
+        private Bitmap _gaugePlayerImage, _gaugeOpponentImage;
         public Bitmap GaugePlayerImage { get => _gaugePlayerImage; private set => Set(ref _gaugePlayerImage, value); }
-        public Bitmap GaugeEnemyImage { get => _gaugeEnemyImage; private set => Set(ref _gaugeEnemyImage, value); }
-        public bool HasRealGauges => _gaugePlayerImage != null || _gaugeEnemyImage != null;
+        public Bitmap GaugeOpponentImage { get => _gaugeOpponentImage; private set => Set(ref _gaugeOpponentImage, value); }
+        public bool HasRealGauges => _gaugePlayerImage != null || _gaugeOpponentImage != null;
         public bool ShowPlaceholderGauges => !HasRealGauges;
 
         // Move flag 0x40 keeps the gauges up during the animation; 0x80 hides the shadow.
@@ -1710,7 +1710,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 string[] names = SpeciesNames;
                 string name = _gaugeSpeciesId >= 0 && _gaugeSpeciesId < names.Length ? names[_gaugeSpeciesId] : "";
-                byte[] rgba = BattleMessageText.MoveUsed(_fileIndex, _attackerIsEnemy, name, _messageBoxIndex - 1);
+                byte[] rgba = BattleMessageText.MoveUsed(_fileIndex, _attackerIsOpponent, name, _messageBoxIndex - 1);
                 MessageImage = rgba == null ? null : ImageConverter.FromRgba(rgba, 256, 192);
             }
             catch (Exception ex) { AppLogger.WarnOnce("BattleScriptEditorViewModel.RenderMessage", ex); MessageImage = null; }
@@ -1725,7 +1725,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 BattleGroundRenderer r = _groundRenderer ??= new DSPRE.Avalonia.Data.BattleGroundRenderer();
                 GaugePlayerImage = Data.GaugeTextImages.Bar(true, GaugeNameText, _gaugeLevel)
                                 ?? Gauge(r.BuildGauge(true));
-                GaugeEnemyImage = Data.GaugeTextImages.Bar(false, GaugeNameText, _gaugeLevel)
+                GaugeOpponentImage = Data.GaugeTextImages.Bar(false, GaugeNameText, _gaugeLevel)
                                ?? Gauge(r.BuildGauge(false));
                 RenderMessage();
                 OnPropertyChanged(nameof(HasRealGauges));
@@ -1838,7 +1838,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     System.Threading.Tasks.Task.Run(() => RenderScriptSounds(cmds))
                         .ContinueWith(_ => Dispatcher.UIThread.Post(() => RecordTimeline(BuildCommands())));
 
-                int emitters = BattleAnimParticles.Extract(cmds, _version, _attackerIsEnemy).Count;
+                int emitters = BattleAnimParticles.Extract(cmds, _version, _attackerIsOpponent).Count;
                 HasParticleAnimation = emitters > 0 && _particleNarc.Available;
 
                 CellAnimNote = "";
@@ -1855,8 +1855,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 bool loaded = _cellRenderer.Load(res.Char, res.Pltt, res.Cell, res.CellAnm);
                 if (loaded)
                 {
-                    // Surf picks the sequence by side; 1 is the enemy's flipped wave.
-                    int bank = _attackerIsEnemy && _cellRenderer.AnimationCount > 1 ? 1 : 0;
+                    // Surf picks the sequence by side; 1 is the opponent's flipped wave.
+                    int bank = _attackerIsOpponent && _cellRenderer.AnimationCount > 1 ? 1 : 0;
                     _cellFrames = _cellRenderer.RenderAnimation(bank);
                     if (_cellFrames.Count > 0)
                     {
@@ -1946,10 +1946,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private BattleAnimPlayer NewPlayer(List<WazaSeqCommand> cmds, int moveId, bool live)
         {
             if (live) RenderScriptSounds(cmds);
-            double aX = _attackerIsEnemy ? _dfX : _atX, aY = _attackerIsEnemy ? _dfY : _atY;
-            double dX = _attackerIsEnemy ? _atX : _dfX, dY = _attackerIsEnemy ? _atY : _dfY;
+            double aX = _attackerIsOpponent ? _dfX : _atX, aY = _attackerIsOpponent ? _dfY : _atY;
+            double dX = _attackerIsOpponent ? _atX : _dfX, dY = _attackerIsOpponent ? _atY : _dfY;
             BattleAnimPlayer player = new BattleAnimPlayer(cmds, _version, _particleNarc, aX, aY, dX, dY,
-                                   attackerIsEnemy: _attackerIsEnemy, selfTarget: IsSelfTargetMove(moveId))
+                                   attackerIsOpponent: _attackerIsOpponent, selfTarget: IsSelfTargetMove(moveId))
             { SecondTurnVariant = _secondTurnVariant, Weather = _weatherIndex, Contest = _contest && HasContestCheck };
             player.Cells = _cellRenderer;
             if (live && _soundsOn)
@@ -2099,9 +2099,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 PlayerOffsetX = _animPlayer.MonDX[0] + _animPlayer.MonShakeX[0]; PlayerOffsetY = _animPlayer.MonDY[0] + _animPlayer.MonShakeY[0];
                 PlayerRotation = _animPlayer.MonRot[0]; PlayerScaleX = _animPlayer.MonScaleX[0]; PlayerScaleY = _animPlayer.MonScaleY[0];
                 PlayerVisible = _animPlayer.MonVisible[0]; PlayerTintOpacity = _animPlayer.MonTintA[0];
-                EnemyOffsetX = _animPlayer.MonDX[1] + _animPlayer.MonShakeX[1]; EnemyOffsetY = _animPlayer.MonDY[1] + _animPlayer.MonShakeY[1];
-                EnemyRotation = _animPlayer.MonRot[1]; EnemyScaleX = _animPlayer.MonScaleX[1]; EnemyScaleY = _animPlayer.MonScaleY[1];
-                EnemyVisible = _animPlayer.MonVisible[1]; EnemyTintOpacity = _animPlayer.MonTintA[1];
+                OpponentOffsetX = _animPlayer.MonDX[1] + _animPlayer.MonShakeX[1]; OpponentOffsetY = _animPlayer.MonDY[1] + _animPlayer.MonShakeY[1];
+                OpponentRotation = _animPlayer.MonRot[1]; OpponentScaleX = _animPlayer.MonScaleX[1]; OpponentScaleY = _animPlayer.MonScaleY[1];
+                OpponentVisible = _animPlayer.MonVisible[1]; OpponentTintOpacity = _animPlayer.MonTintA[1];
                 if (_animPlayer.MonTintA[0] > 0 || _animPlayer.MonTintA[1] > 0)
                     TintBrush = new SolidColorBrush(Color.FromRgb(_animPlayer.TintR, _animPlayer.TintG, _animPlayer.TintB));
             }
@@ -2121,9 +2121,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (IsAnimation && _sceneLoaded) SceneComposite = _compositor.Render(null);
             CellScaleX = CellScaleY = CellOpacity = 1;
             ShakeX = ShakeY = 0; BackgroundDarken = 0;
-            PlayerOffsetX = PlayerOffsetY = EnemyOffsetX = EnemyOffsetY = 0;
-            PlayerRotation = EnemyRotation = 0; PlayerScaleX = PlayerScaleY = EnemyScaleX = EnemyScaleY = 1;
-            PlayerTintOpacity = EnemyTintOpacity = 0; PlayerVisible = EnemyVisible = true;
+            PlayerOffsetX = PlayerOffsetY = OpponentOffsetX = OpponentOffsetY = 0;
+            PlayerRotation = OpponentRotation = 0; PlayerScaleX = PlayerScaleY = OpponentScaleX = OpponentScaleY = 1;
+            PlayerTintOpacity = OpponentTintOpacity = 0; PlayerVisible = OpponentVisible = true;
             OnPropertyChanged(nameof(IsCellPlaying));
             OnPropertyChanged(nameof(CellPlayButtonText)); OnPropertyChanged(nameof(CellPlayButtonIcon));
             OnPropertyChanged(nameof(CanStopPreview));

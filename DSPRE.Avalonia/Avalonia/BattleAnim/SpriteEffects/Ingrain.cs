@@ -8,7 +8,7 @@ namespace DSPRE.Avalonia.BattleAnim.SpriteEffects
     public static class Ingrain
     {
         private const int VineCount = 4, UpperOffsetX = 40, UpperOffsetY = 4, LowerOffsetX = 32, LowerOffsetY = 0;
-        private const int PriorityBehind = 10, PriorityInFront = 18, VineYPlayer = 140, VineYEnemy = 84, MaxDelay = 20;
+        private const int PriorityBehind = 10, PriorityInFront = 18, VineYPlayer = 140, VineYOpponent = 84, MaxDelay = 20;
         private const int MinAlpha = 0, MaxAlpha = 15, AlphaFadeDelay = 110, FadeStep = 2, FadeFrom = 0, FadeTo = 14, FadeTaskPriority = 1002;
         // Lower left, upper right, lower right, upper left.
         private const int LL = 0, UR = 1, LR = 2, UL = 3;
@@ -26,7 +26,7 @@ namespace DSPRE.Avalonia.BattleAnim.SpriteEffects
             vines[UR].FlipH = vines[LR].FlipH = true;
             int attacker = sys.Attacker;
             bool player = attacker == 0;
-            int vineX = (short)sys.MonX(attacker), vineY = player ? VineYPlayer : VineYEnemy;
+            int vineX = (short)sys.MonX(attacker), vineY = player ? VineYPlayer : VineYOpponent;
             foreach (CellActor v in vines) v.SetPosition(vineX, vineY);
             vines[LL].OamPriority = vines[LR].OamPriority = player ? PriorityBehind : PriorityInFront;
             vines[UR].OamPriority = vines[UL].OamPriority = player ? PriorityInFront : PriorityBehind;

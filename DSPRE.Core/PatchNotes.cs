@@ -14,7 +14,7 @@ namespace DSPRE
             ["trainerCustomPokeballs"] =
                 "What it does\n" +
                 "Repurposes each trainer party member's ball capsule field as a Poké Ball item ID. " +
-                "Zero keeps the default Poké Ball. Enemy trainers lose capsule seal effects. Existing nonzero " +
+                "Zero keeps the default Poké Ball. Opponent trainers lose capsule seal effects. Existing nonzero " +
                 "capsule values become item IDs, so review existing parties after applying.\n\n" +
                 "Where to edit\n" +
                 "The Trainer editor switches Ball Capsule to a Poké Ball picker, hides Edit and previews the item icon. " +
@@ -317,7 +317,7 @@ namespace DSPRE
                 "HeartGold or SoulSilver, except Japanese. Not compatible with hg-engine.",
             ["hpBarText"] =
                 "What it does\n" +
-                "Removes the white box behind the name, level, HP, gender symbol and \"Lv\" in battle, so your HP bar art shows behind them.\n\n" +
+                "Removes the white box behind the name, level, HP, gender symbol and \"Lv\" in battle, so the HP bar art shows behind them.\n\n" +
                 "Where to edit\n" +
                 "Graphics > HP bar layout and Graphics > Battle screen. Their previews drop the box once the patch is in.\n\n" +
                 "Requirements\n" +

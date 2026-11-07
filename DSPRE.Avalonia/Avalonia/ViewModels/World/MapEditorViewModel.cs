@@ -1934,10 +1934,10 @@ namespace DSPRE.Avalonia.ViewModels.World
                     _ => events.Triggers.Cast<Event>().ToList(),
                 };
                 if (c.Index >= list.Count) { c.Result = "not found"; continue; }
-                if (!claimed.TryGetValue(c.File, out HashSet<(int, int)> mine)) claimed[c.File] = mine = new HashSet<(int, int)>();
-                if (NearestOpenSquare(events, list[c.Index], c.X, c.Y, waterTypes, mine) is (int tx, int ty))
+                if (!claimed.TryGetValue(c.File, out HashSet<(int, int)> used)) claimed[c.File] = used = new HashSet<(int, int)>();
+                if (NearestOpenSquare(events, list[c.Index], c.X, c.Y, waterTypes, used) is (int tx, int ty))
                 {
-                    mine.Add((tx, ty));
+                    used.Add((tx, ty));
                     c.Result = $"will move to {tx},{ty}";
                 }
                 else c.Result = "no open square on this map";

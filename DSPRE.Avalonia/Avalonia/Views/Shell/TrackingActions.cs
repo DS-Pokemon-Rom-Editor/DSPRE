@@ -152,8 +152,8 @@ namespace DSPRE.Avalonia.Views.Shell
                             await OpenLinkedAsIsAsync(owner, vm, folder);
                             return;
                         }
-                        string mine = await PickBaseRomAsync(owner);
-                        if (mine != null) await MoveAsync(owner, vm, folder, mine);
+                        string baseRom = await PickBaseRomAsync(owner);
+                        if (baseRom != null) await MoveAsync(owner, vm, folder, baseRom);
                         return;
                     }
                 }
@@ -463,7 +463,7 @@ namespace DSPRE.Avalonia.Views.Shell
             GitSync.PullResult result = await vm.PullAsync();
             if (result.Outcome == GitSync.Outcome.NeedsCommit)
             {
-                if (!await DialogHelper.AskTwoWayAsync("Commit your changes before pulling, so nothing of yours is overwritten.", "Pull", "Commit…", "Cancel", owner)) return;
+                if (!await DialogHelper.AskTwoWayAsync("Commit local changes before pulling so they aren't overwritten.", "Pull", "Commit…", "Cancel", owner)) return;
                 await CommitAsync(owner, vm);
                 // Ask git again, because the panel's rows may be stale.
                 result = await vm.PullAsync();

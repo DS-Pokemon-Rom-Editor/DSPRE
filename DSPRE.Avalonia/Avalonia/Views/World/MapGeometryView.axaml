@@ -68,7 +68,7 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <TextBlock Text="Stripes: slope · gold edge: yours · white edge: picked" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+            <TextBlock Text="Stripes: slope · gold edge: kept · white edge: picked" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
           </StackPanel>
           <Button Content="Propose plates" HorizontalAlignment="Stretch" Click="Terrain_Click"
                   IsVisible="{Binding !HasProposal}" ToolTip.Tip="Where faces changed; your plates are kept"/>

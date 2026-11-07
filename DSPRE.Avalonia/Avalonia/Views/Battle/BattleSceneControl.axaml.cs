@@ -10,18 +10,18 @@ namespace DSPRE.Avalonia.Views.Battle
     /// </summary>
     public partial class BattleSceneControl : UserControl
     {
-        public static readonly StyledProperty<Bitmap> EnemyProperty =
-            AvaloniaProperty.Register<BattleSceneControl, Bitmap>(nameof(Enemy));
+        public static readonly StyledProperty<Bitmap> OpponentProperty =
+            AvaloniaProperty.Register<BattleSceneControl, Bitmap>(nameof(Opponent));
         public static readonly StyledProperty<Bitmap> PlayerProperty =
             AvaloniaProperty.Register<BattleSceneControl, Bitmap>(nameof(Player));
-        public static readonly StyledProperty<double> EnemyYProperty =
-            AvaloniaProperty.Register<BattleSceneControl, double>(nameof(EnemyY));
+        public static readonly StyledProperty<double> OpponentYProperty =
+            AvaloniaProperty.Register<BattleSceneControl, double>(nameof(OpponentY));
         public static readonly StyledProperty<double> PlayerYProperty =
             AvaloniaProperty.Register<BattleSceneControl, double>(nameof(PlayerY));
 
-        public Bitmap Enemy  { get => GetValue(EnemyProperty);  set => SetValue(EnemyProperty, value); }
+        public Bitmap Opponent  { get => GetValue(OpponentProperty);  set => SetValue(OpponentProperty, value); }
         public Bitmap Player { get => GetValue(PlayerProperty); set => SetValue(PlayerProperty, value); }
-        public double EnemyY  { get => GetValue(EnemyYProperty);  set => SetValue(EnemyYProperty, value); }
+        public double OpponentY  { get => GetValue(OpponentYProperty);  set => SetValue(OpponentYProperty, value); }
         public double PlayerY { get => GetValue(PlayerYProperty); set => SetValue(PlayerYProperty, value); }
 
         // Loaded in code: a XAML image source that can't resolve crashes the editor, so a missing file becomes a blank
@@ -39,7 +39,7 @@ namespace DSPRE.Avalonia.Views.Battle
         public static Bitmap ShadowMediumAsset     { get; } = LoadAsset("shadow_medium.png");
         public static Bitmap ShadowLargeAsset      { get; } = LoadAsset("shadow_large.png");
         public static Bitmap HealthOpponentAsset   { get; } = LoadAsset("health_opponent.png");
-        public static Bitmap HealthYouAsset        { get; } = LoadAsset("health_you.png");
+        public static Bitmap HealthPlayerAsset        { get; } = LoadAsset("health_you.png");
         public static Bitmap TextBarAsset          { get; } = LoadAsset("text_bar.png");
 
         public BattleSceneControl() => InitializeComponent();

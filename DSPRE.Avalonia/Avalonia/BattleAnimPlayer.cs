@@ -165,9 +165,9 @@ namespace DSPRE.Avalonia
         {
             int r = _work[6];
             if (r == 0) return false;
-            bool dfMine = _dfVis == 0;
-            if (r == 2 && _atVis == _dfVis) return _attackerIsEnemy;
-            return dfMine;
+            bool dfPlayer = _dfVis == 0;
+            if (r == 2 && _atVis == _dfVis) return _attackerIsOpponent;
+            return dfPlayer;
         }
         private int _rasterLeft;
         public bool RasterActive => _rasterLeft > 0;
@@ -195,7 +195,7 @@ namespace DSPRE.Avalonia
             => (Math.Sin(2 * Math.PI * turn) * 32 * dir, 8 * (1 - Math.Cos(2 * Math.PI * turn)));
         private const int SplashHopPasses = 21;
         private const int PartialDrawHeight = 80;
-        /// <summary>Each side's sprite offset from the species' height data (0 for the player's side, 1 for the enemy's).</summary>
+        /// <summary>Each side's sprite offset from the species' height data (0 for the player's side, 1 for the opponent's).</summary>
         public int[] SpriteYOffsets { get; } = new int[2];
         // How long the scrolling BG task runs: it fades the BG in 2 levels a pass, waits for the scroll to pass the
         // edge (the step drops towards 0 every slow-down + 1 passes), and fades back out the same way.
@@ -315,7 +315,7 @@ namespace DSPRE.Avalonia
         private CellSequence[] CellSeqs => _cellSeqs ??= (Cells != null && Cells.Loaded ? Cells.BuildSequences() : Array.Empty<CellSequence>());
         private readonly List<CellActor> _spriteActors = new List<CellActor>();
         public IReadOnlyList<CellActor> SpriteActors => _spriteActors;
-        private static readonly (int x, int y) SurfHomePlayer = (76, 120), SurfHomeEnemy = (144, 64);
+        private static readonly (int x, int y) SurfHomePlayer = (76, 120), SurfHomeOpponent = (144, 64);
         private static double Lerp(double a, double b, double t) => a + (b - a) * Math.Clamp(t, 0, 1);
 
         private readonly List<string> _notes = new List<string>();
@@ -380,13 +380,13 @@ namespace DSPRE.Avalonia
 
         public BattleAnimPlayer(List<WazaSeqCommand> cmds, WazaSeqVersion version, ScriptNarc particleNarc,
                           double atX, double atY, double dfX, double dfY, int width = 256, int height = 192,
-                          bool attackerIsEnemy = false, bool selfTarget = false)
+                          bool attackerIsOpponent = false, bool selfTarget = false)
         {
             _cmds = cmds ?? new List<WazaSeqCommand>();
             _version = version; _particleNarc = particleNarc;
-            _attackerIsEnemy = attackerIsEnemy;
-            _atVis = attackerIsEnemy ? 1 : 0;
-            _dfVis = selfTarget ? _atVis : (attackerIsEnemy ? 0 : 1);
+            _attackerIsOpponent = attackerIsOpponent;
+            _atVis = attackerIsOpponent ? 1 : 0;
+            _dfVis = selfTarget ? _atVis : (attackerIsOpponent ? 0 : 1);
             // Effects anchor to the battle's fixed battler points (BattleAnimUtil_GetBattlerPos), not to where each
             // species is drawn.
             (double X, double Y) at = BattlerPoint(_atVis), df = BattlerPoint(_dfVis);
@@ -394,7 +394,7 @@ namespace DSPRE.Avalonia
             _monCX[1 - _atVis] = (int)Math.Round(dfX); _monCY[1 - _atVis] = (int)Math.Round(dfY);
             _atX = at.X; _atY = at.Y;
             _dfX = df.X; _dfY = df.Y;
-            _particles = new BattleParticles(particleNarc, _splRandom, attackerIsEnemy, selfTarget);
+            _particles = new BattleParticles(particleNarc, _splRandom, attackerIsOpponent, selfTarget);
             int wp = 0;
             for (int i = 0; i < _cmds.Count; i++)
             {
@@ -424,7 +424,7 @@ namespace DSPRE.Avalonia
         }
         private bool _contest;
 
-        private readonly bool _attackerIsEnemy;
+        private readonly bool _attackerIsOpponent;
         // The game never seeds its particle randomness, so any start value is as faithful as another.
         private readonly SplRandom _splRandom = new SplRandom(DefaultSeed);
         public const uint DefaultSeed = 0x5EED;
@@ -484,10 +484,10 @@ namespace DSPRE.Avalonia
         private int CorrectPan(int pan)
         {
             int p = (sbyte)pan;
-            bool atEnemy = _atVis == 1, dfEnemy = _dfVis == 1;
-            if (atEnemy && !dfEnemy) p = -p;
-            else if (!atEnemy && !dfEnemy) { if (p > 0) p = -p; }
-            else if (atEnemy && dfEnemy) { if (p < 0) p = -p; }
+            bool atOpponent = _atVis == 1, dfOpponent = _dfVis == 1;
+            if (atOpponent && !dfOpponent) p = -p;
+            else if (!atOpponent && !dfOpponent) { if (p > 0) p = -p; }
+            else if (atOpponent && dfOpponent) { if (p < 0) p = -p; }
             return (sbyte)p;
         }
 
@@ -731,8 +731,8 @@ namespace DSPRE.Avalonia
                     case "JumpIfBattlerSide":
                         if (c.Args.Length >= 3)
                         {
-                            bool checkedIsEnemy = c.Args[0] == 0 ? _attackerIsEnemy : !_attackerIsEnemy;
-                            if (checkedIsEnemy) { if (JumpRelative(c.WordPos + 3, c.Args[2])) break; }
+                            bool checkedIsOpponent = c.Args[0] == 0 ? _attackerIsOpponent : !_attackerIsOpponent;
+                            if (checkedIsOpponent) { if (JumpRelative(c.WordPos + 3, c.Args[2])) break; }
                             else { if (JumpRelative(c.WordPos + 2, c.Args[1])) break; }
                         }
                         break;
@@ -790,7 +790,7 @@ namespace DSPRE.Avalonia
                         if (c.Args.Length >= 3)
                         {
                             int cb = c.Args[c.Args.Length - 1], count = c.Args.Length - 2;
-                            int sep = _attackerIsEnemy ? 3 : 0;
+                            int sep = _attackerIsOpponent ? 3 : 0;
                             if (sep >= count) sep = 0;
                             CreateEmitter(c.Args[0], 0, c.Args[1 + sep], cb);
                         }
@@ -1131,14 +1131,14 @@ namespace DSPRE.Avalonia
             if (FnMoveBattlerFamily.Contains(fn)) { MoveMon(a); return; }
             if (fn == FnSurf)
             {
-                int castCap = _attackerIsEnemy ? 1 : 0;
+                int castCap = _attackerIsOpponent ? 1 : 0;
                 _surfActor = null;
                 foreach (CellActor act in _spriteActors)
                 {
                     if (act.CapId == castCap) { _surfActor = act; }
                     else if (act.CapId == 0 || act.CapId == 1) { act.Visible = false; act.Alive = false; }
                 }
-                (int x, int y) def = _attackerIsEnemy ? SurfHomeEnemy : SurfHomePlayer;
+                (int x, int y) def = _attackerIsOpponent ? SurfHomeOpponent : SurfHomePlayer;
                 _cellDefX = def.x; _cellDefY = def.y;
                 _cellPhase = 0; _cellFrame = 0;
                 if (_surfActor != null)
@@ -1151,7 +1151,7 @@ namespace DSPRE.Avalonia
             }
             if ((fn == FnScrollCustomBg || fn == FnMuddyWater) && a.Length >= 10)
             {
-                bool rev = a[7] != 0 && _attackerIsEnemy;
+                bool rev = a[7] != 0 && _attackerIsOpponent;
                 double sgn = rev ? -1 : 1;
                 int ofs = WET02_START_Y_OFS / 3 * 2;
                 double spdY = a[6] * sgn;
@@ -1944,7 +1944,7 @@ namespace DSPRE.Avalonia
                     case ShadowPunchFx:
                     {
                         // The user and 2 grey copies slide 48 px right at different speeds and back; the game doesn't
-                        // mirror it for the enemy side.
+                        // mirror it for the opponent side.
                         int r = fx.Frame + 1;
                         if (r >= fx.Frames) break;
                         double main, c1, c2;
@@ -2463,7 +2463,7 @@ namespace DSPRE.Avalonia
         private void StartBackground(int bgId, bool overlay, double posX, double posY, double spdX, double spdY,
                                      double peak, int fadeFrames, double stopY, bool useStop)
         {
-            BattleBgRenderer.BgImage img = _bgRenderer.Build(bgId, reverse: _attackerIsEnemy);
+            BattleBgRenderer.BgImage img = _bgRenderer.Build(bgId, reverse: _attackerIsOpponent);
             if (img == null) return;
             _bgStarts++;
             _bgRgba = img.Rgba; _bgW = img.Width; _bgH = img.Height;

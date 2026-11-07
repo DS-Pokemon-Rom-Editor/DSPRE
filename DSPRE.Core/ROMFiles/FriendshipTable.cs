@@ -19,7 +19,7 @@ namespace DSPRE.ROMFiles
         public static readonly string[] EventNames =
         {
             "Level up", "Vitamin", "Battle item", "Gym Leader, Elite Four or Champion battle", "Learning a TM or HM",
-            "Walking", "Fainting", "Surviving poison in the field", "Fainting to a much stronger foe", "Winning a Contest",
+            "Walking", "Fainting", "Surviving poison in the field", "Fainting to a much stronger opponent", "Winning a Contest",
         };
 
         public static readonly string[] BandNames = { "Below 100", "100 to 199", "200 and up" };

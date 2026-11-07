@@ -86,14 +86,14 @@ namespace DSPRE.Avalonia.Data
         }
 
         // On the ground below each Pokemon: the battler's orthographic world position less this lift, in the game's
-        // 172 units per pixel. Index 0 is the player, 1 the enemy.
+        // 172 units per pixel. Index 0 is the player, 1 the opponent.
         private static readonly (int X, int Y)[] BurstLift = { (10 + 0, 32 - 16), (10 - 15, 32 - 25) };
         private const int UnitsPerPixel = 172;
 
-        private static (int X, int Y, int Z) BurstPos(bool enemySide)
+        private static (int X, int Y, int Z) BurstPos(bool opponentSide)
         {
-            (int x, int y, int z) = BattleParticles.BattlerTypeWorldPos(!enemySide, contest: false, ortho: true);
-            (int X, int Y) lift = BurstLift[enemySide ? 1 : 0];
+            (int x, int y, int z) = BattleParticles.BattlerTypeWorldPos(!opponentSide, contest: false, ortho: true);
+            (int X, int Y) lift = BurstLift[opponentSide ? 1 : 0];
             return (x - lift.X * UnitsPerPixel, y - lift.Y * UnitsPerPixel, z);
         }
 
@@ -110,27 +110,27 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>Starts every emitter of a ball's open burst in <paramref name="into"/>. False when the ROM has none.</summary>
-        public bool AddBurst(SplScene into, int ball, bool enemySide)
+        public bool AddBurst(SplScene into, int ball, bool opponentSide)
         {
             (byte[] bytes, SpaArchive arc) = Burst(BurstEntry(ball));
             if (arc == null || arc.Emitters.Count == 0) return false;
             SplManager mgr = into.Add(bytes, _rng, orthographic: true, arc.Textures);
             if (mgr == null) return false;
-            (int x, int y, int z) = BurstPos(enemySide);
+            (int x, int y, int z) = BurstPos(opponentSide);
             for (int i = 0; i < mgr.Resources.Count; i++) mgr.CreateEmitter(i, e => e.SetPos(x, y, z));
             return true;
         }
 
         /// <summary>Starts a placed seal's burst, the first emitter of its particle file, at the seal's spot. False when
         /// there is none.</summary>
-        public bool AddSeal(SplScene into, BallSeal seal, int x, int y, bool enemySide)
+        public bool AddSeal(SplScene into, BallSeal seal, int x, int y, bool opponentSide)
         {
             if (seal == null) return false;
             (byte[] bytes, SpaArchive arc) = Burst(seal.Particle);
             if (arc == null || arc.Emitters.Count == 0) return false;
             SplManager mgr = into.Add(bytes, _rng, orthographic: true, arc.Textures);
             if (mgr == null) return false;
-            (int px, int py, int pz) = BurstPos(enemySide);
+            (int px, int py, int pz) = BurstPos(opponentSide);
             px += (x - BallCapsule.BoardCentreX) * UnitsPerPixel;
             py += (BallCapsule.BoardCentreY - y + 30) * UnitsPerPixel;
             mgr.CreateEmitter(0, e => e.SetPos(px, py, pz));
@@ -242,18 +242,18 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>How many animations the class has.</summary>
-        public int EnemyTrainerSequenceCount(int trainerClass) => Front(trainerClass).SequenceCount;
+        public int OpponentTrainerSequenceCount(int trainerClass) => Front(trainerClass).SequenceCount;
 
         /// <summary>How long a class animation runs at the battle's two animation units a tick.</summary>
-        public int EnemyTrainerSequenceTicks(int trainerClass, int seq)
+        public int OpponentTrainerSequenceTicks(int trainerClass, int seq)
         {
             int units = 0;
             foreach ((int Bank, int Duration) f in Front(trainerClass).Sequence(seq)) units += Math.Max(1, f.Duration);
             return (units + 1) / 2;
         }
 
-        /// <summary>The enemy trainer <paramref name="ticks"/> into an animation, 160×160 around its position.</summary>
-        public AvaBitmap EnemyTrainer(int trainerClass, int seq, int ticks)
+        /// <summary>The opponent trainer <paramref name="ticks"/> into an animation, 160×160 around its position.</summary>
+        public AvaBitmap OpponentTrainer(int trainerClass, int seq, int ticks)
         {
             TrainerClassSpriteRenderer r = Front(trainerClass);
             (int Bank, int Duration)[] frames = r.Sequence(seq);
@@ -302,9 +302,9 @@ namespace DSPRE.Avalonia.Data
         }
 
         // ── Party ball row ──────────────────────────────────────────────────────────────────────
-        // Battle OBJ archive: palette 110, tiles 340, cells 341, animations 342. Sequences 0-2 enemy balls,
-        // 3-5 yours, 6 an empty slot, 7-8 the bars.
-        public const int RowEnemyHealthy = 0, RowPlayerHealthy = 3, RowEmpty = 6, RowEnemyBar = 7, RowPlayerBar = 8;
+        // Battle OBJ archive: palette 110, tiles 340, cells 341, animations 342. Sequences 0-2 opponent balls,
+        // 3-5 the player's, 6 an empty slot, 7-8 the bars.
+        public const int RowOpponentHealthy = 0, RowPlayerHealthy = 3, RowEmpty = 6, RowOpponentBar = 7, RowPlayerBar = 8;
         private WeCellAnimRenderer _row;
         private CellSequence[] _rowSeqs;
 
@@ -330,7 +330,7 @@ namespace DSPRE.Avalonia.Data
             {
                 if (!row.Visible || row.Alpha <= 0) continue;
                 any = true;
-                int barSeq = player ? RowPlayerBar : RowEnemyBar;
+                int barSeq = player ? RowPlayerBar : RowOpponentBar;
                 int barCell = barSeq < seqs.Length && seqs[barSeq].Frames?.Length > 0 ? seqs[barSeq].Frames[0].Cell : (player ? 26 : 25);
                 Blit(buffer, _row.RenderCellRgba(barCell), (int)Math.Round(row.BarX), (int)Math.Round(row.BarY), row.Alpha);
                 for (int s = 0; s < row.Balls.Length && s < balls.Length; s++)
@@ -372,7 +372,7 @@ namespace DSPRE.Avalonia.Data
         private ScriptNarc _effectParticles;
 
         /// <summary>The shiny sparkle on the battler at (<paramref name="x"/>, <paramref name="y"/>), or null.</summary>
-        public BattleAnimPlayer Sparkle(bool enemySide, double x, double y)
+        public BattleAnimPlayer Sparkle(bool opponentSide, double x, double y)
         {
             WazaSeqVersion version = GameFamily == GameFamilies.HGSS ? WazaSeqVersion.HGSS : WazaSeqVersion.Plat;
             if (!_sparkleTried)
@@ -384,7 +384,7 @@ namespace DSPRE.Avalonia.Data
             List<WazaSeqCommand> cmds = BattleAnimScript.Parse(_sparkleBytes, version);
             if (cmds == null || cmds.Count == 0) return null;
             _effectParticles ??= new ScriptNarc(DirNames.WazaParticle);
-            return new BattleAnimPlayer(cmds, version, _effectParticles, x, y, x, y, 256, 192, attackerIsEnemy: enemySide, selfTarget: true);
+            return new BattleAnimPlayer(cmds, version, _effectParticles, x, y, x, y, 256, 192, attackerIsOpponent: opponentSide, selfTarget: true);
         }
 
         // ── Sound ───────────────────────────────────────────────────────────────────────────────

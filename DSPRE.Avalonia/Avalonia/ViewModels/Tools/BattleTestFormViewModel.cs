@@ -112,11 +112,11 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             _passCount = _s.PassCount; _knownFailing = _s.KnownFailing.Trim() == "TRUE" || _s.KnownFailing.Trim() == "1";
 
             Player = _s.Player.Select((m, i) => Hook(new FormMon(m, i))).ToList();
-            Enemy = _s.Enemy.Select((m, i) => Hook(new FormMon(m, i))).ToList();
+            Opponent = _s.Opponent.Select((m, i) => Hook(new FormMon(m, i))).ToList();
             Scripts = new List<FormBattler>
             {
-                Battler("Player, first", _s.PlayerScript[0]), Battler("Player, second", _s.PlayerScript[1]),
-                Battler("Enemy, first", _s.EnemyScript[0]), Battler("Enemy, second", _s.EnemyScript[1]),
+                Battler("First player", _s.PlayerScript[0]), Battler("Second player", _s.PlayerScript[1]),
+                Battler("First opponent", _s.OpponentScript[0]), Battler("Second opponent", _s.OpponentScript[1]),
             };
             foreach (HgEngineBattleScenario.Expectation e in _s.Expectations) Expectations.Add(Hook(new FormExpectation(e)));
 
@@ -179,7 +179,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         }
 
         public List<FormMon> Player { get; } = new();
-        public List<FormMon> Enemy { get; } = new();
+        public List<FormMon> Opponent { get; } = new();
         public List<FormBattler> Scripts { get; } = new();
         public ObservableCollection<FormExpectation> Expectations { get; } = new();
 

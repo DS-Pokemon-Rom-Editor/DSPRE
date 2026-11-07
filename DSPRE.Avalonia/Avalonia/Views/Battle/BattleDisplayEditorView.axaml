@@ -25,7 +25,7 @@
 
       <Grid IsEnabled="{Binding IsAvailable}" IsVisible="{Binding IsAvailable}" ColumnDefinitions="Auto,24,*">
 
-        <!-- LEFT COLUMN: live battle preview (this Pokémon vs itself; enemy = front, player = back). -->
+        <!-- LEFT COLUMN: live battle preview (this Pokémon vs itself; opponent = front, player = back). -->
         <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Top">
           <TextBlock Text="Battle preview (this Pokémon vs itself)" FontWeight="SemiBold"/>
           <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
@@ -67,10 +67,10 @@
           <!-- Separate display: one scene of the selected gender. -->
           <StackPanel Spacing="2" IsVisible="{Binding !UnifiedDisplay}">
             <views:BattleSceneControl Width="512" Height="384" HorizontalAlignment="Left"
-                                      Enemy="{Binding EnemySprite}" Player="{Binding PlayerSprite}"
-                                      EnemyY="{Binding EnemyTop}" PlayerY="{Binding PlayerTop}"/>
-            <TextBlock Classes="frame-note" IsVisible="{Binding EnemyFrameWarning}" Classes.severe="{Binding EnemyFrameWarningSevere}" FontSize="10" TextWrapping="Wrap"
-                       Text="{Binding EnemyFrameWarningText, StringFormat='Enemy: {0}'}"/>
+                                      Opponent="{Binding OpponentSprite}" Player="{Binding PlayerSprite}"
+                                      OpponentY="{Binding OpponentTop}" PlayerY="{Binding PlayerTop}"/>
+            <TextBlock Classes="frame-note" IsVisible="{Binding OpponentFrameWarning}" Classes.severe="{Binding OpponentFrameWarningSevere}" FontSize="10" TextWrapping="Wrap"
+                       Text="{Binding OpponentFrameWarningText, StringFormat='Opponent: {0}'}"/>
             <TextBlock Classes="frame-note" IsVisible="{Binding PlayerFrameWarning}" Classes.severe="{Binding PlayerFrameWarningSevere}" FontSize="10" TextWrapping="Wrap"
                        Text="{Binding PlayerFrameWarningText, StringFormat='Player: {0}'}"/>
           </StackPanel>
@@ -79,19 +79,19 @@
           <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding UnifiedDisplay}">
             <StackPanel Spacing="2">
               <TextBlock Text="Male" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
-              <views:BattleSceneControl Width="256" Height="192" Enemy="{Binding EnemySpriteM}" Player="{Binding PlayerSpriteM}"
-                                        EnemyY="{Binding EnemyTopM}" PlayerY="{Binding PlayerTopM}"/>
-              <TextBlock Classes="frame-note" IsVisible="{Binding EnemyFrameWarningM}" Classes.severe="{Binding EnemyFrameWarningSevereM}" FontSize="9" TextWrapping="Wrap"
-                         Text="{Binding EnemyFrameWarningTextM, StringFormat='Enemy: {0}'}"/>
+              <views:BattleSceneControl Width="256" Height="192" Opponent="{Binding OpponentSpriteM}" Player="{Binding PlayerSpriteM}"
+                                        OpponentY="{Binding OpponentTopM}" PlayerY="{Binding PlayerTopM}"/>
+              <TextBlock Classes="frame-note" IsVisible="{Binding OpponentFrameWarningM}" Classes.severe="{Binding OpponentFrameWarningSevereM}" FontSize="9" TextWrapping="Wrap"
+                         Text="{Binding OpponentFrameWarningTextM, StringFormat='Opponent: {0}'}"/>
               <TextBlock Classes="frame-note" IsVisible="{Binding PlayerFrameWarningM}" Classes.severe="{Binding PlayerFrameWarningSevereM}" FontSize="9" TextWrapping="Wrap"
                          Text="{Binding PlayerFrameWarningTextM, StringFormat='Player: {0}'}"/>
             </StackPanel>
             <StackPanel Spacing="2">
               <TextBlock Text="Female" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" HorizontalAlignment="Center"/>
-              <views:BattleSceneControl Width="256" Height="192" Enemy="{Binding EnemySpriteF}" Player="{Binding PlayerSpriteF}"
-                                        EnemyY="{Binding EnemyTopF}" PlayerY="{Binding PlayerTopF}"/>
-              <TextBlock Classes="frame-note" IsVisible="{Binding EnemyFrameWarningF}" Classes.severe="{Binding EnemyFrameWarningSevereF}" FontSize="9" TextWrapping="Wrap"
-                         Text="{Binding EnemyFrameWarningTextF, StringFormat='Enemy: {0}'}"/>
+              <views:BattleSceneControl Width="256" Height="192" Opponent="{Binding OpponentSpriteF}" Player="{Binding PlayerSpriteF}"
+                                        OpponentY="{Binding OpponentTopF}" PlayerY="{Binding PlayerTopF}"/>
+              <TextBlock Classes="frame-note" IsVisible="{Binding OpponentFrameWarningF}" Classes.severe="{Binding OpponentFrameWarningSevereF}" FontSize="9" TextWrapping="Wrap"
+                         Text="{Binding OpponentFrameWarningTextF, StringFormat='Opponent: {0}'}"/>
               <TextBlock Classes="frame-note" IsVisible="{Binding PlayerFrameWarningF}" Classes.severe="{Binding PlayerFrameWarningSevereF}" FontSize="9" TextWrapping="Wrap"
                          Text="{Binding PlayerFrameWarningTextF, StringFormat='Player: {0}'}"/>
             </StackPanel>
@@ -168,7 +168,7 @@
                             IsEnabled="{Binding CanChooseIntro}"
                             ToolTip.Tip="Off plays a mid-battle send-out."/>
                   <CheckBox Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Content="Wild-style entry" IsChecked="{Binding TrainerSlideIn}"
-                            IsEnabled="{Binding CanSlideIn}" ToolTip.Tip="Their Pokémon slides in like a wild one"/>
+                            IsEnabled="{Binding CanSlideIn}" ToolTip.Tip="The opponent's Pokémon slides in like a wild one"/>
                   <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" Spacing="8">
                     <CheckBox Content="Party balls" IsChecked="{Binding ShowPartyBalls}" IsEnabled="{Binding CanShowPartyBalls}" VerticalAlignment="Center"
                               ToolTip.Tip="Trainer battles only."/>

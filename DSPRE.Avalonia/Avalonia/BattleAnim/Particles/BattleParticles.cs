@@ -23,7 +23,7 @@ namespace DSPRE.Avalonia.BattleAnim.Particles
 
         private readonly ScriptNarc _narc;
         private readonly SplRandom _rng;
-        private readonly bool _attackerIsEnemy, _selfTarget;
+        private readonly bool _attackerIsOpponent, _selfTarget;
         private readonly PSystem[] _global = new PSystem[MaxSystems];
         private readonly PSystem[] _bySlot = new PSystem[MaxSystems];
         private readonly int[] _scriptProjection = new int[MaxSystems];
@@ -35,9 +35,9 @@ namespace DSPRE.Avalonia.BattleAnim.Particles
         /// <summary>Reads the next SetExtraParams block after the running command and moves the script past it.</summary>
         public Func<int[]> ExtraParams;
 
-        public BattleParticles(ScriptNarc narc, SplRandom rng, bool attackerIsEnemy, bool selfTarget)
+        public BattleParticles(ScriptNarc narc, SplRandom rng, bool attackerIsOpponent, bool selfTarget)
         {
-            _narc = narc; _rng = rng; _attackerIsEnemy = attackerIsEnemy; _selfTarget = selfTarget;
+            _narc = narc; _rng = rng; _attackerIsOpponent = attackerIsOpponent; _selfTarget = selfTarget;
             for (int i = 0; i < MaxSystems; i++) _scriptProjection[i] = 1;
         }
 
@@ -45,7 +45,7 @@ namespace DSPRE.Avalonia.BattleAnim.Particles
         public bool Contest { get; set; }
 
         // Battler sides: the attacker, and the defender, who is the attacker for a move on its user.
-        private bool AttackerIsPlayer => !_attackerIsEnemy;
+        private bool AttackerIsPlayer => !_attackerIsOpponent;
         private bool DefenderIsPlayer => _selfTarget ? AttackerIsPlayer : !AttackerIsPlayer;
         private bool IsPlayer(bool attacker) => attacker ? AttackerIsPlayer : DefenderIsPlayer;
 
@@ -54,7 +54,7 @@ namespace DSPRE.Avalonia.BattleAnim.Particles
         public enum PosKind { Normal, Beam1, Beam2, Beam3, Hypnosis, TriAttack, HydroCannon, HyperVoice, GrassWhistle, DragonPulse, CameraLookAt, HydroPump }
 
         // BattleAnimUtil_GetBattlerTypeWorldPosInternal for the two single-battle battlers and the two contestants:
-        // [player, enemy, contest player, contest enemy][kind] = (perspective x, y, z, orthographic x, y, z).
+        // [player, opponent, contest player, contest opponent][kind] = (perspective x, y, z, orthographic x, y, z).
         private static readonly double[][][] WorldPos =
         {
             new[]
@@ -124,7 +124,7 @@ namespace DSPRE.Avalonia.BattleAnim.Particles
 
         private (int X, int Y, int Z) TypePos(bool player, PosKind kind, bool ortho) => BattlerTypeWorldPos(player, Contest, ortho, kind);
 
-        /// <summary>BattleAnimUtil_GetBattlerTypeWorldPos for a single battle's player or enemy, or a contestant.</summary>
+        /// <summary>BattleAnimUtil_GetBattlerTypeWorldPos for a single battle's player or opponent, or a contestant.</summary>
         public static (int X, int Y, int Z) BattlerTypeWorldPos(bool player, bool contest, bool ortho, PosKind kind = PosKind.Normal)
         {
             double[] v = WorldPos[(player ? 0 : 1) + (contest ? 2 : 0)][(int)kind];
@@ -503,7 +503,7 @@ namespace DSPRE.Avalonia.BattleAnim.Particles
                 }
                 case 6: case 7:
                 {
-                    // The contest config flips for a start on the enemy side, as the battle one does.
+                    // The contest config flips for a start on the opponent side, as the battle one does.
                     double s = d.StartPlayer ? 1 : -1;
                     set(-0.5703 * s, 0.3516 * s, 0.1797 * s);
                     return true;

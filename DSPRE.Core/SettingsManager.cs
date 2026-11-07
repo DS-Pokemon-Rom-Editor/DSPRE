@@ -84,7 +84,7 @@ namespace DSPRE
         /// the tour starts automatically after the next successful ROM load in the Avalonia shell.</summary>
         public bool GuidedTourShown { get; set; } = false;
 
-        /// <summary>Editors whose first-open tour has run; the rest show theirs the next time they open.</summary>
+        /// <summary>Editors whose first-open tour has run; the rest show a tour the next time they open.</summary>
         public List<string> EditorToursShown { get; set; } = new List<string>();
 
         /// <summary>Project folders that generated patch credits or declined the offer after saving.</summary>
@@ -159,10 +159,10 @@ namespace DSPRE
             if (!string.IsNullOrEmpty(directory))
                 Directory.CreateDirectory(directory);
 
-            Newtonsoft.Json.Linq.JObject mine = Newtonsoft.Json.Linq.JObject.FromObject(Settings);
+            Newtonsoft.Json.Linq.JObject current = Newtonsoft.Json.Linq.JObject.FromObject(Settings);
             Newtonsoft.Json.Linq.JObject onDisk = ReadDisk();
             Newtonsoft.Json.Linq.JObject merged = new Newtonsoft.Json.Linq.JObject();
-            foreach (Newtonsoft.Json.Linq.JProperty p in mine.Properties())
+            foreach (Newtonsoft.Json.Linq.JProperty p in current.Properties())
             {
                 Newtonsoft.Json.Linq.JToken other = onDisk?.GetValue(p.Name, StringComparison.OrdinalIgnoreCase);
                 merged[p.Name] = _saved == null ? p.Value : Merge(p.Value, _saved[p.Name], other);
@@ -174,12 +174,12 @@ namespace DSPRE
         }
 
         // Per-project tables (test saves, emulator paths) are merged key by key, so two windows each keep their own.
-        private static Newtonsoft.Json.Linq.JToken Merge(Newtonsoft.Json.Linq.JToken mine, Newtonsoft.Json.Linq.JToken saved,
+        private static Newtonsoft.Json.Linq.JToken Merge(Newtonsoft.Json.Linq.JToken current, Newtonsoft.Json.Linq.JToken saved,
             Newtonsoft.Json.Linq.JToken onDisk)
         {
-            if (onDisk == null) return mine;
-            if (Newtonsoft.Json.Linq.JToken.DeepEquals(mine, saved)) return onDisk;
-            if (mine is not Newtonsoft.Json.Linq.JObject m || onDisk is not Newtonsoft.Json.Linq.JObject d) return mine;
+            if (onDisk == null) return current;
+            if (Newtonsoft.Json.Linq.JToken.DeepEquals(current, saved)) return onDisk;
+            if (current is not Newtonsoft.Json.Linq.JObject m || onDisk is not Newtonsoft.Json.Linq.JObject d) return current;
             Newtonsoft.Json.Linq.JObject s = saved as Newtonsoft.Json.Linq.JObject;
             Newtonsoft.Json.Linq.JObject result = new Newtonsoft.Json.Linq.JObject();
             foreach (string key in m.Properties().Select(p => p.Name).Union(d.Properties().Select(p => p.Name)))

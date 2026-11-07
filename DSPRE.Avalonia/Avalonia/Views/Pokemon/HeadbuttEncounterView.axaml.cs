@@ -32,7 +32,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
                 },
             };
 
-            // Arrow keys act only while the 3D view has focus, so side-panel inputs keep theirs.
+            // Arrow keys act only while the 3D view has focus, so side-panel inputs keep their own.
             GlHost.KeyDown += (s, e) =>
             {
                 if (VM != null && VM.EditMode3D && VM.HasSelectedTree)

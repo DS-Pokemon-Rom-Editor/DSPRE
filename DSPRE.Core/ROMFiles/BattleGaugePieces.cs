@@ -19,7 +19,7 @@ namespace DSPRE.ROMFiles
         public enum Family { DiamondPearl, PlatinumAndJohto }
 
         /// <summary>The six bars, in the order the game's tables keep them.</summary>
-        public enum Bar { YoursSingle, TheirsSingle, YoursDouble, TheirsDouble, YourPartner, TheirPartner }
+        public enum Bar { PlayerSingle, OpponentSingle, PlayerDouble, OpponentDouble, PlayerPartner, OpponentPartner }
         public const int BarCount = 6;
 
         public enum Slot { Name, LvMark, LvDigits, CurrentHp, MaxHp, HpGauge, Caught, Status, HpLeft, HpRight, Slash }
@@ -52,7 +52,7 @@ namespace DSPRE.ROMFiles
         private static bool Sinnoh => Locate()?.Family == Family.DiamondPearl;
 
         /// <summary>
-        /// Where the experience fill goes in your single battle bar. The code holds these as numbers, not a table: five
+        /// Where the experience fill goes in the player's single battle bar. The code holds these as numbers, not a table: five
         /// tiles then seven in Platinum and HeartGold, four then seven in Diamond and Pearl.
         /// </summary>
         public static Span[] ExpGauge => ReadExp() is { } e
@@ -215,8 +215,8 @@ namespace DSPRE.ROMFiles
         // three games; the code points at every one. The one at -0x130 is the Safari Zone and Pal Park bar's.
         private static readonly Dictionary<Bar, int> Templates = new()
         {
-            [Bar.YoursSingle] = -0xFC, [Bar.TheirsSingle] = -0xC8, [Bar.YoursDouble] = -0x200,
-            [Bar.TheirsDouble] = -0x1CC, [Bar.YourPartner] = -0x164, [Bar.TheirPartner] = -0x94,
+            [Bar.PlayerSingle] = -0xFC, [Bar.OpponentSingle] = -0xC8, [Bar.PlayerDouble] = -0x200,
+            [Bar.OpponentDouble] = -0x1CC, [Bar.PlayerPartner] = -0x164, [Bar.OpponentPartner] = -0x94,
         };
 
         // How far left of each bar its second sprite sits, one signed byte a bar (Platinum and HeartGold).

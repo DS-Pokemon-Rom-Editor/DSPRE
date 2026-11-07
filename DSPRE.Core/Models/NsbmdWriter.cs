@@ -115,9 +115,9 @@ namespace DSPRE.Models
             ObjMesh.Material m = mesh.Materials[material];
             if (textures != null)
             {
-                DsTexture mine = textures.FirstOrDefault(t => string.Equals(t.Name, Short(m.Name),
+                DsTexture named = textures.FirstOrDefault(t => string.Equals(t.Name, Short(m.Name),
                                                                       StringComparison.OrdinalIgnoreCase));
-                if (mine != null) { texW = mine.Width; texH = mine.Height; }
+                if (named != null) { texW = named.Width; texH = named.Height; }
             }
 
             if (picturesAreElsewhere) { texW = 1; texH = 1; }
@@ -206,9 +206,9 @@ namespace DSPRE.Models
                                 GxDisplayList.Fixed(p.Z / posScale));
             }
 
-            List<ObjMesh.Face> mine = mesh.Faces.Where(f => f.Material == material).ToList();
-            List<ObjMesh.Face> quads = mine.Where(f => f.Corners.Count == 4).ToList();
-            List<ObjMesh.Face> others = mine.Where(f => f.Corners.Count != 4).ToList();
+            List<ObjMesh.Face> faces = mesh.Faces.Where(f => f.Material == material).ToList();
+            List<ObjMesh.Face> quads = faces.Where(f => f.Corners.Count == 4).ToList();
+            List<ObjMesh.Face> others = faces.Where(f => f.Corners.Count != 4).ToList();
             if (others.Count > 0)
             {
                 dl.Begin(GxDisplayList.Shape.Triangles);

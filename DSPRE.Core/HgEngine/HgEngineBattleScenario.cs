@@ -30,8 +30,8 @@ namespace DSPRE.HgEngine
         }
 
         public string BattleType = "", Weather = "", FieldCondition = "", Terrain = "", PassCount = "", KnownFailing = "";
-        public Mon[] Player = NewParty(), Enemy = NewParty();
-        public Action[][] PlayerScript = NewScript(), EnemyScript = NewScript();
+        public Mon[] Player = NewParty(), Opponent = NewParty();
+        public Action[][] PlayerScript = NewScript(), OpponentScript = NewScript();
         public List<Expectation> Expectations = new List<Expectation>();
 
         private static Mon[] NewParty() => Enumerable.Range(0, PartySize).Select(_ => new Mon()).ToArray();
@@ -100,9 +100,9 @@ namespace DSPRE.HgEngine
             PassCount = ValueOf(Find(_root, ".expectationPassCount"));
             KnownFailing = ValueOf(Find(_root, ".knownFailing"));
             LoadParty(Find(_root, ".playerParty")?.Child, Player);
-            LoadParty(Find(_root, ".enemyParty")?.Child, Enemy);
+            LoadParty(Find(_root, ".opponentParty")?.Child, Opponent);
             LoadScript(Find(_root, ".playerScript")?.Child, PlayerScript);
-            LoadScript(Find(_root, ".enemyScript")?.Child, EnemyScript);
+            LoadScript(Find(_root, ".opponentScript")?.Child, OpponentScript);
             Node exp = Find(_root, ".expectations")?.Child;
             if (exp != null)
                 foreach (Item e in exp.Items.Where(i => i.Child != null))
@@ -178,9 +178,9 @@ namespace DSPRE.HgEngine
             Set(edits, _root, ".expectationPassCount", was.PassCount, PassCount);
             Set(edits, _root, ".knownFailing", was.KnownFailing, KnownFailing);
             WriteParty(edits, ".playerParty", was.Player, Player);
-            WriteParty(edits, ".enemyParty", was.Enemy, Enemy);
+            WriteParty(edits, ".opponentParty", was.Opponent, Opponent);
             WriteScript(edits, ".playerScript", was.PlayerScript, PlayerScript);
-            WriteScript(edits, ".enemyScript", was.EnemyScript, EnemyScript);
+            WriteScript(edits, ".opponentScript", was.OpponentScript, OpponentScript);
             WriteExpectations(edits, was.Expectations);
 
             StringBuilder sb = new StringBuilder(_text);

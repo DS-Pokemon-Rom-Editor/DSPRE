@@ -142,8 +142,8 @@ namespace DSPRE.Tracking.Kinds
             JsonObject json = Fields.Write(f => Bind(f, Number(id), bytes, ctx));
             if (_twin is (DirNames twin, string key) && read(TrackedFile.Member(twin, Number(id))) is byte[] copy)
             {
-                JsonNode mine = json["values"], theirs = Fields.Write(f => Bind(f, Number(id), copy, ctx))["values"];
-                if (mine is JsonObject main && theirs is JsonObject other)
+                JsonNode current = json["values"], copied = Fields.Write(f => Bind(f, Number(id), copy, ctx))["values"];
+                if (current is JsonObject main && copied is JsonObject other)
                 {
                     JsonObject differs = new JsonObject();
                     foreach (KeyValuePair<string, JsonNode> v in other)
@@ -151,7 +151,7 @@ namespace DSPRE.Tracking.Kinds
                     if (differs.Count > 0 || other.Count != main.Count) json[key] = differs;
                     if (other.Count < main.Count) json[key + "_length"] = other.Count;
                 }
-                else if (!JsonNode.DeepEquals(mine, theirs)) json[key] = theirs?.DeepClone();
+                else if (!JsonNode.DeepEquals(current, copied)) json[key] = copied?.DeepClone();
             }
             return json;
         }

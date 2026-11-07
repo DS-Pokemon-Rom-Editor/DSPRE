@@ -41,13 +41,13 @@ namespace DSPRE.Avalonia.Data
 
         public static int ColoursEntry => BattleObjects.Find("HpBar.Shared", "Colours");
 
-        private static bool YourDouble(BattleGaugeComposer.Kind k) =>
+        private static bool PlayerDouble(BattleGaugeComposer.Kind k) =>
             k is BattleGaugeComposer.Kind.PlayerNear or BattleGaugeComposer.Kind.PlayerFar;
 
-        /// <summary>Your bars show HP numbers: the single battle one always, the double battle ones after Start.</summary>
-        private static bool ShowsNumbers(BattleGaugeComposer.Kind k) => k == BattleGaugeComposer.Kind.PlayerSingle || YourDouble(k);
+        /// <summary>The player's bars show HP numbers: the single battle one always, the double battle ones after Start.</summary>
+        private static bool ShowsNumbers(BattleGaugeComposer.Kind k) => k == BattleGaugeComposer.Kind.PlayerSingle || PlayerDouble(k);
 
-        private static bool Theirs(BattleGaugeComposer.Kind k) =>
+        private static bool Opponent(BattleGaugeComposer.Kind k) =>
             k is BattleGaugeComposer.Kind.OpponentSingle or BattleGaugeComposer.Kind.OpponentFar or BattleGaugeComposer.Kind.OpponentNear;
 
         /// <summary>Tile number to its square in the bar's "as it appears" picture, from the bar's cell layout.</summary>
@@ -167,9 +167,9 @@ namespace DSPRE.Avalonia.Data
             if (plan.Colours.Keys.Any(s => !barSlots.Contains(s) && s != TextBack && s != TextInk && s != TextShadow && Ds(Pack(palette[s])) != plan.Colours[s]))
                 plan.Notes.Add("Some colours share numbers with the status words or the health fill, so those change colour too.");
 
-            if (Theirs(kind))
+            if (Opponent(kind))
                 plan.Notes.Add("In a wild battle the caught box shows the first status tile until that Pokémon is caught.");
-            else if (YourDouble(kind))
+            else if (PlayerDouble(kind))
                 plan.Notes.Add(plan.ClearTextBackground ? "In doubles, Start shows the HP numbers where the gauge was."
                                                         : "In doubles, Start shows the HP numbers on the text background where the gauge was.");
             plan.Notes.Add("The other bars share these colours and pieces, so import them too for a matching set.");
@@ -287,7 +287,7 @@ namespace DSPRE.Avalonia.Data
                 }
             }
 
-            if (YourDouble(kind))
+            if (PlayerDouble(kind))
             {
                 // Start puts the numbers' ends where the HP tag and the bar end are, and going back copies the tag,
                 // the bar end and the first status square in again, so those take this bar's own squares.
@@ -313,7 +313,7 @@ namespace DSPRE.Avalonia.Data
                 }
             }
 
-            if (Theirs(kind))
+            if (Opponent(kind))
             {
                 List<int> caught = TilesOf(BattleGaugePieces.Slot.Caught, kind).ToList();
                 if (caught.Count == 1) Lay(BattleGaugePieces.CaughtBall, Old(BattleGaugePieces.NoStatus), Bar(caught[0]));

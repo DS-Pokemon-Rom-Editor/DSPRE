@@ -21,7 +21,7 @@ namespace DSPRE.Avalonia
         public void ClearStatics() => _statics.Clear();
         public void AddStatic(byte[] rgba, int w, int h, int left, int top) { if (rgba != null) _statics.Add((rgba, w, h, left, top)); }
         public void SetPlayer(byte[] rgba, int w, int h, int left, int top) => _back = (rgba, w, h, left, top);
-        public void SetEnemy(byte[] rgba, int w, int h, int left, int top) => _front = (rgba, w, h, left, top);
+        public void SetOpponent(byte[] rgba, int w, int h, int left, int top) => _front = (rgba, w, h, left, top);
 
         public WriteableBitmap Render(BattleAnimPlayer player)
         {

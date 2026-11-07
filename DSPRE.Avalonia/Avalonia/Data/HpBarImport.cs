@@ -53,7 +53,7 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>
         /// Draws the battle with the current bar and with the imported one, or returns null.
-        /// A double battle bar of yours is drawn twice: with its gauge, and with the numbers Start swaps in.
+        /// A player double battle bar is drawn twice: with its gauge, and with the numbers Start swaps in.
         /// </summary>
         public static List<(string Label, byte[] Now, byte[] After)> Preview(GraphicAssets.Archive archive, int index, string path, HpBarFit.Plan plan, out string trouble)
         {

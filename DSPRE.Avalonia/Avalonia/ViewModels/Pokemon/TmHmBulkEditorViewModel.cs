@@ -681,11 +681,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void TakeSourceSave(int id)
         {
             SortedSet<int> was = _savedRows[id];
-            SortedSet<int> mine = new SortedSet<int>(_compat[id]);
+            SortedSet<int> edited = new SortedSet<int>(_compat[id]);
             ReadSourceLists();
             LoadSourceSpecies(id);
-            foreach (int r in was) if (!mine.Contains(r)) _compat[id].Remove(r);
-            foreach (int r in mine) if (!was.Contains(r)) _compat[id].Add(r);
+            foreach (int r in was) if (!edited.Contains(r)) _compat[id].Remove(r);
+            foreach (int r in edited) if (!was.Contains(r)) _compat[id].Add(r);
         }
 
         /// <summary>Unsubscribes from app-wide events; call when the editor window closes.</summary>

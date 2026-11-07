@@ -714,12 +714,12 @@ namespace DSPRE.Avalonia.ViewModels.World
                 return;
             }
 
-            bool theirs = Path.GetExtension(path).Equals(".pdsts", StringComparison.OrdinalIgnoreCase);
-            MapTileset set = theirs
+            bool incoming = Path.GetExtension(path).Equals(".pdsts", StringComparison.OrdinalIgnoreCase);
+            MapTileset set = incoming
                 ? PdstsFile.Read(path, out string whynot)
                 : MapTileset.FromObj(path, out whynot);
             if (set == null) { Warning = whynot; return; }
-            if (theirs) TileCollisions.ReadMeta(path, set);
+            if (incoming) TileCollisions.ReadMeta(path, set);
 
             _project = null;
             ProjectMaps.Clear();
@@ -730,7 +730,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             SizePlaces(set);
             Load(set, new TileGrid());
-            if (theirs) CameFrom(path, set);
+            if (incoming) CameFrom(path, set);
             Warning = MissingPictures(set);
 
             int spreading = set.Tiles.Count(t => t.Spreads);
@@ -792,7 +792,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             Dictionary<string, (byte[] rgba, int w, int h)> area = PicturesOfTheArea();
             set.TurnPlacesIntoDots(name =>
                 name == null ? (0, 0)
-                : own.TryGetValue(name, out (byte[] rgba, int w, int h) mine) ? (mine.w, mine.h)
+                : own.TryGetValue(name, out (byte[] rgba, int w, int h) existing) ? (existing.w, existing.h)
                 : area.TryGetValue(name, out (byte[] rgba, int w, int h) found) ? (found.w, found.h) : (0, 0));
         }
 
@@ -991,8 +991,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             /// <summary>For a clash: 0 keeps the area's picture, 1 adds this one under a new name, 2 replaces the area's.</summary>
             public int Choice { get; set; } = 1;
             public AvBitmap Ours { get; set; }
-            public AvBitmap Theirs { get; set; }
-            public bool HasTheirs => Theirs != null;
+            public AvBitmap Incoming { get; set; }
+            public bool HasIncoming => Incoming != null;
             internal DsTexture Texture;
         }
 
@@ -1059,12 +1059,12 @@ namespace DSPRE.Avalonia.ViewModels.World
             string folder = GameDirs[DirNames.MapTextures].unpackedDir;
             foreach (IGrouping<int, byte> g in areas.GroupBy(a => (int)new AreaData(a).MapTileset)) plan.Packs.Add((g.Key, g.ToList()));
 
-            Dictionary<int, (NsbtxWriter.Contents contents, Dictionary<string, (byte[] rgba, int w, int h)> pictures)> theirs = new Dictionary<int, (NsbtxWriter.Contents contents, Dictionary<string, (byte[] rgba, int w, int h)> pictures)>();
+            Dictionary<int, (NsbtxWriter.Contents contents, Dictionary<string, (byte[] rgba, int w, int h)> pictures)> incoming = new Dictionary<int, (NsbtxWriter.Contents contents, Dictionary<string, (byte[] rgba, int w, int h)> pictures)>();
             foreach ((int pack, List<byte> _) in plan.Packs)
             {
                 string path = Path.Combine(folder, pack.ToString("D4"));
                 byte[] bytes = File.Exists(path) ? File.ReadAllBytes(path) : null;
-                theirs[pack] = (bytes == null ? null : NsbtxWriter.Read(bytes),
+                incoming[pack] = (bytes == null ? null : NsbtxWriter.Read(bytes),
                                 bytes == null ? new Dictionary<string, (byte[] rgba, int w, int h)>() : PicturesInPack(bytes, PalettesOf));
             }
 
@@ -1073,13 +1073,13 @@ namespace DSPRE.Avalonia.ViewModels.World
                 bool clash = false, missing = false;
                 foreach ((int pack, List<byte> _) in plan.Packs)
                 {
-                    (NsbtxWriter.Contents contents, Dictionary<string, (byte[] rgba, int w, int h)> pictures) = theirs[pack];
+                    (NsbtxWriter.Contents contents, Dictionary<string, (byte[] rgba, int w, int h)> pictures) = incoming[pack];
                     string had = contents?.Textures.FirstOrDefault(n => string.Equals(n, NitroDictionary.Fit(choice.Name), StringComparison.OrdinalIgnoreCase));
                     if (had == null) { missing = true; continue; }
-                    if (pictures.TryGetValue(had, out (byte[] rgba, int w, int h) their) && !LooksTheSame(ours[choice.Name], their))
+                    if (pictures.TryGetValue(had, out (byte[] rgba, int w, int h) packed) && !LooksTheSame(ours[choice.Name], packed))
                     {
                         clash = true;
-                        choice.Theirs ??= ImageConverter.FromRgba(their.rgba, their.w, their.h);
+                        choice.Incoming ??= ImageConverter.FromRgba(packed.rgba, packed.w, packed.h);
                     }
                 }
                 choice.Clash = clash;
@@ -1090,7 +1090,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             int worstTex = 0, worstPal = 0;
             foreach ((int pack, List<byte> packAreas) in plan.Packs)
             {
-                NsbtxWriter.Contents contents = theirs[pack].contents;
+                NsbtxWriter.Contents contents = incoming[pack].contents;
                 int tex = contents?.TextureBytes ?? 0, pal = contents?.PaletteBytes ?? 0;
                 foreach (PictureChoice c in plan.Pictures.Where(c => c.Said != Same))
                 {
@@ -1191,12 +1191,12 @@ namespace DSPRE.Avalonia.ViewModels.World
                 // A palette is renamed when a different one in the pack already has its name.
                 if (!replace.Contains(t.Name))
                 {
-                    byte[] mine = t.Colours.SelectMany(v => new[] { (byte)v, (byte)(v >> 8) }).ToArray();
+                    byte[] existing = t.Colours.SelectMany(v => new[] { (byte)v, (byte)(v >> 8) }).ToArray();
                     for (int i = 0; i < t.PaletteNames.Count; i++)
                     {
                         string pal = t.PaletteNames[i];
-                        bool differs = contents.Values.Any(cn => cn != null && cn.Palettes.TryGetValue(NitroDictionary.Fit(pal), out byte[] theirs)
-                                                                 && !theirs.Take(mine.Length).SequenceEqual(mine.Take(theirs.Length)));
+                        bool differs = contents.Values.Any(cn => cn != null && cn.Palettes.TryGetValue(NitroDictionary.Fit(pal), out byte[] incoming)
+                                                                 && !incoming.Take(existing.Length).SequenceEqual(existing.Take(incoming.Length)));
                         if (!differs) continue;
                         string now = Fresh(pal);
                         Rename(t.Name, f => f.Palette == pal, f => f.Palette = now);
@@ -2161,14 +2161,14 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void AddTilesFrom(string path)
         {
             if (_set == null) return;
-            bool theirs = Path.GetExtension(path).Equals(".pdsts", StringComparison.OrdinalIgnoreCase);
-            MapTileset other = theirs ? PdstsFile.Read(path, out string whynot) : MapTileset.FromObj(path, out whynot);
+            bool incoming = Path.GetExtension(path).Equals(".pdsts", StringComparison.OrdinalIgnoreCase);
+            MapTileset other = incoming ? PdstsFile.Read(path, out string whynot) : MapTileset.FromObj(path, out whynot);
             if (other == null) { Warning = whynot; return; }
-            if (theirs) TileCollisions.ReadMeta(path, other);
+            if (incoming) TileCollisions.ReadMeta(path, other);
             SizePlaces(other);
-            Dictionary<MapTileset.Tile, int> places = theirs ? TileCollisions.ListedPlaces(other) : null;
+            Dictionary<MapTileset.Tile, int> places = incoming ? TileCollisions.ListedPlaces(other) : null;
             int first = _set.Append(other);
-            if (theirs)
+            if (incoming)
                 for (int i = first; i < _set.Tiles.Count; i++)
                     if (places.TryGetValue(other.Tiles[i - first], out int listed)) _tileSource[_set.Tiles[i]] = (path, listed);
             if (other.PictureFiles.Count > 0)

@@ -69,7 +69,7 @@ namespace DSPRE.Avalonia
             Add("BattleTowerEditorView", "Battle Tower editor",
                 S("tab:Trainers>list", "Tower trainers", "The Battle Tower's trainers."),
                 S("tab:Trainers>name:TowerTrainerPanel", "Trainer", "Their class, name and three lines."),
-                S("tab:Trainers>name:SetIdList", "Their Pokémon", "The sets this trainer picks a team from."),
+                S("tab:Trainers>name:SetIdList", "Team", "The sets this trainer picks a team from."),
                 S("tab:Pokémon sets>list", "Pokémon sets", "The shared pool of tower Pokémon."),
                 S("tab:Pokémon sets>name:SetPanel", "Set", "Species, moves, nature, item, form and maxed stats. Ctrl+click edits them."),
                 S("toolbar", "Files", "Export or import the open tab, or show where it is kept."),

@@ -212,32 +212,32 @@ namespace DSPRE.Avalonia.Data
         private void AddGround(List<Piece> pieces, Options o)
         {
             BattleGroundRenderer r = _ground ??= new BattleGroundRenderer();
-            (int MineDrawing, int EnemyDrawing, int MineLayout, int EnemyLayout, int PaletteDay)? files = BattleGroundRenderer.TerrainFiles(o.TerrainId);
-            (BattleGroundRenderer.GroundImage mine, BattleGroundRenderer.GroundImage enemy) both;
+            (int PlayerDrawing, int OpponentDrawing, int PlayerLayout, int OpponentLayout, int PaletteDay)? files = BattleGroundRenderer.TerrainFiles(o.TerrainId);
+            (BattleGroundRenderer.GroundImage playerGround, BattleGroundRenderer.GroundImage opponent) both;
             try { both = r.Build(o.TerrainId, o.TimeOfDay); }
             catch (Exception ex) { AppLogger.WarnOnce("BattleScreenRenderer.AddGround", ex); both = (null, null); }
             foreach (bool player in new[] { false, true })
             {
                 Piece piece = new Piece
                 {
-                    Name = player ? "Your ground" : "Their ground",
+                    Name = player ? "Player ground" : "Opponent ground",
                     What = "The tray the Pokémon stands on.",
                     Archive = DirNames.BattleObj,
-                    Drawing = files.HasValue ? (player ? files.Value.MineDrawing : files.Value.EnemyDrawing) : -1,
-                    Layout = files.HasValue ? (player ? files.Value.MineLayout : files.Value.EnemyLayout) : -1,
+                    Drawing = files.HasValue ? (player ? files.Value.PlayerDrawing : files.Value.OpponentDrawing) : -1,
+                    Layout = files.HasValue ? (player ? files.Value.PlayerLayout : files.Value.OpponentLayout) : -1,
                     Colours = files.HasValue ? files.Value.PaletteDay + o.TimeOfDay : -1,
                     SharedNote = "Shared by this terrain",
                 };
-                BattleGroundRenderer.GroundImage g = player ? both.mine : both.enemy;
+                BattleGroundRenderer.GroundImage g = player ? both.playerGround : both.opponent;
                 if (g?.Rgba == null) piece.Whynot = "This ground couldn't be drawn.";
                 else { piece.Rgba = g.Rgba; piece.Width = g.Width; piece.Height = g.Height; piece.Left = g.Left; piece.Top = g.Top; }
                 pieces.Add(piece);
             }
         }
 
-        // battle_display.c places the sprites at gEncounterCoords' y, 50 for theirs and 112 for yours, at x 192 and 64. Each one
-        // is drawn its height-table value lower and its sprite record's FrontY higher. Their shadow is centred 36 below 50.
-        private const int TheirX = 192, TheirY = 50, YourX = 64, YourY = 112, ShadowBelow = 36;
+        // battle_display.c places the sprites at gEncounterCoords' y, 50 for the opponent and 112 for the player, at x 192 and 64. Each one
+        // is drawn its height-table value lower and its sprite record's FrontY higher. The opponent's shadow is centred 36 below 50.
+        private const int OpponentX = 192, OpponentY = 50, PlayerX = 64, PlayerY = 112, ShadowBelow = 36;
 
         private IBattleOffsetSource _offsets;
 
@@ -267,12 +267,12 @@ namespace DSPRE.Avalonia.Data
                 // The other sprites' last two members are the shadows (three 64 by 16 sizes) and their colours.
                 GraphicAssets.Preview p = count >= 2 ? GraphicAssets.Render(other, count - 2, paletteIndex: count - 1) : null;
                 pieces.Add(SpritePiece("Shadow", "The shadow under the front sprite.", DirNames.OtherPokemonBattleSprites, count - 2, p,
-                                       0, shadow * 16, 64, 16, TheirX + rec.ShadowX - 32, TheirY + ShadowBelow - 8));
+                                       0, shadow * 16, 64, 16, OpponentX + rec.ShadowX - 32, OpponentY + ShadowBelow - 8));
             }
             pieces.Add(SpritePiece("Front sprite", "The opponent's Pokémon.", DirNames.PokemonBattleSprites, o.Species * 6 + 3,
-                                   GraphicAssets.Render(sprites, o.Species * 6 + 3), 0, 0, 80, 80, TheirX - 40, TheirY + rec.FrontM - 40 - rec.FrontY));
+                                   GraphicAssets.Render(sprites, o.Species * 6 + 3), 0, 0, 80, 80, OpponentX - 40, OpponentY + rec.FrontM - 40 - rec.FrontY));
             pieces.Add(SpritePiece("Back sprite", "The player's Pokémon.", DirNames.PokemonBattleSprites, o.Species * 6 + 1,
-                                   GraphicAssets.Render(sprites, o.Species * 6 + 1), 0, 0, 80, 80, YourX - 40, YourY + rec.BackM - 40));
+                                   GraphicAssets.Render(sprites, o.Species * 6 + 1), 0, 0, 80, 80, PlayerX - 40, PlayerY + rec.BackM - 40));
         }
 
         // pokemon_sprite.c sShadowTextureCoords: small, medium and large are rows 0, 1 and 2. Size 0 draws none.
@@ -324,8 +324,7 @@ namespace DSPRE.Avalonia.Data
                         Level = o.Level,
                         Gender = o.Gender,
                         Status = o.Status,
-                        // Only your own side shows numbers, and in a double battle only once the
-                        // games have been asked to swap the bar for them.
+                        // Only the player's bar shows numbers, and in a double battle only after Start swaps them in.
                         ShowHealthNumbers = player && (!o.Doubles || o.NumbersInsteadOfBar),
                         Health = (int)Math.Round(Math.Clamp(o.HealthLeft, 0, 1) * SampleMostHealth),
                         MostHealth = SampleMostHealth,

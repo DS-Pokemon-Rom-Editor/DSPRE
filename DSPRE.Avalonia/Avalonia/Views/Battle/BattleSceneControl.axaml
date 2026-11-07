@@ -13,12 +13,12 @@
         <Image Source="{Binding ArenaBackdrop}" Canvas.Left="{Binding BackdropX}" Canvas.Top="0" Stretch="None" IsVisible="{Binding HasArenaGraphics}"/>
         <Image Source="{x:Static views:BattleSceneControl.BackgroundAsset}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192" Stretch="Fill" IsVisible="{Binding !HasArenaGraphics}"/>
 
-        <Image Source="{Binding ArenaGroundEnemy}" Canvas.Left="{Binding ArenaGroundEnemyX}" Canvas.Top="{Binding ArenaGroundEnemyTop}" IsVisible="{Binding HasArenaGraphics}"/>
-        <Image Source="{Binding ArenaGroundMine}"  Canvas.Left="{Binding ArenaGroundMineX}"  Canvas.Top="{Binding ArenaGroundMineTop}"  IsVisible="{Binding HasArenaGraphics}"/>
-        <Image Source="{x:Static views:BattleSceneControl.PlatformOpponentAsset}" Canvas.Left="{Binding PlaceholderEnemyPlatformX}" Canvas.Top="72" IsVisible="{Binding !HasArenaGraphics}"/>
+        <Image Source="{Binding ArenaGroundOpponent}" Canvas.Left="{Binding ArenaGroundOpponentX}" Canvas.Top="{Binding ArenaGroundOpponentTop}" IsVisible="{Binding HasArenaGraphics}"/>
+        <Image Source="{Binding ArenaGroundPlayer}"  Canvas.Left="{Binding ArenaGroundPlayerX}"  Canvas.Top="{Binding ArenaGroundPlayerTop}"  IsVisible="{Binding HasArenaGraphics}"/>
+        <Image Source="{x:Static views:BattleSceneControl.PlatformOpponentAsset}" Canvas.Left="{Binding PlaceholderOpponentPlatformX}" Canvas.Top="72" IsVisible="{Binding !HasArenaGraphics}"/>
         <Image Source="{x:Static views:BattleSceneControl.PlatformYouAsset}" Canvas.Left="{Binding PlaceholderPlayerPlatformX}" Canvas.Top="122" IsVisible="{Binding !HasArenaGraphics}"/>
 
-        <!-- Enemy shadow (one visible per size), grown in with the sprite. -->
+        <!-- Opponent shadow (one visible per size), grown in with the sprite. -->
         <Canvas>
           <Canvas.Styles>
             <Style Selector="Image.shadow">
@@ -43,19 +43,19 @@
         </Canvas>
 
         <!-- 
-             Enemy (front) and player (back) sprites, passed in per scene. The tint follows the sprite's alpha so
+             Opponent (front) and player (back) sprites, passed in per scene. The tint follows the sprite's alpha so
              transparent pixels stay clear.
         -->
-        <Grid Canvas.Left="{Binding EnemyLeft}" Canvas.Top="{Binding #SceneRoot.EnemyY}" Width="80" Height="80"
-               RenderTransformOrigin="0,0" IsVisible="{Binding EnemyShown}">
+        <Grid Canvas.Left="{Binding OpponentLeft}" Canvas.Top="{Binding #SceneRoot.OpponentY}" Width="80" Height="80"
+               RenderTransformOrigin="0,0" IsVisible="{Binding OpponentShown}">
           <Grid.RenderTransform>
             <MatrixTransform Matrix="{Binding AnimMatrix}"/>
           </Grid.RenderTransform>
-          <Image Source="{Binding #SceneRoot.Enemy}" Stretch="None" RenderOptions.BitmapInterpolationMode="None"
+          <Image Source="{Binding #SceneRoot.Opponent}" Stretch="None" RenderOptions.BitmapInterpolationMode="None"
                  HorizontalAlignment="Left" VerticalAlignment="Top"/>
           <Rectangle Fill="{Binding AnimFadeBrush}" Opacity="{Binding AnimFadeOpacity}" IsHitTestVisible="False">
             <Rectangle.OpacityMask>
-              <ImageBrush Source="{Binding #SceneRoot.Enemy}" Stretch="None" AlignmentX="Left" AlignmentY="Top"/>
+              <ImageBrush Source="{Binding #SceneRoot.Opponent}" Stretch="None" AlignmentX="Left" AlignmentY="Top"/>
             </Rectangle.OpacityMask>
           </Rectangle>
         </Grid>
@@ -75,20 +75,20 @@
         </Grid>
 
         <!-- Send-out only: trainers, balls, bursts, sparkles and party rows. -->
-        <Image Source="{Binding EnemyTrainerSprite.Image}" Canvas.Left="{Binding EnemyTrainerSprite.Left}" Canvas.Top="{Binding EnemyTrainerSprite.Top}"
-               Width="160" Height="160" IsVisible="{Binding EnemyTrainerSprite.Visible}" RenderOptions.BitmapInterpolationMode="None"/>
+        <Image Source="{Binding OpponentTrainerSprite.Image}" Canvas.Left="{Binding OpponentTrainerSprite.Left}" Canvas.Top="{Binding OpponentTrainerSprite.Top}"
+               Width="160" Height="160" IsVisible="{Binding OpponentTrainerSprite.Visible}" RenderOptions.BitmapInterpolationMode="None"/>
         <Image Source="{Binding PlayerTrainerSprite.Image}" Canvas.Left="{Binding PlayerTrainerSprite.Left}" Canvas.Top="{Binding PlayerTrainerSprite.Top}"
                Width="160" Height="160" IsVisible="{Binding PlayerTrainerSprite.Visible}" RenderOptions.BitmapInterpolationMode="None"/>
 
-        <Grid Canvas.Left="{Binding EnemyBallSprite.Left}" Canvas.Top="{Binding EnemyBallSprite.Top}" Width="64" Height="64"
-              IsVisible="{Binding EnemyBallSprite.Visible}" RenderTransformOrigin="50%,50%">
+        <Grid Canvas.Left="{Binding OpponentBallSprite.Left}" Canvas.Top="{Binding OpponentBallSprite.Top}" Width="64" Height="64"
+              IsVisible="{Binding OpponentBallSprite.Visible}" RenderTransformOrigin="50%,50%">
           <Grid.RenderTransform>
-            <RotateTransform Angle="{Binding EnemyBallSprite.Rotation}"/>
+            <RotateTransform Angle="{Binding OpponentBallSprite.Rotation}"/>
           </Grid.RenderTransform>
-          <Image Source="{Binding EnemyBallSprite.Image}" Stretch="None" RenderOptions.BitmapInterpolationMode="None"/>
-          <Rectangle Fill="White" Opacity="{Binding EnemyBallSprite.Flash}" IsHitTestVisible="False">
+          <Image Source="{Binding OpponentBallSprite.Image}" Stretch="None" RenderOptions.BitmapInterpolationMode="None"/>
+          <Rectangle Fill="White" Opacity="{Binding OpponentBallSprite.Flash}" IsHitTestVisible="False">
             <Rectangle.OpacityMask>
-              <ImageBrush Source="{Binding EnemyBallSprite.Image}" Stretch="None"/>
+              <ImageBrush Source="{Binding OpponentBallSprite.Image}" Stretch="None"/>
             </Rectangle.OpacityMask>
           </Rectangle>
         </Grid>
@@ -105,11 +105,11 @@
           </Rectangle>
         </Grid>
 
-        <Image Source="{Binding EnemyBurstImage}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192"
+        <Image Source="{Binding OpponentBurstImage}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192"
                RenderOptions.BitmapInterpolationMode="None" IsHitTestVisible="False"/>
         <Image Source="{Binding PlayerBurstImage}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192"
                RenderOptions.BitmapInterpolationMode="None" IsHitTestVisible="False"/>
-        <Image Source="{Binding EnemySparkleImage}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192"
+        <Image Source="{Binding OpponentSparkleImage}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192"
                RenderOptions.BitmapInterpolationMode="None" IsHitTestVisible="False"/>
         <Image Source="{Binding PlayerSparkleImage}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192"
                RenderOptions.BitmapInterpolationMode="None" IsHitTestVisible="False"/>
@@ -117,8 +117,8 @@
                RenderOptions.BitmapInterpolationMode="None" IsHitTestVisible="False"/>
 
         <!-- The ROM's gauge frames, or the bundled ones when they can't be read. Each side's bar slides in alone during a send-out. -->
-        <Canvas Canvas.Left="{Binding EnemyGaugeX}" IsVisible="{Binding EnemyGaugeShown}">
-          <Image Source="{Binding GaugeEnemyImage}"  Canvas.Left="-70" Canvas.Top="-92" Width="256" Height="256"
+        <Canvas Canvas.Left="{Binding OpponentGaugeX}" IsVisible="{Binding OpponentGaugeShown}">
+          <Image Source="{Binding GaugeOpponentImage}"  Canvas.Left="-70" Canvas.Top="-92" Width="256" Height="256"
                  IsVisible="{Binding HasRealGauges}" RenderOptions.BitmapInterpolationMode="None"/>
           <Image Source="{x:Static views:BattleSceneControl.HealthOpponentAsset}" Canvas.Left="0"   Canvas.Top="18"
                  IsVisible="{Binding PlaceholderGaugesVisible}"/>
@@ -136,9 +136,9 @@
         <Canvas Canvas.Left="{Binding PlayerGaugeX}" IsVisible="{Binding PlayerGaugeShown}">
           <Image Source="{Binding GaugePlayerImage}" Canvas.Left="{Binding PlayerGaugeImageLeft}" Canvas.Top="-12" Width="256" Height="256"
                  IsVisible="{Binding HasRealGauges}" RenderOptions.BitmapInterpolationMode="None"/>
-          <Image Source="{x:Static views:BattleSceneControl.HealthYouAsset}"      Canvas.Left="129" Canvas.Top="95"
+          <Image Source="{x:Static views:BattleSceneControl.HealthPlayerAsset}"      Canvas.Left="129" Canvas.Top="95"
                  IsVisible="{Binding PlaceholderGaugesVisible}"/>
-          <!-- Your side. The captured frame only shows their gauge, so these are where DSPRE has
+          <!-- The player's side. The captured frame only shows the opponent's gauge, so these are where DSPRE has
                always put them and are NOT checked against a real battle. -->
           <Canvas IsVisible="{Binding HasRealGauges}">
             <TextBlock Canvas.Left="149" Canvas.Top="102" Text="{Binding GaugeNameText}"  FontSize="9" FontWeight="Bold" Foreground="{Binding GaugeTextBrush}" IsVisible="{Binding !GaugeTextIsReal}"/>

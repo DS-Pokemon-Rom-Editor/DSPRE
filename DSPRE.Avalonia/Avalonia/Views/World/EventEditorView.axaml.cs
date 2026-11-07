@@ -52,7 +52,7 @@ namespace DSPRE.Avalonia.Views.World
             };
             GlHost.PointerExited += (s, e) => VM?.ClearHoverCoords();
 
-            // Arrow keys act only while the 3D view has focus, so side-panel inputs keep theirs.
+            // Arrow keys act only while the 3D view has focus, so side-panel inputs keep their own.
             GlHost.KeyDown += (s, e) =>
             {
                 // In edit mode with an event selected, arrow keys nudge it one tile along X/Z; else pan.

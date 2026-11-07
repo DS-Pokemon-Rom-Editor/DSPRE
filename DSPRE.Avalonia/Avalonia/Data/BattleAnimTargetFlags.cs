@@ -10,8 +10,8 @@ namespace DSPRE.Avalonia.Data
 
         public const int PokemonSprite0 = 0x0002, PokemonSprite1 = 0x0004, PokemonSprite2 = 0x0008, PokemonSprite3 = 0x0010;
 
-        // With SpecificBattler the other bits name fixed slots, not roles: the player's and the enemy's first battler.
-        public const int PlayerSlot = 0, EnemySlot = 1;
+        // With SpecificBattler the other bits name fixed slots, not roles: the player's and the opponent's first battler.
+        public const int PlayerSlot = 0, OpponentSlot = 1;
 
         public static List<int> Targets(int flag, int attacker, int defender)
         {
@@ -20,7 +20,7 @@ namespace DSPRE.Avalonia.Data
             {
                 // In a single battle there is no second slot on either side, and the routines fall back to the player's battler.
                 if ((flag & (Attacker | AttackerPartner | DefenderPartner)) != 0) list.Add(PlayerSlot);
-                if ((flag & Defender) != 0) list.Add(EnemySlot);
+                if ((flag & Defender) != 0) list.Add(OpponentSlot);
                 return list;
             }
             if ((flag & AllBattlers) != 0) { list.Add(attacker); if (defender != attacker) list.Add(defender); return list; }
@@ -44,8 +44,8 @@ namespace DSPRE.Avalonia.Data
             {
                 if ((flag & Attacker) != 0) parts.Add("the player's first Pokémon");
                 if ((flag & AttackerPartner) != 0) parts.Add("the player's second Pokémon");
-                if ((flag & Defender) != 0) parts.Add("the enemy's first Pokémon");
-                if ((flag & DefenderPartner) != 0) parts.Add("the enemy's second Pokémon");
+                if ((flag & Defender) != 0) parts.Add("the opponent's first Pokémon");
+                if ((flag & DefenderPartner) != 0) parts.Add("the opponent's second Pokémon");
             }
             else
             {

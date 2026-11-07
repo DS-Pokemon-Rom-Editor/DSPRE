@@ -30,8 +30,8 @@ namespace DSPRE.ROMFiles
 
         public static Part[] PartsOf(BattleGaugePieces.Bar bar) => bar switch
         {
-            BattleGaugePieces.Bar.YoursSingle => new[] { Part.Name, Part.LvMark, Part.LvDigits, Part.CurrentHp, Part.MaxHp, Part.HpGauge, Part.Status, Part.Exp },
-            BattleGaugePieces.Bar.YoursDouble or BattleGaugePieces.Bar.YourPartner =>
+            BattleGaugePieces.Bar.PlayerSingle => new[] { Part.Name, Part.LvMark, Part.LvDigits, Part.CurrentHp, Part.MaxHp, Part.HpGauge, Part.Status, Part.Exp },
+            BattleGaugePieces.Bar.PlayerDouble or BattleGaugePieces.Bar.PlayerPartner =>
                 new[] { Part.Name, Part.LvMark, Part.LvDigits, Part.HpGauge, Part.Status, Part.CurrentHp, Part.Slash, Part.MaxHp, Part.HpTag, Part.BarEnd },
             _ => new[] { Part.Name, Part.LvMark, Part.LvDigits, Part.HpGauge, Part.Status, Part.Caught },
         };
@@ -155,7 +155,7 @@ namespace DSPRE.ROMFiles
                     if (!empty(tile) && !plain(tile) && !under.Contains(tile)) art.Add(tile);
             }
             HashSet<Part> clashes = new();
-            bool swaps = Bar is BattleGaugePieces.Bar.YoursDouble or BattleGaugePieces.Bar.YourPartner;
+            bool swaps = Bar is BattleGaugePieces.Bar.PlayerDouble or BattleGaugePieces.Bar.PlayerPartner;
             foreach ((Part part, (int X, int Y) at) in At)
             {
                 (int w, int h) = Size(part);

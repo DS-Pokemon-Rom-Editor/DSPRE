@@ -564,7 +564,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             users = users.Distinct().ToList();
             if (users.Count == 0) return null;
             // The same layer on the other pages is this piece again, so it is counted by page instead of named.
-            string selfName = self is ScreenBg mine ? "Background " + mine.Bg : (self as ScreenSprite)?.Name;
+            string selfName = self is ScreenBg selfBg ? "Background " + selfBg.Bg : (self as ScreenSprite)?.Name;
             List<(string Page, string Name)> others = users.Where(u => u.Name != selfName).ToList();
             if (others.Count == 0)
             {

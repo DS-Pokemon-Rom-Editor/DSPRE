@@ -348,21 +348,21 @@ namespace DSPRE.ROMFiles
             (bool[] columns, bool[] _) = Lines(data);
             foreach (int y in new[] { old.Top - 1, old.Bottom + 1 }.Where(shared.ContainsKey))
             {
-                bool mineAbove = shared[y].Above == old;
-                Band other = mineAbove ? shared[y].Below : shared[y].Above;
+                bool movedAbove = shared[y].Above == old;
+                Band other = movedAbove ? shared[y].Below : shared[y].Above;
                 for (int x = Math.Min(old.X0, moved.X0); x <= last; x++)
                 {
-                    int mine = StateOf(moved, x), theirs = StateOf(other, x);
-                    if (mine == 0 && theirs == 0) { Set(data, x, y, Plain(data, x, y, (_, _) => false)); continue; }
+                    int movedState = StateOf(moved, x), otherState = StateOf(other, x);
+                    if (movedState == 0 && otherState == 0) { Set(data, x, y, Plain(data, x, y, (_, _) => false)); continue; }
                     // Look for a tile with the same pair of states, in this row first, then the other shared rows. If either half is empty,
                     // the tile must also sit on the same kind of grid column.
                     ushort? found = null;
                     foreach ((Band Above, Band Below, ushort[] Tiles) s in shared.OrderBy(kv => kv.Key != y).Select(kv => kv.Value))
                     {
-                        Band mineThere = mineAbove ? s.Above : s.Below, otherThere = mineAbove ? s.Below : s.Above;
+                        Band movedThere = movedAbove ? s.Above : s.Below, otherThere = movedAbove ? s.Below : s.Above;
                         for (int c = 0; c < Columns && found == null; c++)
-                            if (StateOf(mineThere, c) == mine && StateOf(otherThere, c) == theirs
-                                && (mine != 0 && theirs != 0 || columns[c % Spec.Grid] == columns[x % Spec.Grid]))
+                            if (StateOf(movedThere, c) == movedState && StateOf(otherThere, c) == otherState
+                                && (movedState != 0 && otherState != 0 || columns[c % Spec.Grid] == columns[x % Spec.Grid]))
                                 found = s.Tiles[c];
                         if (found != null) break;
                     }
@@ -371,7 +371,7 @@ namespace DSPRE.ROMFiles
                     {
                         ushort? Half(bool upper)
                         {
-                            int want = upper == mineAbove ? mine : theirs;
+                            int want = upper == movedAbove ? movedState : otherState;
                             foreach ((Band Above, Band Below, ushort[] Tiles) s in shared.OrderBy(kv => kv.Key != y).Select(kv => kv.Value))
                                 for (int c = 0; c < Columns; c++)
                                     if (StateOf(upper ? s.Above : s.Below, c) == want && (want != 0 || columns[c % Spec.Grid] == columns[x % Spec.Grid]))

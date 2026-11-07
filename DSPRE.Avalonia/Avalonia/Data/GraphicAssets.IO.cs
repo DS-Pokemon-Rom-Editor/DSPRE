@@ -372,7 +372,7 @@ namespace DSPRE.Avalonia.Data
             if (IndexedPng.IsInterlaced(file))
                 return "That PNG is interlaced. Save it without interlacing and import it again.";
             if (!IndexedPng.TryRead(file, out byte[] indices, out uint[] pal, out int w, out int h))
-                return "That PNG isn't indexed. Export this entry first and paint over it, or save yours as an "
+                return "That PNG isn't indexed. Export this entry first and paint over it, or save the picture as an "
                      + "indexed PNG.";
 
             if (w != ix.Width || h != ix.Height)
@@ -445,7 +445,7 @@ namespace DSPRE.Avalonia.Data
             if (IndexedPng.IsInterlaced(file))
                 return "That PNG is interlaced. Save it without interlacing and import it again.";
             if (!IndexedPng.TryRead(file, out byte[] indices, out uint[] pal, out int w, out int h))
-                return "That PNG isn't indexed. Export this one first and paint over it, or save yours as an "
+                return "That PNG isn't indexed. Export this one first and paint over it, or save the picture as an "
                      + "indexed PNG.";
             if (w != shown.Width || h != shown.Height)
                 return $"This is {shown.Width} by {shown.Height} and that PNG is {w} by {h}. Save this one "

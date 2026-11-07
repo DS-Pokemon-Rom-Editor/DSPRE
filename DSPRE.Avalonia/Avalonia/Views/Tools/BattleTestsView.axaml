@@ -80,8 +80,8 @@
 
                 <TextBlock Text="Player party" FontWeight="Bold"/>
                 <ItemsControl ItemsSource="{Binding Player}" ItemTemplate="{StaticResource MonCard}"/>
-                <TextBlock Text="Enemy party" FontWeight="Bold"/>
-                <ItemsControl ItemsSource="{Binding Enemy}" ItemTemplate="{StaticResource MonCard}"/>
+                <TextBlock Text="Opponent party" FontWeight="Bold"/>
+                <ItemsControl ItemsSource="{Binding Opponent}" ItemTemplate="{StaticResource MonCard}"/>
 
                 <TextBlock Text="Turns" FontWeight="Bold"/>
                 <ItemsControl ItemsSource="{Binding Scripts}">

@@ -728,14 +728,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 foreach (ScreenWindowLayout.Window other in shown)
                 {
                     if (ReferenceEquals(other, w) || other.Layer != w.Layer || !GameTextScreens.Together(_text, w, other)
-                        || !kept.TryGetValue(other.Name, out bool[] theirs)) continue;
+                        || !kept.TryGetValue(other.Name, out bool[] otherKept)) continue;
                     (int ox, int oy, int ow, int oh) = GameTextScreens.Placed(_text, other, state);
                     bool overlap = false, lost = false;
                     for (int ty = Math.Max(y, oy); ty < Math.Min(y + height, oy + oh) && ty < 32; ty++)
                         for (int tx = Math.Max(x, ox); tx < Math.Min(x + width, ox + ow) && tx < 32; tx++)
                         {
                             overlap = true;
-                            if (theirs[ty * 32 + tx]) lost = true;
+                            if (otherKept[ty * 32 + tx]) lost = true;
                         }
                     if (overlap) notes.Add(lost ? $"Partly hidden by {Said(other)}" : $"Hides part of {Said(other)}");
                 }

@@ -496,7 +496,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public float PlateHeight { get => Picked == null ? 0 : Picked.Height / Unit; set => EditPlate(p => p.Tilt(value * Unit, p.SlopeX, p.SlopeZ), keepTilt: false); }
         public float PlateSlopeX { get => Picked == null ? 0 : Picked.SlopeX / Unit; set => EditPlate(p => p.Tilt(p.Height, value * Unit, p.SlopeZ), keepTilt: false); }
         public float PlateSlopeZ { get => Picked == null ? 0 : Picked.SlopeZ / Unit; set => EditPlate(p => p.Tilt(p.Height, p.SlopeX, value * Unit), keepTilt: false); }
-        public bool PlateKept { get => Picked?.Mine == true; set => EditPlate(p => p.Mine = value, keepTilt: true, mark: false); }
+        public bool PlateKept { get => Picked?.Kept == true; set => EditPlate(p => p.Kept = value, keepTilt: true, mark: false); }
 
         private void EditPlate(Action<BdhcBuild.Piece> change, bool keepTilt = true, bool mark = true)
         {
@@ -505,7 +505,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             float height = p.Height, sx = p.SlopeX, sz = p.SlopeZ;
             change(p);
             if (keepTilt) p.Tilt(height, sx, sz);
-            if (mark) p.Mine = true;
+            if (mark) p.Kept = true;
             WritePlates("Plate changed.");
         }
 
@@ -515,14 +515,14 @@ namespace DSPRE.Avalonia.ViewModels.World
             byte[] made = BdhcBuild.From(_plates, out string whynot);
             if (made == null) { Warning = whynot; return; }
             Remember();
-            _map.KeptPlates = _plates.Where(p => p.Mine).Select(p => p.Copy()).ToList();
+            _map.KeptPlates = _plates.Where(p => p.Kept).Select(p => p.Copy()).ToList();
             _map.ImportTerrain(made);
             int blocked = BdhcBuild.BlockUngrounded(_map.Bdhc, _map.Collisions);
             if (blocked > 0) said += $" Blocked {Plural.Of(blocked, "square")} with no ground.";
             Dirty = true;
             Note = said;
             CheckTerrain();
-            if (HasPickedPlate) PlateNote = $"Plate {_pickedPlate + 1} of {_plates.Count}" + (Picked.Mine ? ", yours." : ".");
+            if (HasPickedPlate) PlateNote = $"Plate {_pickedPlate + 1} of {_plates.Count}" + (Picked.Kept ? ", kept." : ".");
             RaisePlate();
             Changed?.Invoke(this, EventArgs.Empty);
         }
@@ -559,8 +559,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (_mesh == null || _map == null) return;
             _proposal = BdhcBuild.Propose(_mesh, _map.Collisions, _map.Bdhc, _map.KeptPlates, Touched);
-            int yours = _proposal.Count(p => p.Mine);
-            PlateNote = $"{_proposal.Count} plates proposed" + (yours > 0 ? $", {yours} of yours kept." : ".");
+            int keptCount = _proposal.Count(p => p.Kept);
+            PlateNote = $"{_proposal.Count} plates proposed" + (keptCount > 0 ? $", {keptCount} kept." : ".");
             if (!_showPlates) ShowPlates = true; else RebuildPlates();
             RaisePlate();
         }
@@ -588,7 +588,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             List<MapMesh.Vertex> corners = _mesh.Faces[PickedFace].Corners.Select(c => _mesh.Vertices[c]).ToList();
             float x = corners.Average(v => v.X) * scale, z = corners.Average(v => v.Z) * scale, y = corners.Average(v => v.Y) * scale;
             float left = MathF.Floor((x + Edge) / Unit) * Unit - Edge, top = MathF.Floor((z + Edge) / Unit) * Unit - Edge;
-            BdhcBuild.Piece plate = new BdhcBuild.Piece { MinX = left, MaxX = left + Unit, MinZ = top, MaxZ = top + Unit, Mine = true };
+            BdhcBuild.Piece plate = new BdhcBuild.Piece { MinX = left, MaxX = left + Unit, MinZ = top, MaxZ = top + Unit, Kept = true };
             plate.Tilt(y, 0f, 0f);
             _plates.Add(plate);
             _pickedPlate = _plates.Count - 1;
@@ -631,7 +631,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     if (MeshPick.Crosses(ox, oy, oz, dx, dy, dz, u, v, w, out float t) && t < nearest) { nearest = t; best = i; }
             }
             _pickedPlate = best;
-            if (best >= 0) PlateNote = $"Plate {best + 1} of {_plates.Count}" + (_plates[best].Mine ? ", yours." : ".");
+            if (best >= 0) PlateNote = $"Plate {best + 1} of {_plates.Count}" + (_plates[best].Kept ? ", kept." : ".");
             RebuildPlates();
             RaisePlate();
             return best >= 0;
@@ -643,10 +643,10 @@ namespace DSPRE.Avalonia.ViewModels.World
             PlateVertexCount = 0;
             if (_proposal == null)
             {
-                List<BdhcBuild.Piece> mine = _map?.KeptPlates ?? new List<BdhcBuild.Piece>();
+                List<BdhcBuild.Piece> keptBefore = _map?.KeptPlates ?? new List<BdhcBuild.Piece>();
                 _plates = BdhcBuild.Read(_map?.Bdhc);
                 foreach (BdhcBuild.Piece p in _plates)
-                    p.Mine = mine.Any(k => Math.Abs(k.MinX - p.MinX) < 0.01f && Math.Abs(k.MaxX - p.MaxX) < 0.01f
+                    p.Kept = keptBefore.Any(k => Math.Abs(k.MinX - p.MinX) < 0.01f && Math.Abs(k.MaxX - p.MaxX) < 0.01f
                                         && Math.Abs(k.MinZ - p.MinZ) < 0.01f && Math.Abs(k.MaxZ - p.MaxZ) < 0.01f
                                         && Math.Abs(k.Height - p.Height) < 0.05f);
                 if (_pickedPlate >= _plates.Count) _pickedPlate = -1;
@@ -692,8 +692,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                         }
                     }
                     // An outline shows where one plate ends; the user's own have a gold one.
-                    (float, float, float) edge = picked ? (1f, 1f, 1f) : plate.Mine ? (1f, 0.78f, 0.15f) : (0.06f, 0.06f, 0.08f);
-                    float w = picked || plate.Mine ? Unit / 6f : Unit / 12f;
+                    (float, float, float) edge = picked ? (1f, 1f, 1f) : plate.Kept ? (1f, 0.78f, 0.15f) : (0.06f, 0.06f, 0.08f);
+                    float w = picked || plate.Kept ? Unit / 6f : Unit / 12f;
                     Quad(plate, plate.MinX, plate.MinZ, plate.MaxX, plate.MinZ + w, edge, 0.002f);
                     Quad(plate, plate.MinX, plate.MaxZ - w, plate.MaxX, plate.MaxZ, edge, 0.002f);
                     Quad(plate, plate.MinX, plate.MinZ, plate.MinX + w, plate.MaxZ, edge, 0.002f);
@@ -729,7 +729,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 return;
             }
 
-            int apart = 0, near = 0, looked = 0, yours = 0, kept = 0;
+            int apart = 0, near = 0, looked = 0, underKept = 0, kept = 0;
             bool first = _offAtOpen == null;
             if (first) _offAtOpen = new Dictionary<(int x, int z), float>();
             for (int tz = 0; tz < 32; tz++)
@@ -741,7 +741,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
                     looked++;
                     float x = rawX * 64f - 256f, z = rawZ * 64f - 256f;
-                    if (_map.KeptPlates.Any(p => p.Covers(x, z))) { yours++; continue; }
+                    if (_map.KeptPlates.Any(p => p.Covers(x, z))) { underKept++; continue; }
                     bool none = !drawn.TryGetHeight(rawX, rawZ, walkY, out float drawY);
                     float off = none ? float.MaxValue : Math.Abs(drawY - walkY);
                     // PDSMS water sits a little below its plates; a quarter tile or less is left alone.
@@ -754,7 +754,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 }
 
             TerrainDisagrees = apart > 0;
-            string within = (near > 0 ? $", {near} within 1/4 tile" : "") + (yours > 0 ? $", {yours} under your plates" : "")
+            string within = (near > 0 ? $", {near} within 1/4 tile" : "") + (underKept > 0 ? $", {underKept} under kept plates" : "")
                           + (kept > 0 ? $", {kept} already different when opened" : "");
             TerrainNote = apart == 0
                 ? $"Terrain matches the model ({looked} tiles{within})."

@@ -295,7 +295,7 @@ namespace DSPRE.Avalonia.Data
             ["ResetAllStatChanges"] = "Resets every Pokémon's stat changes.",
             ["SetHealthbarStatus"] = "Sets the condition an HP bar shows.",
             ["SetPokemonEncounter"] = "Sets the wild Pokémon for the battle.",
-            ["SetRandomTarget"] = "Targets a random foe.",
+            ["SetRandomTarget"] = "Targets a random opponent.",
             ["Transform"] = "Turns the user into the target.",
             ["TrickRoom"] = "Turns Trick Room on or off.",
             ["TriggerAbilityOnHit"] = "Triggers Abilities that react to a hit.",

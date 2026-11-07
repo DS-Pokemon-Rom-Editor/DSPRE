@@ -32,18 +32,18 @@ namespace DSPRE.Avalonia.Data
             _ => PtTerrainNames,
         };
 
-        // terrain id to platform graphic set per side. Id 11 draws your side from platform 10 and theirs, with its colours, from platform 8.
+        // terrain id to platform graphic set per side. Id 11 draws the player's platform from set 10, and the opponent's platform and colours from set 8.
         private static readonly int[] DpGroundGfx = { 2, 7, 0, 10, 4, 9, 5, 1, 3, 6, 8 };
-        private static readonly int[] PtHgssMineGfx =
+        private static readonly int[] PtHgssPlayerGfx =
             { 2, 7, 0, 10, 4, 9, 5, 1, 3, 6, 8, 10, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 };
-        private static readonly int[] PtHgssEnemyGfx =
+        private static readonly int[] PtHgssOpponentGfx =
             { 2, 7, 0, 10, 4, 9, 5, 1, 3, 6, 8, 8, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 };
-        private static int[] MineGfx => GameFamily == GameFamilies.DP ? DpGroundGfx : PtHgssMineGfx;
-        private static int[] EnemyGfx => GameFamily == GameFamilies.DP ? DpGroundGfx : PtHgssEnemyGfx;
+        private static int[] PlayerGfx => GameFamily == GameFamilies.DP ? DpGroundGfx : PtHgssPlayerGfx;
+        private static int[] OpponentGfx => GameFamily == GameFamilies.DP ? DpGroundGfx : PtHgssOpponentGfx;
 
 
         // Cell origin on screen; a 256 canvas drawn at pos - 128 puts its centre there.
-        private const int MineX = 64, MineY = 128 + 8, EnemyX = 24 * 8, EnemyY = 8 * 11, Canvas = 256;
+        private const int PlayerX = 64, PlayerY = 128 + 8, OpponentX = 24 * 8, OpponentY = 8 * 11, Canvas = 256;
 
         public static int TerrainCount => TerrainNames.Length;
 
@@ -52,27 +52,27 @@ namespace DSPRE.Avalonia.Data
         /// them. The numbers differ per game, so a constant is right for one family and wrong for the
         /// others. Platform 0 has the layout every terrain uses.
         /// </summary>
-        public static (int MineDrawing, int EnemyDrawing, int MineLayout, int EnemyLayout, int PaletteDay)?
+        public static (int PlayerDrawing, int OpponentDrawing, int PlayerLayout, int OpponentLayout, int PaletteDay)?
             TerrainFiles(int terrainId)
         {
-            if (terrainId < 0 || terrainId >= MineGfx.Length) return null;
-            int mine = MineGfx[terrainId], enemy = EnemyGfx[terrainId];
-            int mineDraw = BattleObjects.Find($"Platform.{mine}.Yours", "Drawing");
-            int enemyDraw = BattleObjects.Find($"Platform.{enemy}.Theirs", "Drawing");
-            int mineLayout = BattleObjects.Find("Platform.0.Yours", "As it appears");
-            int enemyLayout = BattleObjects.Find("Platform.0.Theirs", "As it appears");
-            int palDay = BattleObjects.Find($"Platform.{enemy}.Day", "Colours");
-            if (mineDraw < 0 || enemyDraw < 0 || mineLayout < 0 || enemyLayout < 0 || palDay < 0) return null;
-            return (mineDraw, enemyDraw, mineLayout, enemyLayout, palDay);
+            if (terrainId < 0 || terrainId >= PlayerGfx.Length) return null;
+            int playerSet = PlayerGfx[terrainId], opponent = OpponentGfx[terrainId];
+            int playerDraw = BattleObjects.Find($"Platform.{playerSet}.Player", "Drawing");
+            int opponentDraw = BattleObjects.Find($"Platform.{opponent}.Opponent", "Drawing");
+            int playerLayout = BattleObjects.Find("Platform.0.Player", "As it appears");
+            int opponentLayout = BattleObjects.Find("Platform.0.Opponent", "As it appears");
+            int palDay = BattleObjects.Find($"Platform.{opponent}.Day", "Colours");
+            if (playerDraw < 0 || opponentDraw < 0 || playerLayout < 0 || opponentLayout < 0 || palDay < 0) return null;
+            return (playerDraw, opponentDraw, playerLayout, opponentLayout, palDay);
         }
 
         // A default only: backdrop and ground are set independently per zone, and platform numbering parallels backdrop numbering.
         public static int BackdropForTerrain(int terrainId)
         {
-            if (terrainId < 0 || terrainId >= MineGfx.Length) return -1;
+            if (terrainId < 0 || terrainId >= PlayerGfx.Length) return -1;
             // Ice platforms are drawn as set 3, the forest's number, but ice floors are indoors: Snowpoint Gym uses Indoors 1.
             if (terrainId == TerrainIce) return Math.Min(BackdropIndoors1, BattleBgRenderer.BackdropCount - 1);
-            return Math.Min(MineGfx[terrainId], BattleBgRenderer.BackdropCount - 1);
+            return Math.Min(PlayerGfx[terrainId], BattleBgRenderer.BackdropCount - 1);
         }
 
         private const int TerrainIce = 8, BackdropIndoors1 = 6;
@@ -80,18 +80,18 @@ namespace DSPRE.Avalonia.Data
         private readonly ScriptNarc _narc = new ScriptNarc(DirNames.BattleObj);
         public bool Available => _narc.Available;
 
-        /// <summary>Builds the (mine, enemy) ground platforms for a terrain (a terrain id), or (null,null) if the
+        /// <summary>Builds the (player, opponent) ground platforms for a terrain (a terrain id), or (null,null) if the
         /// archive is unmapped/missing. <paramref name="timeZone"/> 0=day,1=evening,2=night selects the palette.</summary>
-        public (GroundImage mine, GroundImage enemy) Build(int terrainId, int timeZone = 0)
+        public (GroundImage player, GroundImage opponent) Build(int terrainId, int timeZone = 0)
         {
             if (!_narc.Available) return (null, null);
-            (int MineDrawing, int EnemyDrawing, int MineLayout, int EnemyLayout, int PaletteDay)? files = TerrainFiles(terrainId);
+            (int PlayerDrawing, int OpponentDrawing, int PlayerLayout, int OpponentLayout, int PaletteDay)? files = TerrainFiles(terrainId);
             if (files == null) return (null, null);
             int tz = Math.Clamp(timeZone, 0, 2);
-            (int MineDrawing, int EnemyDrawing, int MineLayout, int EnemyLayout, int PaletteDay) f = files.Value;
-            GroundImage mine = Render(f.MineDrawing, f.PaletteDay + tz, f.MineLayout, MineX, MineY);
-            GroundImage enemy = Render(f.EnemyDrawing, f.PaletteDay + tz, f.EnemyLayout, EnemyX, EnemyY);
-            return (mine, enemy);
+            (int PlayerDrawing, int OpponentDrawing, int PlayerLayout, int OpponentLayout, int PaletteDay) f = files.Value;
+            GroundImage player = Render(f.PlayerDrawing, f.PaletteDay + tz, f.PlayerLayout, PlayerX, PlayerY);
+            GroundImage opponent = Render(f.OpponentDrawing, f.PaletteDay + tz, f.OpponentLayout, OpponentX, OpponentY);
+            return (player, opponent);
         }
 
         // Only the static single-battle gauge frame; the fill and text are overlaid in the UI.
@@ -99,7 +99,7 @@ namespace DSPRE.Avalonia.Data
         {
             if (!_narc.Available) return null;
             // Found by name because file numbers differ per game.
-            string thing = player ? "HpBar.Yours" : "HpBar.Theirs";
+            string thing = player ? "HpBar.Player" : "HpBar.Opponent";
             int drawing = BattleObjects.Find(thing, "Drawing");
             int layout = BattleObjects.Find(thing, "As it appears");
             int colours = BattleObjects.Find("HpBar.Shared", "Colours");

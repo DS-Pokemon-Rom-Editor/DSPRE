@@ -150,7 +150,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>HGSS keeps its starters in the ARM9, so there is no script command to point at.</summary>
         public bool CanManageCommand => StarterRotomSource.IsAvailable && IsHeldItemSupported;
 
-        /// <summary>HGSS starters never carry a held item, and DP keep theirs out of reach.</summary>
+        /// <summary>HGSS starters never carry a held item, and DP keep the item out of reach.</summary>
         public bool IsHeldItemSupported =>
             RomInfo.GameFamily != RomInfo.GameFamilies.HGSS && !IsDiamondOrPearl;
 

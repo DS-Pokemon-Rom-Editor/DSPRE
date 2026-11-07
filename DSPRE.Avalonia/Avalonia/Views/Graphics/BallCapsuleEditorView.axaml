@@ -74,8 +74,8 @@
         </StackPanel>
         <views:BattleSceneControl x:DataType="vmb:BattleDisplayEditorViewModel" DataContext="{Binding Battle}"
                                   Width="512" Height="384" HorizontalAlignment="Left"
-                                  Enemy="{Binding EnemySprite}" Player="{Binding PlayerSprite}"
-                                  EnemyY="{Binding EnemyTop}" PlayerY="{Binding PlayerTop}"/>
+                                  Opponent="{Binding OpponentSprite}" Player="{Binding PlayerSprite}"
+                                  OpponentY="{Binding OpponentTop}" PlayerY="{Binding PlayerTop}"/>
       </StackPanel>
     </Grid>
   </DockPanel>

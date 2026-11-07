@@ -59,8 +59,8 @@ namespace DSPRE.Avalonia.Views.Audio
         private async Task DrawSelectedAsync()
         {
             _rendering?.Cancel();
-            CancellationTokenSource mine = _rendering = new CancellationTokenSource();
-            CancellationToken token = mine.Token;
+            CancellationTokenSource cts = _rendering = new CancellationTokenSource();
+            CancellationToken token = cts.Token;
 
             AudioEditorViewModel vm = ViewModel;
             _drawing = vm?.Selected != null;

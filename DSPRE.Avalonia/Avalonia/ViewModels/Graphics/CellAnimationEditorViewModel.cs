@@ -1067,15 +1067,15 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         // across both. Laying them out the same way here is what puts the tiles back where the cells expect.
         private static byte[] Sheet(ArchiveFiles narc, int own, int shared)
         {
-            byte[] mine = NitroBgCodec.ReadCharacters(NitroBgCodec.Inflate(narc.Get(own)));
-            if (shared < 0) return mine;
+            byte[] ownTiles = NitroBgCodec.ReadCharacters(NitroBgCodec.Inflate(narc.Get(own)));
+            if (shared < 0) return ownTiles;
 
             byte[] first = NitroBgCodec.ReadCharacters(NitroBgCodec.Inflate(narc.Get(shared)));
-            if (first.Length == 0) return mine;
+            if (first.Length == 0) return ownTiles;
 
-            byte[] both = new byte[first.Length + mine.Length];
+            byte[] both = new byte[first.Length + ownTiles.Length];
             first.CopyTo(both, 0);
-            mine.CopyTo(both, first.Length);
+            ownTiles.CopyTo(both, first.Length);
             return both;
         }
     }

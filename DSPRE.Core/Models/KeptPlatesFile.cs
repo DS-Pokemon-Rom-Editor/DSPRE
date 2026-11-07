@@ -25,7 +25,7 @@ namespace DSPRE.Models
                 string[] v = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 if (v.Length != 8) continue;
                 float[] f = v.Select(s => float.Parse(s, CultureInfo.InvariantCulture)).ToArray();
-                BdhcBuild.Piece plate = new BdhcBuild.Piece { MinX = f[0], MinZ = f[1], MaxX = f[2], MaxZ = f[3], Nx = f[4], Ny = f[5], Nz = f[6], D = f[7], Mine = true };
+                BdhcBuild.Piece plate = new BdhcBuild.Piece { MinX = f[0], MinZ = f[1], MaxX = f[2], MaxZ = f[3], Nx = f[4], Ny = f[5], Nz = f[6], D = f[7], Kept = true };
                 plate.AtY = plate.Height;
                 plates.Add(plate);
             }

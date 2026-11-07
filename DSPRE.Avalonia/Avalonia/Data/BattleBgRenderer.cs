@@ -60,7 +60,7 @@ namespace DSPRE.Avalonia.Data
 
         private readonly ScriptNarc _narc = new ScriptNarc(DirNames.BattleBg);
 
-        /// <summary>Builds the BG image for a background id; reverse=true uses the enemy-side tilemap. Null if unavailable.</summary>
+        /// <summary>Builds the BG image for a background id; reverse=true uses the opponent-side tilemap. Null if unavailable.</summary>
         public BgImage Build(int bgId, bool reverse = false) => Build(bgId, reverse ? 1 : 0);
 
         /// <summary>Builds the BG image with its screen (0), reversed screen (1) or contest screen (2).</summary>

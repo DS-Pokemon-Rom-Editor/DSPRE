@@ -4,7 +4,7 @@ using DSPRE.Avalonia.Data;
 namespace DSPRE.Avalonia.BattleAnim
 {
     /// <summary>The battle animation system as the effect tasks see it. Battlers are 0 for the player's side and 1
-    /// for the enemy's.</summary>
+    /// for the opponent's.</summary>
     public interface IBattleAnimSystem
     {
         int Attacker { get; }
@@ -13,7 +13,7 @@ namespace DSPRE.Avalonia.BattleAnim
         /// <summary>BattleAnimSystem_IsContest.</summary>
         bool Contest { get; }
 
-        /// <summary>BattleAnimUtil_GetTransformDirectionX and Y: 1, or -1 for the enemy's side.</summary>
+        /// <summary>BattleAnimUtil_GetTransformDirectionX and Y: 1, or -1 for the opponent's side.</summary>
         int TransformDirectionX(int battler);
         int TransformDirectionY(int battler);
 

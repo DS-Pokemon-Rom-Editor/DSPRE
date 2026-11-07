@@ -9,7 +9,7 @@ namespace DSPRE.Avalonia.BattleAnim.SpriteEffects
     {
         private const int AttackerStart = 10, AttackerRef = 10, AttackerEnd = 15, AttackerFrames = 12;
         private const int FaceStart = 5, FaceRef = 10, FaceEnd = 12, FaceScaleFrames = 32, FaceOffsetX = 32, FaceMoveFrames = 32;
-        private const int FaceMoveYEnemy = -8, FaceMoveYPlayer = -24;
+        private const int FaceMoveYOpponent = -8, FaceMoveYPlayer = -24;
 
         public static Func<bool> Start(IBattleAnimSystem sys, CellActor sprite)
         {
@@ -20,7 +20,7 @@ namespace DSPRE.Avalonia.BattleAnim.SpriteEffects
             sprite.Animate = true;
             sprite.Xlu = true;
             int baseX = attackerX + FaceOffsetX * dirX, baseY = attackerY;
-            int moveY = dirY < 0 ? FaceMoveYEnemy : FaceMoveYPlayer;
+            int moveY = dirY < 0 ? FaceMoveYOpponent : FaceMoveYPlayer;
             PosLerp facePos = new PosLerp(0, 0, 0, moveY * dirY, FaceMoveFrames);
             ScaleLerp faceScale = new ScaleLerp(FaceStart, FaceRef, FaceEnd, FaceScaleFrames);
             AlphaFade faceAlpha = null;

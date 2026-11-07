@@ -569,17 +569,17 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (_selectedIndex < 0 || _selectedIndex >= ClassNames.Count || _pendingClass != null) return;
 
             // Reload from the new source, then put back only the fields the user had changed.
-            ClassState mine = HasUnsavedChanges && _loadedState != null ? DSPRE.Avalonia.UndoJson.Read<ClassState>(TakeState()) : null;
-            ClassState loaded = mine != null ? DSPRE.Avalonia.UndoJson.Read<ClassState>(_loadedState) : null;
+            ClassState unsaved = HasUnsavedChanges && _loadedState != null ? DSPRE.Avalonia.UndoJson.Read<ClassState>(TakeState()) : null;
+            ClassState loaded = unsaved != null ? DSPRE.Avalonia.UndoJson.Read<ClassState>(_loadedState) : null;
             LoadClass(_selectedIndex);
-            if (mine == null) return;
-            if (mine.Name != loaded.Name) ClassName = mine.Name;
-            if (mine.WithArticle != loaded.WithArticle) WithArticle = mine.WithArticle;
-            if (mine.MusicMain != loaded.MusicMain) MusicMain = mine.MusicMain;
-            if (mine.MusicAlt != loaded.MusicAlt) MusicAlt = mine.MusicAlt;
-            if (mine.Gender != loaded.Gender) GenderIndex = mine.Gender;
-            if (mine.Prize != loaded.Prize) PrizeMultiplier = mine.Prize;
-            if (mine.BattleMusic != loaded.BattleMusic) BattleMusic = mine.BattleMusic;
+            if (unsaved == null) return;
+            if (unsaved.Name != loaded.Name) ClassName = unsaved.Name;
+            if (unsaved.WithArticle != loaded.WithArticle) WithArticle = unsaved.WithArticle;
+            if (unsaved.MusicMain != loaded.MusicMain) MusicMain = unsaved.MusicMain;
+            if (unsaved.MusicAlt != loaded.MusicAlt) MusicAlt = unsaved.MusicAlt;
+            if (unsaved.Gender != loaded.Gender) GenderIndex = unsaved.Gender;
+            if (unsaved.Prize != loaded.Prize) PrizeMultiplier = unsaved.Prize;
+            if (unsaved.BattleMusic != loaded.BattleMusic) BattleMusic = unsaved.BattleMusic;
         }
 
         /// <summary>A variable-size ARM9 table with an entry for each class that has eye-contact music.</summary>

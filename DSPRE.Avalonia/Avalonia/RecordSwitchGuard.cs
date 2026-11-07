@@ -89,7 +89,7 @@ namespace DSPRE.Avalonia
         /// </summary>
         public static Task<bool> TakeSavedVersionAsync(string subject)
             => DialogHelper.AskTwoWayAsync(
-                $"{subject} was saved in another editor, and has unsaved changes here.\n\nWhich version do you want to keep?",
-                "Saved elsewhere", "The saved one", "Mine");
+                $"{subject} was saved in another editor while this editor has unsaved changes to it.\n\nKeep the saved version or the unsaved changes?",
+                "Saved elsewhere", "Saved version", "Unsaved changes");
     }
 }

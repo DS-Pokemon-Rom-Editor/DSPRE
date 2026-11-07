@@ -66,7 +66,7 @@ namespace DSPRE.Avalonia.Data
         public int Fill = -1;
         /// <summary>For a fill that counts up tile by tile: added for each row down, while each column adds one.</summary>
         public int FillStride = -1;
-        /// <summary>Palette row forced onto the copied squares, or -1 to keep theirs.</summary>
+        /// <summary>Palette row forced onto the copied squares, or -1 to keep the squares' own.</summary>
         public int Palette = -1;
         public string When;
     }

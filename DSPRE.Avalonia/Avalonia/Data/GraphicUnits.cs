@@ -138,29 +138,29 @@ namespace DSPRE.Avalonia.Data
 
             for (int t = 0; t < BattleGroundRenderer.TerrainCount; t++)
             {
-                (int MineDrawing, int EnemyDrawing, int MineLayout, int EnemyLayout, int PaletteDay)? files = BattleGroundRenderer.TerrainFiles(t);
+                (int PlayerDrawing, int OpponentDrawing, int PlayerLayout, int OpponentLayout, int PaletteDay)? files = BattleGroundRenderer.TerrainFiles(t);
                 if (files == null) continue;
-                (int mine, int enemy, int mineCell, int enemyCell, int palDay) = files.Value;
-                if (mine >= fileCount || enemy >= fileCount || palDay + 2 >= fileCount) continue;
+                (int playerFile, int opponent, int playerCell, int opponentCell, int palDay) = files.Value;
+                if (playerFile >= fileCount || opponent >= fileCount || palDay + 2 >= fileCount) continue;
                 // The bridge borrows both sides from other terrains, so it has no files to show.
-                if (spokenFor.Contains(mine) && spokenFor.Contains(enemy)) continue;
+                if (spokenFor.Contains(playerFile) && spokenFor.Contains(opponent)) continue;
 
                 GraphicAssets.Unit u = new GraphicAssets.Unit
                 {
                     Archive = a,
                     Name = BattleGroundRenderer.TerrainNames[t] + " ground",
                 };
-                u.Parts.Add(Part(a, mine, "Your side"));
-                u.Parts.Add(Part(a, enemy, "Their side"));
+                u.Parts.Add(Part(a, playerFile, "Player side"));
+                u.Parts.Add(Part(a, opponent, "Opponent side"));
                 u.Parts.Add(Part(a, palDay, "Day colours"));
                 u.Parts.Add(Part(a, palDay + 1, "Evening colours"));
                 u.Parts.Add(Part(a, palDay + 2, "Night colours"));
-                if (mineCell < fileCount) u.Parts.Add(Part(a, mineCell, "Shared layout"));
-                if (enemyCell < fileCount) u.Parts.Add(Part(a, enemyCell, "Their shared layout"));
+                if (playerCell < fileCount) u.Parts.Add(Part(a, playerCell, "Player shared layout"));
+                if (opponentCell < fileCount) u.Parts.Add(Part(a, opponentCell, "Opponent shared layout"));
                 units.Add(u);
 
                 // The two cell layouts are shared by every terrain, so they're named on each row and get no row of their own.
-                foreach (int k in new[] { mine, enemy, palDay, palDay + 1, palDay + 2, mineCell, enemyCell })
+                foreach (int k in new[] { playerFile, opponent, palDay, palDay + 1, palDay + 2, playerCell, opponentCell })
                     spokenFor.Add(k);
             }
 
@@ -174,9 +174,9 @@ namespace DSPRE.Avalonia.Data
         {
             for (int t = 0; t < BattleGroundRenderer.TerrainCount; t++)
             {
-                (int MineDrawing, int EnemyDrawing, int MineLayout, int EnemyLayout, int PaletteDay)? f = BattleGroundRenderer.TerrainFiles(t);
+                (int PlayerDrawing, int OpponentDrawing, int PlayerLayout, int OpponentLayout, int PaletteDay)? f = BattleGroundRenderer.TerrainFiles(t);
                 if (f == null) continue;
-                if (fileIndex == f.Value.MineDrawing || fileIndex == f.Value.EnemyDrawing)
+                if (fileIndex == f.Value.PlayerDrawing || fileIndex == f.Value.OpponentDrawing)
                     return f.Value.PaletteDay;
             }
             return -1;
@@ -186,10 +186,10 @@ namespace DSPRE.Avalonia.Data
         {
             for (int t = 0; t < BattleGroundRenderer.TerrainCount; t++)
             {
-                (int MineDrawing, int EnemyDrawing, int MineLayout, int EnemyLayout, int PaletteDay)? f = BattleGroundRenderer.TerrainFiles(t);
+                (int PlayerDrawing, int OpponentDrawing, int PlayerLayout, int OpponentLayout, int PaletteDay)? f = BattleGroundRenderer.TerrainFiles(t);
                 if (f == null) continue;
-                if (fileIndex == f.Value.MineDrawing) return BattleGroundRenderer.TerrainNames[t] + " ground";
-                if (fileIndex == f.Value.EnemyDrawing) return BattleGroundRenderer.TerrainNames[t] + " ground";
+                if (fileIndex == f.Value.PlayerDrawing) return BattleGroundRenderer.TerrainNames[t] + " ground";
+                if (fileIndex == f.Value.OpponentDrawing) return BattleGroundRenderer.TerrainNames[t] + " ground";
             }
             return null;
         }

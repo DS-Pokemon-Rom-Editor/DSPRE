@@ -35,8 +35,8 @@
               <Border Grid.Column="0" Width="40" Height="40" Background="#202024" ToolTip.Tip="From this tileset">
                 <Image Source="{Binding Ours}" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
               </Border>
-              <Border Grid.Column="1" Width="40" Height="40" Background="#202024" IsVisible="{Binding HasTheirs}" ToolTip.Tip="In the area">
-                <Image Source="{Binding Theirs}" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
+              <Border Grid.Column="1" Width="40" Height="40" Background="#202024" IsVisible="{Binding HasIncoming}" ToolTip.Tip="In the area">
+                <Image Source="{Binding Incoming}" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
               </Border>
               <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="8,0">
                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>

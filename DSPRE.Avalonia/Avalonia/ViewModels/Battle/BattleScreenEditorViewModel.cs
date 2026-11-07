@@ -394,7 +394,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public bool IsDoubles => _doubles;
 
         private bool _numbersInsteadOfBar;
-        /// <summary>In a double battle the games swap your bars for the numbers on a press.</summary>
+        /// <summary>In a double battle the games swap the player's bars for the numbers on a press.</summary>
         public bool NumbersInsteadOfBar
         {
             get => _numbersInsteadOfBar;

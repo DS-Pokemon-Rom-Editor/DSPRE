@@ -10,7 +10,7 @@ namespace DSPRE.Avalonia.BattleAnim.SpriteEffects
         private const int Count = 3;
 
         // Afterimage_Init and Afterimage_Update in scale mode: the sprites show one by one, each running its own copy of
-        // the scale, and hide when theirs ends.
+        // the scale, and hide when the copies' runs end.
         private sealed class Afterimage
         {
             private readonly CellActor[] _sprites;

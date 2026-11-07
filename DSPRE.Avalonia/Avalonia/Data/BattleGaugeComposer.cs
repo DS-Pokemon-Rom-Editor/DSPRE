@@ -30,7 +30,7 @@ namespace DSPRE.Avalonia.Data
             public int Slash;                      // the "/" between the two numbers, when it is not
                                                    // already part of the picture (double battles only)
             public (int pos, int size)[] Gauge;    // the health fill, first piece then second
-            public int Caught;                     // the caught ball, on their side
+            public int Caught;                     // the caught ball, on the opponent's side
             public int HpLeft, HpRight;            // bar end tiles that doubles replace with the number ends
         }
 
@@ -39,7 +39,7 @@ namespace DSPRE.Avalonia.Data
         {
             [Kind.PlayerSingle] = new Layout           // the games call this AA
             {
-                Graphic = "HpBar.Yours", X = 192, Y = 116,
+                Graphic = "HpBar.Player", X = 192, Y = 116,
                 Name = new[] { (0x13, 5), (0x1b, 5), (0x50, 3), (0x58, 3) },
                 LvMark = new[] { (0x53, 2), (0x5B, 2) },
                 LvDigits = new[] { (0x55, 3), (0x5d, 3) },
@@ -49,7 +49,7 @@ namespace DSPRE.Avalonia.Data
             },
             [Kind.OpponentSingle] = new Layout          // BB
             {
-                Graphic = "HpBar.Theirs", X = 58, Y = 36,
+                Graphic = "HpBar.Opponent", X = 58, Y = 36,
                 Name = new[] { (0x11, 7), (0x19, 7), (0x50, 1), (0x58, 1) },
                 LvMark = new[] { (0x51, 2), (0x59, 2) },
                 LvDigits = new[] { (0x53, 3), (0x5b, 3) },
@@ -59,7 +59,7 @@ namespace DSPRE.Avalonia.Data
             },
             [Kind.PlayerNear] = new Layout              // A
             {
-                Graphic = "HpBar.YoursDouble", X = 192, Y = 103,
+                Graphic = "HpBar.PlayerDouble", X = 192, Y = 103,
                 Name = new[] { (0x12, 6), (0x1a, 6), (0x50, 2), (0x58, 2) },
                 LvMark = new[] { (0x52, 2), (0x5a, 2) },
                 LvDigits = new[] { (0x54, 3), (0x5c, 3) },
@@ -70,7 +70,7 @@ namespace DSPRE.Avalonia.Data
             },
             [Kind.OpponentFar] = new Layout             // B
             {
-                Graphic = "HpBar.TheirsDouble", X = 64, Y = 16,
+                Graphic = "HpBar.OpponentDouble", X = 64, Y = 16,
                 Name = new[] { (0x11, 7), (0x19, 7), (0x50, 1), (0x58, 1) },
                 LvMark = new[] { (0x51, 2), (0x59, 2) },
                 LvDigits = new[] { (0x53, 3), (0x5b, 3) },
@@ -80,7 +80,7 @@ namespace DSPRE.Avalonia.Data
             },
             [Kind.PlayerFar] = new Layout               // C
             {
-                Graphic = "HpBar.YourPartner", X = 198, Y = 132,
+                Graphic = "HpBar.PlayerPartner", X = 198, Y = 132,
                 Name = new[] { (0x12, 6), (0x1a, 6), (0x50, 2), (0x58, 2) },
                 LvMark = new[] { (0x52, 2), (0x5a, 2) },
                 LvDigits = new[] { (0x54, 3), (0x5c, 3) },
@@ -91,7 +91,7 @@ namespace DSPRE.Avalonia.Data
             },
             [Kind.OpponentNear] = new Layout            // D
             {
-                Graphic = "HpBar.TheirPartner", X = 58, Y = 45,
+                Graphic = "HpBar.OpponentPartner", X = 58, Y = 45,
                 Name = new[] { (0x11, 7), (0x19, 7), (0x50, 1), (0x58, 1) },
                 LvMark = new[] { (0x51, 2), (0x59, 2) },
                 LvDigits = new[] { (0x53, 3), (0x5b, 3) },
@@ -104,7 +104,7 @@ namespace DSPRE.Avalonia.Data
         // Diamond and Pearl's name field is a tile narrower; their other gauges match Platinum.
         private static readonly Layout DiamondPearlPlayerSingle = new()
         {
-            Graphic = "HpBar.Yours", X = 198, Y = 116,
+            Graphic = "HpBar.Player", X = 198, Y = 116,
             Name = new[] { (0x12, 6), (0x1a, 6), (0x50, 2), (0x58, 2) },
             LvMark = new[] { (0x52, 2), (0x5a, 2) },
             LvDigits = new[] { (0x54, 3), (0x5c, 3) },
@@ -115,12 +115,12 @@ namespace DSPRE.Avalonia.Data
 
         internal static BattleGaugePieces.Bar BarOf(Kind kind) => kind switch
         {
-            Kind.PlayerSingle => BattleGaugePieces.Bar.YoursSingle,
-            Kind.OpponentSingle => BattleGaugePieces.Bar.TheirsSingle,
-            Kind.PlayerNear => BattleGaugePieces.Bar.YoursDouble,
-            Kind.OpponentFar => BattleGaugePieces.Bar.TheirsDouble,
-            Kind.PlayerFar => BattleGaugePieces.Bar.YourPartner,
-            _ => BattleGaugePieces.Bar.TheirPartner,
+            Kind.PlayerSingle => BattleGaugePieces.Bar.PlayerSingle,
+            Kind.OpponentSingle => BattleGaugePieces.Bar.OpponentSingle,
+            Kind.PlayerNear => BattleGaugePieces.Bar.PlayerDouble,
+            Kind.OpponentFar => BattleGaugePieces.Bar.OpponentDouble,
+            Kind.PlayerFar => BattleGaugePieces.Bar.PlayerPartner,
+            _ => BattleGaugePieces.Bar.OpponentPartner,
         };
 
         /// <summary>The slots as this ROM's tables have them, or null when they aren't found.</summary>
@@ -185,10 +185,10 @@ namespace DSPRE.Avalonia.Data
             public BattleGaugeText.Gender Gender = BattleGaugeText.Gender.Genderless;
             public BattleGaugeText.Status Status = BattleGaugeText.Status.None;
             public int Health = 20, MostHealth = 20;
-            public bool ShowHealthNumbers;      // only your own side shows them
+            public bool ShowHealthNumbers;      // only the player's side shows them
             public bool FillGauges;             // copy in the health and experience fill as a battle does
-            public double Experience = 0.5;     // how far to the next level, for your single battle bar
-            public bool Caught;                 // their Pokemon is one you have caught
+            public double Experience = 0.5;     // how far to the next level, for the player's single battle bar
+            public bool Caught;                 // the opponent's Pokémon is a species already caught
         }
 
         public sealed class Drawn
@@ -208,12 +208,12 @@ namespace DSPRE.Avalonia.Data
 
         public static string NameOf(Kind kind) => kind switch
         {
-            Kind.PlayerSingle => "Your HP bar",
-            Kind.OpponentSingle => "Their HP bar",
-            Kind.PlayerNear => "Your front HP bar",
-            Kind.PlayerFar => "Your partner's HP bar",
-            Kind.OpponentFar => "Their back HP bar",
-            Kind.OpponentNear => "Their partner's HP bar",
+            Kind.PlayerSingle => "Player HP bar",
+            Kind.OpponentSingle => "Opponent HP bar",
+            Kind.PlayerNear => "Player front HP bar",
+            Kind.PlayerFar => "Player partner HP bar",
+            Kind.OpponentFar => "Opponent back HP bar",
+            Kind.OpponentNear => "Opponent partner HP bar",
             _ => "HP bar",
         };
 
@@ -334,7 +334,7 @@ namespace DSPRE.Avalonia.Data
         {
             byte[] sheet = BattleGaugePieces.ReadSheet();
             if (sheet == null || layout.Gauge == null) return;
-            bool theirs = kind == Kind.OpponentSingle || kind == Kind.OpponentFar || kind == Kind.OpponentNear;
+            bool opponent = kind == Kind.OpponentSingle || kind == Kind.OpponentFar || kind == Kind.OpponentNear;
             bool yourDouble = kind == Kind.PlayerNear || kind == Kind.PlayerFar;
 
             if (yourDouble && showing.ShowHealthNumbers)
@@ -382,7 +382,7 @@ namespace DSPRE.Avalonia.Data
             }
 
             // A wild Pokemon's bar always gets this tile: the ball when it has been caught, a blank when not.
-            if (theirs) CopyPiece(sheet, showing.Caught ? BattleGaugePieces.CaughtBall : BattleGaugePieces.NoStatus, tiles, layout.Caught,
+            if (opponent) CopyPiece(sheet, showing.Caught ? BattleGaugePieces.CaughtBall : BattleGaugePieces.NoStatus, tiles, layout.Caught,
                                   BattleGaugeTextPatch.CaughtIsClear);
         }
 

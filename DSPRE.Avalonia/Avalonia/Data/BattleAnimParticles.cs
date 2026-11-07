@@ -17,7 +17,7 @@ namespace DSPRE.Avalonia.Data
     public static class BattleAnimParticles
     {
         public static List<BattleAnimParticleRef> Extract(IReadOnlyList<WazaSeqCommand> cmds, WazaSeqVersion version,
-                                                    bool attackerIsEnemy = false)
+                                                    bool attackerIsOpponent = false)
         {
             Dictionary<int, int> slot = new Dictionary<int, int>();
             List<BattleAnimParticleRef> refs = new List<BattleAnimParticleRef>();
@@ -64,8 +64,8 @@ namespace DSPRE.Avalonia.Data
                     case "JumpIfBattlerSide":
                         if (n >= 3)
                         {
-                            bool checkedIsEnemy = c.Args[0] == 0 ? attackerIsEnemy : !attackerIsEnemy;
-                            if (checkedIsEnemy) Jump(ref pc, wordPos[cur] + 3, c.Args[2]);
+                            bool checkedIsOpponent = c.Args[0] == 0 ? attackerIsOpponent : !attackerIsOpponent;
+                            if (checkedIsOpponent) Jump(ref pc, wordPos[cur] + 3, c.Args[2]);
                             else Jump(ref pc, wordPos[cur] + 2, c.Args[1]);
                         }
                         break;
