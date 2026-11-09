@@ -1513,16 +1513,7 @@ namespace DSPRE.ROMFiles
 
         private List<ScriptActionContainer> ReadActionsFromLines(List<string> linelist)
         {
-            List<(int linenum, string text)> lineSource = new List<(int linenum, string text)>();
-
-            for (int l = 0; l < linelist.Count; l++)
-            {
-                string cur = linelist[l];
-                if (!string.IsNullOrWhiteSpace(cur))
-                {
-                    lineSource.Add((l, cur));
-                }
-            }
+            List<(int linenum, string text)> lineSource = PreprocessLines(linelist);
 
             List<ScriptActionContainer> ls = new List<ScriptActionContainer>();
             int i = 0;
