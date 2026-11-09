@@ -12,7 +12,11 @@ namespace DSPRE.Avalonia.Data
     /// </summary>
     public sealed class BattleGroundRenderer
     {
-        public sealed class GroundImage { public byte[] Rgba; public int Width, Height, Left, Top; }
+        public sealed class GroundImage
+        {
+            public byte[] Rgba; public int Width, Height, Left, Top;
+            public global::Avalonia.Media.Imaging.Bitmap ToBitmap() => Rgba == null ? null : ImageConverter.FromRgba(Rgba, Width, Height);
+        }
 
         // terrain id to label.
         private static readonly string[] DpTerrainNames =

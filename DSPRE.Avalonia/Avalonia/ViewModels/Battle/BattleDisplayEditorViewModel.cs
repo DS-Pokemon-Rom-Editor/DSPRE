@@ -228,9 +228,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 // Games whose letters cannot be read fall back to the plain bar.
                 BattleGroundRenderer r = _groundRenderer ??= new BattleGroundRenderer();
                 GaugePlayerImage = Data.GaugeTextImages.Bar(true, GaugeNameText, 5)
-                                ?? GaugeToBitmap(r.BuildGauge(true));
+                                ?? r.BuildGauge(true)?.ToBitmap();
                 GaugeOpponentImage = Data.GaugeTextImages.Bar(false, GaugeNameText, 5)
-                               ?? GaugeToBitmap(r.BuildGauge(false));
+                               ?? r.BuildGauge(false)?.ToBitmap();
             }
             catch (Exception ex) { AppLogger.WarnOnce("BattleDisplayEditorViewModel.RenderGauges", ex); GaugePlayerImage = GaugeOpponentImage = null; }
             OnPropertyChanged(nameof(HasRealGauges));
@@ -303,13 +303,6 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 OnPropertyChanged(nameof(PlaceholderMessageBoxVisible));
             }
             RaiseMessage();
-        }
-
-        // GroundImage (256² straight RGBA) -> unpremultiplied BGRA; the frame has transparency.
-        private static Bitmap GaugeToBitmap(BattleGroundRenderer.GroundImage g)
-        {
-            if (g?.Rgba == null) return null;
-            return ImageConverter.FromRgba(g.Rgba, g.Width, g.Height);
         }
 
         // RGBA w×h (battle BG, 512×256) -> two copies of its top width×192 side by side, black-padded if smaller.
@@ -1970,7 +1963,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             foreach (ProgramCmdRow row in ProgramRows)
             {
                 int n = PokeAnimScript.ArgsFor(row.Op);
-                List<int> parsed = ParseIntList(row.ArgsText);
+                List<int> parsed = NumberListText.Parse(row.ArgsText);
                 int[] args = new int[n];
                 for (int i = 0; i < n; i++)
                     args[i] = i < parsed.Count ? parsed[i] : 0;
@@ -1987,21 +1980,6 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _animDefsNarc.PutRecord(file, PokeAnimScript.Serialize(BuildCommandsFromRows()));
             StopPlayback();
             RefreshProgramScript();   // reflect the canonical (padded) form
-        }
-
-        private static List<int> ParseIntList(string s)
-        {
-            List<int> list = new List<int>();
-            if (string.IsNullOrWhiteSpace(s)) return list;
-            foreach (string p in s.Split(new[] { ',', ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries))
-            {
-                string t = p.Trim();
-                bool ok = t.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
-                    ? int.TryParse(t.Substring(2), System.Globalization.NumberStyles.HexNumber, null, out int v)
-                    : int.TryParse(t, out v);
-                if (ok) list.Add(v);
-            }
-            return list;
         }
 
         private void LoadSpriteData(int id)

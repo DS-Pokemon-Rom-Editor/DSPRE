@@ -800,21 +800,6 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             return list;
         }
 
-        private static List<int> ParseIntList(string s)
-        {
-            List<int> list = new List<int>();
-            if (string.IsNullOrWhiteSpace(s)) return list;
-            foreach (string p in s.Split(new[] { ',', ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries))
-            {
-                string t = p.Trim();
-                bool ok = t.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
-                    ? int.TryParse(t.Substring(2), NumberStyles.HexNumber, null, out int v)
-                    : int.TryParse(t, out v);
-                if (ok) list.Add(v);
-            }
-            return list;
-        }
-
         // ── Text ⇄ container two-way sync ───────────────────────────────────────────
         // Cards (Rows) and text (CommandsText) stay in sync; text only rebuilds the cards when it has no errors.
         private bool _pushingText;     // Rows→text: a programmatic CommandsText push (don't re-parse it)
@@ -1723,9 +1708,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 // Games whose letters cannot be read fall back to the plain bar.
                 BattleGroundRenderer r = _groundRenderer ??= new DSPRE.Avalonia.Data.BattleGroundRenderer();
                 GaugePlayerImage = Data.GaugeTextImages.Bar(true, GaugeNameText, _gaugeLevel)
-                                ?? Gauge(r.BuildGauge(true));
+                                ?? r.BuildGauge(true)?.ToBitmap();
                 GaugeOpponentImage = Data.GaugeTextImages.Bar(false, GaugeNameText, _gaugeLevel)
-                               ?? Gauge(r.BuildGauge(false));
+                               ?? r.BuildGauge(false)?.ToBitmap();
                 RenderMessage();
                 OnPropertyChanged(nameof(HasRealGauges));
                 OnPropertyChanged(nameof(ShowPlaceholderGauges));
@@ -1736,9 +1721,6 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             }
             catch (Exception ex) { AppLogger.Warn("Battle script preview gauges: " + ex.Message); }
         }
-
-        private static Bitmap Gauge(DSPRE.Avalonia.Data.BattleGroundRenderer.GroundImage g) =>
-            g?.Rgba == null ? null : ImageConverter.FromRgba(g.Rgba, g.Width, g.Height);
 
         /// <summary>Loads the selected backdrop into the compositor: the bundled PNG for index 0, otherwise the
         /// real pl_batt_bg background (cropped to the 256×192 scene). Falls back to the PNG if the ROM/NARC is
