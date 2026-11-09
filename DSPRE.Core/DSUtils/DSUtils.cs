@@ -147,6 +147,14 @@ namespace DSPRE
 
         public const string BackupSuffix = ".backup";
 
+        /// <summary>Suffix for a file written beside its target and then moved over it.</summary>
+        public const string TempSuffix = ".dspre.tmp";
+
+        /// <summary>Whether the name is a backup or temp file kept beside a project file.</summary>
+        public static bool IsSideFile(string name) =>
+            name.EndsWith(BackupSuffix, StringComparison.OrdinalIgnoreCase) || name.EndsWith(".bak", StringComparison.OrdinalIgnoreCase)
+            || name.EndsWith(TempSuffix, StringComparison.OrdinalIgnoreCase);
+
         public static readonly string NDSRomFilter = "NDS File (*.nds)|*.nds";
         public class EasyReader : BinaryReader
         {
@@ -187,15 +195,12 @@ namespace DSPRE
         public static void WriteWholeFile(string filepath, byte[] bytes)
         {
             byte[] now = File.Exists(filepath) ? File.ReadAllBytes(filepath) : Array.Empty<byte>();
-            int first = 0;
-            while (first < bytes.Length && first < now.Length && bytes[first] == now[first]) first++;
-            if (first == bytes.Length && now.Length == bytes.Length) return;
-            int last = bytes.Length - 1;
-            if (now.Length == bytes.Length) while (last > first && bytes[last] == now[last]) last--;
-            if (HgEngineWriteGuard.Refuses(filepath, first, Math.Max(1, last - first + 1)))
+            List<(int At, int Length)> changed = ByteRanges.Changed(now, bytes, ProjectWrites.CodeJoinGap, joinTail: true);
+            if (changed.Count == 0) return;
+            if (changed.Exists(r => HgEngineWriteGuard.Refuses(filepath, r.At, Math.Max(1, r.Length))))
                 throw new InvalidOperationException($"hg-engine owns part of {Path.GetFileName(filepath)}, so nothing was written.");
 
-            string temp = filepath + ".dspre.tmp";
+            string temp = filepath + TempSuffix;
             try
             {
                 File.WriteAllBytes(temp, bytes);
@@ -205,7 +210,7 @@ namespace DSPRE
             {
                 if (File.Exists(temp)) File.Delete(temp);
             }
-            ProjectWrites.RaiseCode(filepath, first, Math.Max(1, last - first + 1));
+            ProjectWrites.RaiseCodeChanges(filepath, changed);
         }
 
         // ── Mon party-icon palette table (1 byte per species: 0/1/2) ──────────────────────────────
@@ -1077,7 +1082,7 @@ namespace DSPRE
             // Delete current contents, never the backup being restored
             foreach (string file in Directory.GetFiles(workDir))
             {
-                if (string.Equals(Path.GetFullPath(file), Path.GetFullPath(backupPath), StringComparison.OrdinalIgnoreCase)) continue;
+                if (ProjectPaths.Same(file, backupPath)) continue;
                 File.Delete(file);
             }
             foreach (string dir in Directory.GetDirectories(workDir))

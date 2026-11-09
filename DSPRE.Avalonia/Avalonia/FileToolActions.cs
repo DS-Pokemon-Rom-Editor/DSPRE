@@ -184,12 +184,10 @@ namespace DSPRE.Avalonia
             string target;
             try { target = Path.GetFullPath(archivePath); }
             catch (System.Exception e) when (e is System.ArgumentException || e is System.NotSupportedException || e is PathTooLongException) { return null; }
-            foreach ((string packedDir, string unpackedDir) paths in RomInfo.GameDirs.Values)
+            foreach (RomInfo.DirNames dir in ArchiveMembers.DirsOfArchive(target))
             {
-                if (string.IsNullOrEmpty(paths.packedDir) || string.IsNullOrEmpty(paths.unpackedDir)) continue;
-                if (!string.Equals(Path.GetFullPath(paths.packedDir), target, System.StringComparison.OrdinalIgnoreCase)) continue;
-                return Directory.Exists(paths.unpackedDir) && Directory.EnumerateFileSystemEntries(paths.unpackedDir).Any()
-                    ? Path.GetFullPath(paths.unpackedDir) : null;
+                string unpacked = RomInfo.GameDirs[dir].unpackedDir;
+                if (ArchiveMembers.HasMembers(unpacked)) return Path.GetFullPath(unpacked);
             }
             return null;
         }

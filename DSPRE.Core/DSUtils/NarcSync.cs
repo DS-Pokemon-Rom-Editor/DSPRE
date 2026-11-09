@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text.Json;
 using DSPRE.HgEngine;
 using NarcAPI;
@@ -76,6 +75,8 @@ namespace DSPRE
             public string Sha256 { get; set; }
             /// <summary>When the folder and archive were last in step. A member written later is DSPRE's edit.</summary>
             public long Recorded { get; set; }
+            /// <summary>When the folder was last unpacked whole from the archive. A member written later may hold DSPRE's work.</summary>
+            public long Extracted { get; set; }
         }
 
         private static readonly object Gate = new object();
@@ -93,7 +94,7 @@ namespace DSPRE
             try
             {
                 if (path != null && File.Exists(path))
-                    _stamps = JsonSerializer.Deserialize<Dictionary<string, Stamp>>(File.ReadAllText(path))
+                    _stamps = PlainFiles.ReadJson<Dictionary<string, Stamp>>(path)
                               ?? _stamps;
             }
             catch (Exception ex) when (ex is IOException || ex is JsonException || ex is UnauthorizedAccessException)
@@ -107,7 +108,7 @@ namespace DSPRE
         {
             string path = StampsPath;
             if (path == null) return;
-            try { PlainFiles.WriteText(path, JsonSerializer.Serialize(_stamps, new JsonSerializerOptions { WriteIndented = true })); }
+            try { PlainFiles.WriteJson(path, _stamps); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
                 AppLogger.Warn("The archive fingerprints couldn't be saved: " + ex.Message);
@@ -117,14 +118,10 @@ namespace DSPRE
         private static bool TryPair(string packedPath, string unpackedPath, out DirNames dir)
         {
             dir = default;
-            if (GameDirs == null || string.IsNullOrEmpty(packedPath)) return false;
-            string packed = Path.GetFullPath(packedPath);
-            string unpacked = unpackedPath == null ? null : Path.GetFullPath(unpackedPath).TrimEnd('\\', '/');
-            foreach (KeyValuePair<DirNames, (string packedDir, string unpackedDir)> kv in GameDirs)
+            foreach (DirNames candidate in ArchiveMembers.DirsOfArchive(packedPath))
             {
-                if (!string.Equals(Path.GetFullPath(kv.Value.packedDir), packed, StringComparison.OrdinalIgnoreCase)) continue;
-                if (unpacked != null && !string.Equals(Path.GetFullPath(kv.Value.unpackedDir).TrimEnd('\\', '/'), unpacked, StringComparison.OrdinalIgnoreCase)) continue;
-                dir = kv.Key;
+                if (unpackedPath != null && !ProjectPaths.Same(GameDirs[candidate].unpackedDir, unpackedPath)) continue;
+                dir = candidate;
                 return true;
             }
             return false;
@@ -143,21 +140,23 @@ namespace DSPRE
         {
             FileInfo fi = new FileInfo(packedPath);
             Stamp s = new Stamp { Size = fi.Length, Written = fi.LastWriteTimeUtc.Ticks };
-            if (hash)
-            {
-                using FileStream fs = File.OpenRead(packedPath);
-                s.Sha256 = Convert.ToHexString(SHA256.HashData(fs));
-            }
+            if (hash) s.Sha256 = FileHash.Sha256(packedPath);
             return s;
         }
 
-        private static void Record(string packedPath)
+        private static void Record(string packedPath, bool extracted = false)
         {
             try
             {
                 Stamp s = Measure(packedPath, hash: true);
                 s.Recorded = DateTime.UtcNow.Ticks;
-                lock (Gate) { Stamps()[Key(packedPath)] = s; WriteStamps(); }
+                lock (Gate)
+                {
+                    Stamps().TryGetValue(Key(packedPath), out Stamp old);
+                    s.Extracted = extracted ? s.Recorded : old?.Extracted ?? 0;
+                    Stamps()[Key(packedPath)] = s;
+                    WriteStamps();
+                }
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
@@ -174,10 +173,8 @@ namespace DSPRE
         /// <summary>Called by <see cref="Narc.ExtractToFolder"/>: unpacking an archive into its own folder puts the two in step.</summary>
         internal static void NoteExtracted(string sourceFile, string folder)
         {
-            if (sourceFile != null && TryPair(sourceFile, folder, out _)) Record(sourceFile);
+            if (sourceFile != null && TryPair(sourceFile, folder, out _)) Record(sourceFile, extracted: true);
         }
-
-        private static bool HasMembers(string folder) => Directory.Exists(folder) && Directory.EnumerateFiles(folder).Any();
 
         /// <summary>The archive and folder that have drifted apart, for the given archives or all of them.</summary>
         public static List<Conflict> Find(IEnumerable<DirNames> dirs = null)
@@ -196,7 +193,7 @@ namespace DSPRE
                     // An archive still being unpacked would look like a folder that differs.
                     lock (DSUtils.UnpackLockFor(dir))
                     {
-                        if (!File.Exists(p.packedDir) || !HasMembers(p.unpackedDir)) continue;
+                        if (!File.Exists(p.packedDir) || !ArchiveMembers.HasMembers(p.unpackedDir)) continue;
                         drift = Check(p.packedDir, p.unpackedDir);
                         if (drift != null && TakeBuiltMembers(dir, p.packedDir, p.unpackedDir)) drift = null;
                     }
@@ -212,7 +209,7 @@ namespace DSPRE
         }
 
         /// <summary>
-        /// The build's copy wins for members DSPRE hasn't edited since the last sync. False when an edit would be lost.
+        /// The build's copy wins for members DSPRE hasn't edited since the last sync. False when an edit would be lost or the folder couldn't be backed up.
         /// </summary>
         private static bool TakeBuiltMembers(DirNames dir, string packedPath, string folder)
         {
@@ -248,8 +245,9 @@ namespace DSPRE
                 // DSPRE edited since the last sync are asked about.
                 if (whole && packed.ElementCount != unpacked.ElementCount)
                 {
-                    ArchiveMembers.ReplaceAll(folder, Enumerable.Range(0, packed.ElementCount).Select(packed.GetElementBytes).ToList());
-                    Record(packedPath);
+                    // Without a backup the user is asked instead.
+                    if (!BackUpFolder(packedPath, folder, packed)) return false;
+                    ReplaceFolder(packedPath, packed, folder);
                     return true;
                 }
                 // A build can add members, such as new text banks. A folder longer than the build holds DSPRE's work.
@@ -259,6 +257,8 @@ namespace DSPRE
                     if (i >= unpacked.ElementCount || !packed.GetElementBytes(i).AsSpan().SequenceEqual(unpacked.GetElementBytes(i))) differing.Add(i);
                 if (!whole && differing.Any(i => i < unpacked.ElementCount && !HgEngineOwnedFiles.Owns(archive, i) && Edited(i))) return false;
 
+                // The edit check goes by file dates, which a copied or restored folder can get wrong.
+                if (differing.Count > 0 && !BackUpFolder(packedPath, folder, packed)) return false;
                 foreach (int i in differing)
                 {
                     ArchiveMembers.PutBuilt(dir, i, packed.GetElementBytes(i));
@@ -338,19 +338,24 @@ namespace DSPRE
 
         private static Outcome SettleNow(IEnumerable<DirNames> dirs, bool saving)
         {
+            using IDisposable run = BackupRun();
             Outcome outcome = new Outcome();
             List<Conflict> conflicts = Find(dirs);
+            if (conflicts.Count == 0) return outcome;
+            // Save ROM asks again, since it packs every folder over its archive.
+            if (!saving) conflicts.RemoveAll(IsPutOff);
             if (conflicts.Count == 0) return outcome;
             IReadOnlyList<Choice> choices = AskHook?.Invoke(conflicts, saving);
             if (choices == null || choices.Count != conflicts.Count)
             {
+                foreach (Conflict c in conflicts) PutOff(c);
                 outcome.Undecided.AddRange(conflicts.Select(c => c.Name));
                 return outcome;
             }
 
             for (int i = 0; i < conflicts.Count; i++)
             {
-                if (choices[i] == Choice.Later) { outcome.Undecided.Add(conflicts[i].Name); continue; }
+                if (choices[i] == Choice.Later) { PutOff(conflicts[i]); outcome.Undecided.Add(conflicts[i].Name); continue; }
                 Apply(conflicts[i], choices[i]);
                 if (choices[i] == Choice.UseArchive) outcome.Unpacked.Add(conflicts[i].Name);
             }
@@ -358,6 +363,31 @@ namespace DSPRE
         }
 
         private static readonly object Asking = new object();
+
+        // Archives answered "later", keyed by path with their size and date at the time, so a change asks again.
+        private static readonly Dictionary<string, (long Size, long Written)> PutOffs = new Dictionary<string, (long, long)>(StringComparer.OrdinalIgnoreCase);
+
+        private static void PutOff(Conflict c)
+        {
+            try
+            {
+                FileInfo fi = new FileInfo(c.PackedPath);
+                lock (PutOffs) PutOffs[Path.GetFullPath(c.PackedPath)] = (fi.Length, fi.LastWriteTimeUtc.Ticks);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { }
+        }
+
+        private static bool IsPutOff(Conflict c)
+        {
+            try
+            {
+                FileInfo fi = new FileInfo(c.PackedPath);
+                lock (PutOffs)
+                    return PutOffs.TryGetValue(Path.GetFullPath(c.PackedPath), out (long Size, long Written) then)
+                        && then == (fi.Length, fi.LastWriteTimeUtc.Ticks);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { return false; }
+        }
 
         /// <summary>
         /// <see cref="Settle"/> for the editors' unpack path. While another question is open this does nothing, since
@@ -374,27 +404,172 @@ namespace DSPRE
             finally { System.Threading.Monitor.Exit(Asking); }
         }
 
+        /// <summary>
+        /// Hashes of the archives whose unpacked folders are in sync, taken before make extracts base/ again. An archive
+        /// changed outside DSPRE is left out, so it is still asked about.
+        /// </summary>
+        public static Dictionary<DirNames, string> InSyncArchives()
+        {
+            Dictionary<DirNames, string> found = HashUnpackedArchives(_ => true);
+            foreach ((DirNames dir, string now) in found.ToList())
+            {
+                Stamp known;
+                lock (Gate) Stamps().TryGetValue(Key(GameDirs[dir].packedDir), out known);
+                if (known == null || !string.Equals(now, known.Sha256, StringComparison.OrdinalIgnoreCase)) found.Remove(dir);
+            }
+            return found;
+        }
+
+        /// <summary>The packed archives that have an unpacked folder, by hash, for <see cref="Changed"/> after a build.</summary>
+        public static Dictionary<DirNames, string> HashUnpackedArchives(Func<DirNames, bool> include)
+        {
+            Dictionary<DirNames, string> hashes = new Dictionary<DirNames, string>();
+            if (GameDirs == null) return hashes;
+            foreach ((DirNames dir, (string packedDir, string unpackedDir) p) in GameDirs)
+            {
+                if (!include(dir) || string.IsNullOrEmpty(p.packedDir) || !File.Exists(p.packedDir) || !ArchiveMembers.HasMembers(p.unpackedDir)) continue;
+                try { hashes[dir] = FileHash.Sha256(p.packedDir); }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { AppLogger.Error($"Couldn't read {p.packedDir}: {ex.Message}"); }
+            }
+            return hashes;
+        }
+
+        /// <summary>The archives in <paramref name="before"/> whose packed file is different now.</summary>
+        public static List<DirNames> Changed(Dictionary<DirNames, string> before)
+        {
+            List<DirNames> changed = new List<DirNames>();
+            foreach ((DirNames dir, string hash) in before)
+            {
+                string packed = GameDirs[dir].packedDir;
+                try
+                {
+                    if (File.Exists(packed) && !string.Equals(FileHash.Sha256(packed), hash, StringComparison.OrdinalIgnoreCase)) changed.Add(dir);
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { AppLogger.Error($"Couldn't read {packed}: {ex.Message}"); }
+            }
+            return changed;
+        }
+
+        /// <summary>
+        /// After make extracts base/ again, marks each archive in <paramref name="before"/> that the extract changed, so the
+        /// next save packs its unpacked folder over it without asking.
+        /// </summary>
+        public static void TrustFolders(Dictionary<DirNames, string> before)
+        {
+            foreach (DirNames dir in Changed(before)) Record(GameDirs[dir].packedDir);
+        }
+
+        private const int BackupsKept = 20;
+
+        // Answered conflicts and folders replaced by a build are kept apart, so builds can't push out a conflict's backup.
+        private const string ConflictBackups = "archives", BuildBackups = "rebuilt";
+
+        [ThreadStatic] private static Dictionary<string, string> _run;
+
+        /// <summary>Until disposed, puts every backup in one folder per kind.</summary>
+        public static IDisposable BackupRun()
+        {
+            if (_run != null) return new OnDispose(null);
+            _run = new Dictionary<string, string>();
+            return new OnDispose(() => _run = null);
+        }
+
+        private static string BackupsFolder(string kind)
+        {
+            if (_run != null && _run.TryGetValue(kind, out string open)) return open;
+            string root = ProjectBackups.Folder(DspreDir, kind);
+            string folder = Path.Combine(root, DateTime.Now.ToString("yyyyMMdd-HHmmss-fff"));
+            Directory.CreateDirectory(folder);
+            if (_run != null) _run[kind] = folder;
+            // Only build backups are pruned: a conflict's backup is kept until the user removes it.
+            if (kind != BuildBackups) return folder;
+            try
+            {
+                foreach (string old in Directory.GetDirectories(root).OrderByDescending(d => d, StringComparer.Ordinal).Skip(BackupsKept))
+                    Directory.Delete(old, recursive: true);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                AppLogger.Warn("Old archive backups couldn't be removed: " + ex.Message);
+            }
+            return folder;
+        }
+
+        private static string BackupName(string packedPath) => ProjectBackups.FlatName(Key(packedPath));
+
+        /// <summary>Backs up a folder's edited members before <paramref name="incoming"/> replaces them. False when that failed.</summary>
+        public static bool BackUpFolder(string packedPath, string unpackedPath, Narc incoming)
+        {
+            if (!ArchiveMembers.HasMembers(unpackedPath)) return true;
+            if (!HoldsEdits(packedPath, unpackedPath, incoming)) return true;
+            if (string.IsNullOrEmpty(DspreDir)) return false;
+            try
+            {
+                WriteFolderBackup(BuildBackups, packedPath, unpackedPath);
+                return true;
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                AppLogger.Warn($"Couldn't back up {unpackedPath}: {ex.Message}");
+                return false;
+            }
+        }
+
+        // Without a record of when the folder was unpacked, every member counts as edited.
+        private static bool HoldsEdits(string packedPath, string folder, Narc incoming)
+        {
+            long extracted;
+            lock (Gate) extracted = Stamps().TryGetValue(Key(packedPath), out Stamp known) ? known.Extracted : 0;
+            if (extracted == 0 || !TryPair(packedPath, folder, out DirNames dir)) return true;
+            try
+            {
+                foreach (string file in Directory.EnumerateFiles(folder))
+                {
+                    if (!int.TryParse(Path.GetFileName(file), out int member)) continue;
+                    if (dir == DirNames.TextArchives)
+                    {
+                        string json = ROMFiles.TextArchive.GetFilePaths(member).jsonPath;
+                        if (File.Exists(json) && File.GetLastWriteTimeUtc(json).Ticks > extracted && !JsonMatchesBank(json, file)) return true;
+                    }
+                    if (File.GetLastWriteTimeUtc(file).Ticks <= extracted) continue;
+                    if (incoming == null || member >= incoming.ElementCount) return true;
+                    if (!File.ReadAllBytes(file).AsSpan().SequenceEqual(incoming.GetElementBytes(member))) return true;
+                }
+                return false;
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { return true; }
+        }
+
+        private static void WriteFolderBackup(string kind, string packedPath, string unpackedPath)
+        {
+            Narc folder = Narc.FromFolder(unpackedPath);
+            try { PlainFiles.WriteBytes(Path.Combine(BackupsFolder(kind), BackupName(packedPath) + ".folder.narc"), folder.ToBytes()); }
+            finally { folder.Free(); }
+        }
+
+        // Not ExtractToFolder: it asks before emptying hg-engine's folders, and this runs off the UI thread.
+        private static void ReplaceFolder(string packedPath, Narc packed, string folder)
+        {
+            ArchiveMembers.ReplaceAll(folder, Enumerable.Range(0, packed.ElementCount).Select(packed.GetElementBytes).ToList());
+            Record(packedPath, extracted: true);
+        }
+
         private static void Apply(Conflict c, Choice choice)
         {
-            string backups = Path.Combine(DspreDir, "backups", "archives", DateTime.Now.ToString("yyyyMMdd-HHmmss"));
-            Directory.CreateDirectory(backups);
-            string backupName = c.Name.Replace('/', '_').Replace('\\', '_');
             if (choice == Choice.KeepFolder)
             {
                 // The archive is about to be replaced by the folder, so keep the outside version.
-                PlainFiles.Copy(c.PackedPath, Path.Combine(backups, backupName + ".archive.narc"), overwrite: true);
+                PlainFiles.Copy(c.PackedPath, Path.Combine(BackupsFolder(ConflictBackups), BackupName(c.PackedPath) + ".archive.narc"), overwrite: true);
                 Narc.FromFolder(c.UnpackedPath).Save(c.PackedPath);
                 AppLogger.Info($"{c.Name}: kept the unpacked folder and packed it over the archive.");
             }
             else
             {
                 // The folder is about to be replaced by the archive, so keep DSPRE's version, packed.
-                Narc folder = Narc.FromFolder(c.UnpackedPath);
-                folder.Save(Path.Combine(backups, backupName + ".folder.narc"));
-                folder.Free();
+                WriteFolderBackup(ConflictBackups, c.PackedPath, c.UnpackedPath);
                 Narc packed = Narc.Open(c.PackedPath) ?? throw new InvalidDataException(c.Name + " isn't a valid archive.");
-                packed.ExtractToFolder(c.UnpackedPath);
-                packed.Free();
+                try { ReplaceFolder(c.PackedPath, packed, c.UnpackedPath); }
+                finally { packed.Free(); }
                 AppLogger.Info($"{c.Name}: unpacked the archive over the folder.");
             }
         }

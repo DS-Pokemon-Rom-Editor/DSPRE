@@ -46,14 +46,7 @@ namespace DSPRE.Avalonia.Data
         {
             Staging before = _staging;
             _staging = staging;
-            return new Restore(before);
-        }
-
-        private sealed class Restore : IDisposable
-        {
-            private readonly Staging _before;
-            public Restore(Staging before) => _before = before;
-            public void Dispose() => _staging = _before;
+            return new OnDispose(() => _staging = before);
         }
 
         // Pending entries every thread reads, for an editor whose reads are spread over background work.
@@ -67,22 +60,15 @@ namespace DSPRE.Avalonia.Data
                 List<Func<DirNames, int, byte[]>> next = new List<Func<DirNames, int, byte[]>>(_overlays) { read };
                 _overlays = next.ToArray();
             }
-            return new RemoveOverlay(read);
-        }
-
-        private sealed class RemoveOverlay : IDisposable
-        {
-            private readonly Func<DirNames, int, byte[]> _read;
-            public RemoveOverlay(Func<DirNames, int, byte[]> read) => _read = read;
-            public void Dispose()
+            return new OnDispose(() =>
             {
                 lock (typeof(ScriptNarc))
                 {
                     List<Func<DirNames, int, byte[]>> next = new List<Func<DirNames, int, byte[]>>(_overlays);
-                    next.Remove(_read);
+                    next.Remove(read);
                     _overlays = next.ToArray();
                 }
-            }
+            });
         }
 
         /// <summary>The entry as the project holds it, whatever any editor has pending.</summary>
@@ -108,6 +94,13 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public ScriptNarc(DirNames dir, bool fromPacked) { _dir = dir; _fromPacked = fromPacked; }
 
+        private bool _ifUnpacked;
+
+        /// <summary>Reads the archive only when it is already unpacked, for drawing that can't wait or ask.</summary>
+        public static ScriptNarc IfUnpacked(DirNames dir) => new ScriptNarc(dir) { _ifUnpacked = true };
+
+        public static ScriptNarc Open(DirNames dir, bool ifUnpacked) => ifUnpacked ? IfUnpacked(dir) : new ScriptNarc(dir);
+
         public void Invalidate() { _ready = false; _packedCache.Clear(); }
 
         private void Ensure()
@@ -128,9 +121,14 @@ namespace DSPRE.Avalonia.Data
             }
 
             _archive = HgEngine.HgEngineOwnedFiles.ArchiveOf(_dir);
-            DSPRE.DSUtils.TryUnpackNarcs(new List<DirNames> { _dir });
+            if (_ifUnpacked)
+            {
+                if (!ArchiveMembers.IsUnpacked(_dir)) { _path = null; _count = 0; return; }
+            }
+            else DSPRE.DSUtils.TryUnpackNarcs(new List<DirNames> { _dir });
             _path = GameDirs[_dir].unpackedDir;
-            _count = _path != null ? NarcAPI.Narc.MemberCount(_path) : 0;
+            // Counted when asked, since listing a big folder is slow and most readers only get members.
+            _count = _path != null ? -1 : 0;
         }
 
         /// <summary>True when the archive is mapped for the current game and there to read.</summary>
@@ -140,7 +138,15 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>Number of entry files (≈ number of moves / effects / subroutines).</summary>
-        public int Count { get { Ensure(); return _count; } }
+        public int Count
+        {
+            get
+            {
+                Ensure();
+                if (_count < 0) _count = NarcAPI.Narc.MemberCount(_path);
+                return _count;
+            }
+        }
 
         private string FilePath(int id) => Path.Combine(_path, id.ToString("D4"));
 

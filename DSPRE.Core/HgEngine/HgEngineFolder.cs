@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace DSPRE.HgEngine
@@ -77,28 +76,20 @@ namespace DSPRE.HgEngine
             }
         }
 
-        public static string Sha1Of(string path)
+        /// <summary>Whether the checkout's rom.nds is the clean HeartGold (USA) dump.</summary>
+        public static bool HasCleanRom(string checkout)
         {
-            using FileStream f = File.OpenRead(path);
-            return Convert.ToHexString(SHA1.HashData(f)).ToLowerInvariant();
+            string rom = RomPath(checkout);
+            try { return File.Exists(rom) && FileHash.Sha1(rom) == CleanRetailSha1; }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { return false; }
         }
 
         // Their plaintext folders are the editors' own state, rebuilt from the archive only on request.
         private static readonly HashSet<RomInfo.DirNames> KeptAfterBuild = new() { RomInfo.DirNames.TextArchives, RomInfo.DirNames.Scripts };
 
         /// <summary>The packed archives the project has unpacked, by hash, taken just before make runs.</summary>
-        public static Dictionary<RomInfo.DirNames, string> SnapshotUnpackedArchives()
-        {
-            Dictionary<RomInfo.DirNames, string> hashes = new Dictionary<RomInfo.DirNames, string>();
-            if (RomInfo.GameDirs == null) return hashes;
-            foreach ((RomInfo.DirNames dir, (string packedDir, string unpackedDir) paths) in RomInfo.GameDirs)
-            {
-                if (KeptAfterBuild.Contains(dir) || !Directory.Exists(paths.unpackedDir) || !File.Exists(paths.packedDir)) continue;
-                try { hashes[dir] = Sha1Of(paths.packedDir); }
-                catch (IOException ex) { AppLogger.Error($"HgEngineFolder: couldn't read {paths.packedDir}: {ex.Message}"); }
-            }
-            return hashes;
-        }
+        public static Dictionary<RomInfo.DirNames, string> SnapshotUnpackedArchives() =>
+            NarcSync.HashUnpackedArchives(dir => !KeptAfterBuild.Contains(dir));
 
         /// <summary>
         /// Unpacks again every archive make changed, so editors show what the build made, not what DSPRE wrote
@@ -112,12 +103,21 @@ namespace DSPRE.HgEngine
             HgEngineBuiltPngs.ClearCache();
 
             List<RomInfo.DirNames> changed = new List<RomInfo.DirNames>();
-            foreach ((RomInfo.DirNames dir, string hash) in before)
+            using IDisposable run = NarcSync.BackupRun();
+            foreach (RomInfo.DirNames dir in NarcSync.Changed(before))
             {
                 (string packedDir, string unpackedDir) paths = RomInfo.GameDirs[dir];
                 try
                 {
-                    if (!File.Exists(paths.packedDir) || Sha1Of(paths.packedDir) == hash) continue;
+                    NarcAPI.Narc built = NarcAPI.Narc.Open(paths.packedDir);
+                    bool backedUp;
+                    try { backedUp = NarcSync.BackUpFolder(paths.packedDir, paths.unpackedDir, built); }
+                    finally { built?.Free(); }
+                    if (!backedUp)
+                    {
+                        AppLogger.Warn($"HgEngineFolder: {dir} not refreshed because its folder couldn't be backed up.");
+                        continue;
+                    }
                     foreach (string file in Directory.GetFiles(paths.unpackedDir)) File.Delete(file);
                     changed.Add(dir);
                 }
@@ -145,7 +145,8 @@ namespace DSPRE.HgEngine
             try
             {
                 PlainFiles.Copy(sourceRom, target);
-                // make re-extracts only when rom.nds is newer than base/arm9.bin, and a copy keeps the source's date.
+                // A copy keeps the source's date, and make re-extracts only when rom.nds or hg-engine's tools are newer
+                // than base/arm9.bin.
                 File.SetLastWriteTimeUtc(target, DateTime.UtcNow);
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)

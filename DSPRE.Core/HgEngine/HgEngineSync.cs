@@ -72,8 +72,7 @@ namespace DSPRE.HgEngine
 
                 if (domain.SyncOncePerSession)
                 {
-                    stillExtracted = SyncedOnceThisSession.Contains(domain.Domain) && domain.NarcByDir.Keys.All(dir =>
-                        GameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) p) && Directory.Exists(p.unpackedDir) && Directory.GetFiles(p.unpackedDir).Length > 0);
+                    stillExtracted = SyncedOnceThisSession.Contains(domain.Domain) && domain.NarcByDir.Keys.All(ArchiveMembers.IsUnpacked);
                 }
                 else
                 {
@@ -83,8 +82,7 @@ namespace DSPRE.HgEngine
                         .ToArray();
 
                     bool unchanged = LastSyncedMtimes.TryGetValue(domain.Domain, out DateTime[] cached) && cached.SequenceEqual(currentMtimes);
-                    stillExtracted = unchanged && domain.NarcByDir.Keys.All(dir =>
-                        GameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) p) && Directory.Exists(p.unpackedDir) && Directory.GetFiles(p.unpackedDir).Length > 0);
+                    stillExtracted = unchanged && domain.NarcByDir.Keys.All(ArchiveMembers.IsUnpacked);
                 }
 
                 if (stillExtracted) return true;
@@ -159,7 +157,7 @@ namespace DSPRE.HgEngine
             (DateTime, long Length) stamp = (File.GetLastWriteTimeUtc(packed), new FileInfo(packed).Length);
             lock (BuildLock)
             {
-                if (stamp == _splitLearnsetsFrom && Directory.Exists(unpacked) && Directory.GetFiles(unpacked).Length > 0) return true;
+                if (stamp == _splitLearnsetsFrom && ArchiveMembers.HasMembers(unpacked)) return true;
                 Narc personal = File.Exists(GameDirs[DirNames.PersonalPokeData].packedDir) ? Narc.Open(GameDirs[DirNames.PersonalPokeData].packedDir) : null;
                 if (personal == null) { error = "Couldn't read the species count from the personal data archive."; return false; }
                 if (!HgEngineLearnsets.Sync(packed, HgEngineProject.RepoPathUnc, unpacked, personal.ElementCount, out error)) return false;

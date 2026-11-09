@@ -1,16 +1,18 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 
 namespace DSPRE
 {
     /// <summary>
-    /// Raised after DSPRE writes, moves or deletes a project file, with the file's path. Code writes also say which
-    /// bytes changed and what wrote them, as named by the innermost <see cref="By"/> scope.
+    /// Raised after DSPRE writes, moves or deletes a project file, with the file's path.
     /// </summary>
     public static class ProjectWrites
     {
         public static event Action<string> Written;
-        public static event Action<string, long, int, string> CodeWritten;
+
+        /// <summary>Raised once per code write, before <see cref="Written"/>, with every changed range and the <see cref="By"/> name.</summary>
+        public static event Action<string, IReadOnlyList<(long Offset, int Length)>, string> CodeWritten;
 
         private static readonly AsyncLocal<string> _by = new AsyncLocal<string>();
 
@@ -19,7 +21,7 @@ namespace DSPRE
         {
             string outer = _by.Value;
             _by.Value = what;
-            return new Scope(() => _by.Value = outer);
+            return new OnDispose(() => _by.Value = outer);
         }
 
         public static void Raise(string path)
@@ -32,20 +34,32 @@ namespace DSPRE
         public static void RaiseCode(string path, long offset, int length)
         {
             if (string.IsNullOrEmpty(path)) return;
-            try { CodeWritten?.Invoke(path, offset, length, _by.Value); }
-            catch (Exception ex) { AppLogger.WarnOnce("ProjectWrites.RaiseCode", ex); }
+            CodeEvent(path, new[] { (offset, length) });
             Raise(path);
         }
 
-        private sealed class Scope : IDisposable
+        /// <summary>Shortest unchanged stretch that splits a code write into two ranges.</summary>
+        public const int CodeJoinGap = 8;
+
+        /// <summary>Reports a replaced code file: one code write with each run of changed bytes, then one plain write.</summary>
+        public static void RaiseCodeChanges(string path, byte[] before, byte[] after)
         {
-            private Action _end;
-            public Scope(Action end) { _end = end; }
-            public void Dispose()
-            {
-                _end?.Invoke();
-                _end = null;
-            }
+            if (string.IsNullOrEmpty(path) || after == null) return;
+            RaiseCodeChanges(path, ByteRanges.Changed(before, after, CodeJoinGap, joinTail: true));
+        }
+
+        /// <summary>Like <see cref="RaiseCodeChanges(string, byte[], byte[])"/>, with the runs already worked out.</summary>
+        public static void RaiseCodeChanges(string path, List<(int At, int Length)> changed)
+        {
+            if (string.IsNullOrEmpty(path)) return;
+            if (changed.Count > 0) CodeEvent(path, changed.ConvertAll(r => ((long)r.At, r.Length)));
+            Raise(path);
+        }
+
+        private static void CodeEvent(string path, IReadOnlyList<(long Offset, int Length)> ranges)
+        {
+            try { CodeWritten?.Invoke(path, ranges, _by.Value); }
+            catch (Exception ex) { AppLogger.WarnOnce("ProjectWrites.RaiseCode", ex); }
         }
     }
 }

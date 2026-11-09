@@ -9,6 +9,7 @@ using DSPRE.HgEngine;
 using DSPRE.ROMFiles;
 using NarcAPI;
 using System.IO;
+using DSPRE.Avalonia.Data;
 
 namespace DSPRE.Avalonia.Views.Shell
 {
@@ -385,7 +386,7 @@ namespace DSPRE.Avalonia.Views.Shell
             if (!await ConfirmWslProjectAsync(path)) return;
             if (!await ConfirmProjectCloseAsync()) return;
             OpenEditors.CloseEditorWindows(this);
-            await LoadRomAsync(err0 => { bool ok = AvaloniaRomLoader.LoadFromFolder(path, out string er); err0(er); return ok; }, sourcePath: path);
+            await LoadFolderAsync(path, recordRecent: true);
         }
 
         /// <summary>The checkout a folder opens as: an hg-engine checkout itself, or the one whose base/ tree it is.</summary>
@@ -457,17 +458,11 @@ namespace DSPRE.Avalonia.Views.Shell
                     : await UnsavedChangesDialog.ShowIfNeededAsync(this, OpenEditors.GetUnsavedEditors(this));
                 if (!close) return;
                 OpenEditors.CloseEditorWindows(this);
-                string baseDir = HgEngineFolder.BaseDir(checkout);
-                await LoadRomAsync(err0 =>
-                {
-                    bool ok = AvaloniaRomLoader.LoadFromFolder(baseDir, out string er, recordRecent: false);
-                    if (ok) SettingsManager.RecordRecentProject(checkout);   // the checkout, so reopening runs these checks again
-                    err0(er);
-                    return ok;
-                }, sourcePath: checkout);
+                await LoadHgEngineBaseAsync(checkout, recordRecent: true);
             }
             // Every way out, including a cancel, leaves the link matching the project that is open.
             finally { HgEngineProject.Refresh(); }
+            if (RomInfo.IsHgEngineBaseProject && HgEngineProject.IsActive) await OfferBaseEditsBackAsync();
         }
 
         /// <summary>
@@ -547,7 +542,7 @@ namespace DSPRE.Avalonia.Views.Shell
                 await DialogHelper.ShowErrorAsync(error, "Open hg-engine folder", this);
                 return false;
             }
-            if (HgEngineFolder.Sha1Of(HgEngineFolder.RomPath(checkout)) != HgEngineFolder.CleanRetailSha1)
+            if (!HgEngineFolder.HasCleanRom(checkout))
                 await DialogHelper.ShowInfoAsync("This ROM isn't a clean HeartGold (USA) dump. hg-engine builds on top of whatever it already holds.", "Open hg-engine folder");
             return true;
         }
@@ -577,7 +572,7 @@ namespace DSPRE.Avalonia.Views.Shell
                 if (!await ConfirmWslProjectAsync(path)) return;
                 if (!await ConfirmProjectCloseAsync()) return;
                 OpenEditors.CloseEditorWindows(this);
-                await LoadRomAsync(err0 => { bool ok = AvaloniaRomLoader.LoadFromFolder(path, out string er); err0(er); return ok; }, sourcePath: path);
+                await LoadFolderAsync(path, recordRecent: true);
             }
             else
             {
@@ -833,6 +828,13 @@ namespace DSPRE.Avalonia.Views.Shell
             string error = null;
             string checkout = HgEngineProject.RepoRootWindows;
             if (!await EnsureBuildableAsync(checkout)) return false;
+            // Asked before anything is written: a DSPRE write to base/arm9.bin would hide a newer rom.nds from make.
+            bool reextracts = await System.Threading.Tasks.Task.Run(() => HgEngineBuild.TryCheckBaseReextract(out bool again) && again);
+            if (reextracts)
+            {
+                if (!await RebuildBaseFirstAsync(buildRom)) return false;
+            }
+            else if (!await OfferBaseEditsBackAsync()) return false;
             bool ok = await WriteProjectFilesAsync("Building with hg-engine…", "Writing the project's files into base/ for make.",
                 () => { HgEngineBuildCache.Invalidate(checkout); return true; }, e => error = e);
             if (!ok)
@@ -849,6 +851,42 @@ namespace DSPRE.Avalonia.Views.Shell
                 vm.StatusText = built ? "Built " + (buildRom ?? "test.nds") + " with make." + (refreshed > 0 ? $" {refreshed} archives reloaded from the build." : "")
                     : "The hg-engine build failed.";
             return built;
+        }
+
+        private System.Threading.Tasks.Task<bool> RebuildBaseFirstAsync(string buildRom) =>
+            HgEngineBaseRestore.RebuildFirstAsync(this, () => new CompileRomView().BuildAsync(this, buildRom), ReloadHgEngineBaseAsync,
+                () => OpenEditors.CloseEditorWindows(this));
+
+        private System.Threading.Tasks.Task<bool> OfferBaseEditsBackAsync() => HgEngineBaseRestore.OfferAsync(this, ReloadHgEngineBaseAsync);
+
+        /// <summary>Opens base/ again, so editors that read it before a write-back show what was written.</summary>
+        private async System.Threading.Tasks.Task<bool> ReloadHgEngineBaseAsync()
+        {
+            OpenEditors.CloseEditorWindows(this);
+            try { return await LoadHgEngineBaseAsync(HgEngineProject.RepoRootWindows, recordRecent: false); }
+            finally { HgEngineProject.Refresh(); }
+        }
+
+        /// <summary>Loads a checkout's base/ as the project. False when it didn't load.</summary>
+        private async System.Threading.Tasks.Task<bool> LoadHgEngineBaseAsync(string checkout, bool recordRecent)
+        {
+            bool loaded = await LoadFolderAsync(HgEngineFolder.BaseDir(checkout), recordRecent: false, sourcePath: checkout);
+            // Records the checkout, not base/, so reopening runs these checks again.
+            if (loaded && recordRecent) SettingsManager.RecordRecentProject(checkout);
+            return loaded;
+        }
+
+        /// <summary>Opens an extracted folder as the project. False when it didn't load.</summary>
+        private async System.Threading.Tasks.Task<bool> LoadFolderAsync(string folder, bool recordRecent, string sourcePath = null)
+        {
+            bool loaded = false;
+            await LoadRomAsync(err0 =>
+            {
+                loaded = AvaloniaRomLoader.LoadFromFolder(folder, out string er, recordRecent);
+                err0(er);
+                return loaded;
+            }, sourcePath: sourcePath ?? folder);
+            return loaded;
         }
 
         /// <summary>
@@ -1074,8 +1112,7 @@ namespace DSPRE.Avalonia.Views.Shell
             finally { if (vm != null) vm.IsBusy = false; }
 
             if (result != 1) return;
-            await LoadRomAsync(err0 => { bool ok = AvaloniaRomLoader.LoadFromFolder(folder, out string er, recordRecent: false); err0(er); return ok; },
-                sourcePath: folder);
+            await LoadFolderAsync(folder, recordRecent: false);
         }
 
         private void PatchToolbox_Click(object sender, RoutedEventArgs e)

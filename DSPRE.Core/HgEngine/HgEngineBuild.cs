@@ -12,13 +12,22 @@ namespace DSPRE.HgEngine
     {
         /// <summary>Builds one or more make targets (e.g. "build/narc/a055.narc") in one `make` call.</summary>
         public static bool RunMakeTargets(System.Collections.Generic.IEnumerable<string> targets, out string stdout, out string stderr)
-            => Run($"make -C '{HgEngineProject.RepoPathPosix}' {string.Join(' ', targets)}", out stdout, out stderr);
+            => Run(MakeCall() + " " + string.Join(' ', targets), out stdout, out stderr);
 
         /// <summary>Runs the full `make` build (all data domains + ASM hooks + repack into test.nds),
         /// streaming output line by line for a live log panel.</summary>
         public static bool RunFullBuild(Action<string> onOutputLine, out string stderr, string buildRom = null)
-            => RunStreaming($"make -C '{HgEngineProject.RepoPathPosix}'"
-                + (HgEngineProject.IsSafeBuildRomName(buildRom) ? $" BUILDROM='{buildRom}'" : ""), onOutputLine, out stderr);
+            => RunStreaming(FullBuildCommand(buildRom), onOutputLine, out stderr);
+
+        /// <summary>The command Compile ROM runs.</summary>
+        public static string FullBuildCommand(string buildRom = null)
+            => MakeCall() + (HgEngineProject.IsSafeBuildRomName(buildRom) ? $" BUILDROM='{buildRom}'" : "");
+
+        private static string MakeCall()
+        {
+            string call = $"make -C '{HgEngineProject.RepoPathPosix}'";
+            return HgEngineProject.MakeArguments.Length == 0 ? call : call + " " + HgEngineProject.MakeArguments;
+        }
 
         /// <summary>
         /// Runs hg-engine's text-archive validator over one source file. It reports problems on stdout
@@ -39,6 +48,22 @@ namespace DSPRE.HgEngine
 
             string reported = (stdout + Environment.NewLine + stderr).Trim();
             if (reported.Length > 0) problems = reported;
+            return true;
+        }
+
+        /// <summary>Whether the next make wipes base/ and extracts it again from rom.nds. False when make couldn't tell.</summary>
+        public static bool TryCheckBaseReextract(out bool reextracts)
+        {
+            reextracts = false;
+            // Not make -q: hg-engine's Makefile exits 0 even when the target is out of date. A dry run prints "is up to
+            // date" or "Nothing to be done" when nothing would run.
+            string target = HgEngineBase.BaseDirName + "/arm9.bin";
+            // Uses the build's arguments, since -f or a variable can change what the target needs. LC_ALL=C keeps make's
+            // messages in English.
+            if (!Run($"LC_ALL=C {MakeCall()} -n '{target}' 2>&1; true", out string stdout, out _)) return false;
+            // make marks its errors with "***", and then it can't say what would run.
+            if (string.IsNullOrWhiteSpace(stdout) || stdout.Contains("***", StringComparison.Ordinal)) return false;
+            reextracts = !stdout.Contains("is up to date", StringComparison.Ordinal) && !stdout.Contains("Nothing to be done", StringComparison.Ordinal);
             return true;
         }
 

@@ -70,8 +70,7 @@ namespace DSPRE.Avalonia.Views.Shell
                     + string.Join(Environment.NewLine, failed), title);
 
             // Every editor and cache read the old folders; reloading the project starts them all afresh.
-            await LoadRomAsync(err0 => { bool ok = AvaloniaRomLoader.LoadFromFolder(folder, out string er, recordRecent: false); err0(er); return ok; },
-                sourcePath: folder);
+            await LoadFolderAsync(folder, recordRecent: false);
             if (vm != null) vm.StatusText = title + ": done.";
         }
 

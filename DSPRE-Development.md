@@ -159,6 +159,15 @@ a tooltip saying why.
 Saving, exporting and importing confirm with a `SaveNotice` instead of a dialog. Messages don't use exclamation
 marks, and Enter never answers a question. An editor that's slow to open shows the busy card while it loads.
 
+`SaveNotice` draws the open game's message frame. Its notices and the `DialogHelper` boxes show a follower or player
+beside the text, as chosen for the project in Settings. With no ROM open they keep the plain look. Each method picks a
+speech bubble, and the `SpeechBubble` parameter overrides it. Warnings go through `ShowWarningAsync`.
+
+```csharp
+SaveNotice.Saved(UnsavedChangesDescription, SpeechBubble.Note);
+await DialogHelper.ShowWarningAsync("hg-engine now patches these addresses.", title, this);
+```
+
 Icons come from `Icon.Key`, not text symbols. Numbers are whole where the game's are.
 
 ### Comments and text
@@ -387,6 +396,20 @@ In `MainWindowView.axaml` the menu item binds `IsVisible` to `Shown[MyEditorView
 | Thumb `bl` and `blx` calls | `ThumbBl` (Core) |
 | Screen data kept in game code, for previews | `ScreenCodeData` (Core) |
 | Screen spot tables | `ScreenSpots.Entry`, `ScreenSpots.ShiftEntry` (Core) |
+| Undo when a `using` ends | `OnDispose` (Core) |
+| Paths | `ProjectPaths` (Core) |
+| File hashes | `FileHash` (Core) |
+| Changed byte runs | `ByteRanges.Changed` (Core) |
+| DSPRE's JSON files | `PlainFiles.ReadJson`, `WriteJson` (Core) |
+| Project backups | `ProjectBackups` (Core) |
+| Backup and temp files | `DSUtils.IsSideFile` (Core) |
+| Unpacked archives | `ArchiveMembers.IsUnpacked`, `DirsOfArchive` (Core) |
+| Species names | `RomInfo.GetPokemonNamesOrEmpty` (Core) |
+| Per-project choices | `ProjectPrefs` |
+| Members without unpacking | `ScriptNarc.IfUnpacked` |
+| Frame names | `WindowFrames.Names` |
+| Fixed-width text | `CodeFont` resource, `UiFonts.Code` |
+| Figure beside content | `NoticeFigure.Beside` |
 
 An editor that only draws archive members redraws with `AppEvents.WhenSaved(redraw, dirs)`.
 
@@ -876,6 +899,11 @@ the Mega tables for the Form editor, where a form's number is its place in the s
 
 `make` rebuilds archives on every run. For an archive with a build rule, `NarcSync` copies the build's members into the
 unpacked folder without asking. A member DSPRE edited since the last sync still asks.
+
+`make` deletes `base/` and extracts it again when `rom.nds` or hg-engine's tools change. Archive edits survive in
+`.dspre/unpacked/`. `HgEngineBaseEdits` keeps a copy of DSPRE's other writes to `base/` and `base_dsrom/` in
+`.dspre/base-edits/`. After a re-extract, `HgEngineBaseRestore` offers to write them back, skipping code hg-engine now
+patches.
 
 ## Reference
 

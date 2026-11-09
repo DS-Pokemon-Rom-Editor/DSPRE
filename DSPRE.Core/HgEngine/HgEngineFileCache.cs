@@ -119,10 +119,10 @@ namespace DSPRE.HgEngine
             if (relative.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relative)) return;
             try
             {
-                HgEngineProject.FolderConfigPath(root);
-                string folder = Path.Combine(root, RomInfo.HgEngineDspreFolder, "backups");
-                Directory.CreateDirectory(folder);
-                string name = relative.Replace(Path.DirectorySeparatorChar, '_').Replace('/', '_');
+                string dspre = HgEngineProject.DspreFolder(root);
+                if (dspre == null) return;
+                string folder = ProjectBackups.Folder(dspre);
+                string name = ProjectBackups.FlatName(relative);
                 List<string> copies = Directory.GetFiles(folder, name + ".*").OrderByDescending(File.GetLastWriteTimeUtc).ToList();
                 if (copies.Count > 0 && DateTime.UtcNow - File.GetLastWriteTimeUtc(copies[0]) < BackupGap) return;
                 PlainFiles.WriteBytes(Path.Combine(folder, name + "." + DateTime.Now.ToString("yyyyMMdd-HHmmss")), before);
@@ -136,7 +136,7 @@ namespace DSPRE.HgEngine
 
         private static string WriteTemp(string path, string output, System.Text.Encoding encoding)
         {
-            string temp = path + ".dspre-tmp";
+            string temp = path + DSUtils.TempSuffix;
             try { PlainFiles.WriteText(temp, output, encoding ?? new System.Text.UTF8Encoding(false)); }
             catch
             {
