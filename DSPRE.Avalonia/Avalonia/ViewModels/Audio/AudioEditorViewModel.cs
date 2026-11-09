@@ -557,6 +557,8 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         public string Save()
         {
             if (!HasUnsavedChanges) return null;
+            // Read before saving: it counts what is still pending.
+            string saved = UnsavedChangesDescription;
 
             List<HeldSample> samples;
             lock (_heldLock) samples = _pendingSamples.ToList();
@@ -587,7 +589,8 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             }
             PendingChanged();
             ForgetSteps();
-            StatusText = wroteCheckout ? "Saved. Compile the ROM to hear the new cries in game." : "Saved.";
+            StatusText = wroteCheckout ? "Compile the ROM to hear the new cries in game." : "";
+            SaveNotice.Saved(saved, SpeechBubble.Note);
             return null;
         }
 

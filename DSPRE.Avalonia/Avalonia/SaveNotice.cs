@@ -7,6 +7,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using DSPRE.Avalonia.Controls;
 using DSPRE.Avalonia.Data;
 
 namespace DSPRE.Avalonia
@@ -23,7 +24,7 @@ namespace DSPRE.Avalonia
 
         /// <summary>"Saved Matrix 3", "Saved Learnset (Mon 25)" and so on. Give the subject, not the
         /// verb; the word Saved is added here so every editor phrases it the same way.</summary>
-        public static void Saved(string subject) => Show(Compose(subject));
+        public static void Saved(string subject, SpeechBubble bubble = SpeechBubble.Smile) => Show(Compose(subject), bubble);
 
         /// <summary>Builds the line from the editor's UnsavedChangesDescription; a blank subject gets a fallback.</summary>
         public static string Compose(string subject)
@@ -31,36 +32,38 @@ namespace DSPRE.Avalonia
 
         /// <summary>A confirmation that is not a save, for the few editors that write by another
         /// name (applying a patch, exporting, repacking).</summary>
-        public static void Show(string message) => Post(message, null);
+        public static void Show(string message, SpeechBubble bubble = SpeechBubble.Smile) => Post(message, null, bubble);
 
         /// <summary>"Exported egg_moves.csv", with a Show file button that opens its folder.</summary>
-        public static void Exported(string path) => Post("Exported " + Path.GetFileName(path), path);
+        public static void Exported(string path) => Exported(path, SpeechBubble.Smile);
+
+        public static void Exported(string path, SpeechBubble bubble) => Post("Exported " + Path.GetFileName(path), path, bubble);
 
         /// <summary>"Exported 590 building models to buildings", with an Open folder button. Give what went out, not the verb.</summary>
         public static void ExportedTo(string what, string folder)
-            => Post($"Exported {what.Trim()} to {Path.GetFileName(folder.TrimEnd('\\', '/'))}", folder, opensFolder: true);
+            => Post($"Exported {what.Trim()} to {Path.GetFileName(folder.TrimEnd('\\', '/'))}", folder, SpeechBubble.Smile, opensFolder: true);
 
         /// <summary>"Imported Bulbasaur's egg moves from egg_moves.csv". Give what came in, not the verb; the file is left out when unknown.</summary>
-        public static void Imported(string what, string path)
+        public static void Imported(string what, string path, SpeechBubble bubble = SpeechBubble.Smile)
         {
             string file = string.IsNullOrEmpty(path) ? null : Path.GetFileName(path);
-            if (string.IsNullOrWhiteSpace(what)) Post(file == null ? null : "Imported " + file, null);
-            else Post(file == null ? "Imported " + what.Trim() : $"Imported {what.Trim()} from {file}", null);
+            if (string.IsNullOrWhiteSpace(what)) Post(file == null ? null : "Imported " + file, null, bubble);
+            else Post(file == null ? "Imported " + what.Trim() : $"Imported {what.Trim()} from {file}", null, bubble);
         }
 
-        private static void Post(string message, string file, bool opensFolder = false)
+        private static void Post(string message, string file, SpeechBubble bubble, bool opensFolder = false)
         {
             if (string.IsNullOrWhiteSpace(message)) return;
 
-            if (Dispatcher.UIThread.CheckAccess()) Present(message, file, opensFolder);
-            else Dispatcher.UIThread.Post(() => Present(message, file, opensFolder));
+            if (Dispatcher.UIThread.CheckAccess()) Present(message, file, opensFolder, bubble);
+            else Dispatcher.UIThread.Post(() => Present(message, file, opensFolder, bubble));
         }
 
         private static Border _showing;
         private static OverlayLayer _showingIn;
         private static DispatcherTimer _life;
 
-        private static void Present(string message, string file, bool opensFolder)
+        private static void Present(string message, string file, bool opensFolder, SpeechBubble bubble)
         {
             try
             {
@@ -72,10 +75,13 @@ namespace DSPRE.Avalonia
                 // save.
                 Clear();
 
-                _showing = Build(message, file, opensFolder);
+                _showing = Build(message, file, opensFolder, bubble);
                 _showingIn = layer;
                 layer.Children.Add(_showing);
                 Place(_showing, window.ClientSize);
+                // The game frame is sized after layout, so the notice is centred again when its size changes.
+                Border placed = _showing;
+                placed.SizeChanged += (_, _) => Place(placed, window.ClientSize);
 
                 _life = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(file == null ? VisibleMs : FileVisibleMs) };
                 _life.Tick += (_, _) => Clear();
@@ -103,13 +109,14 @@ namespace DSPRE.Avalonia
             _showingIn = null;
         }
 
-        private static Border Build(string message, string file, bool opensFolder)
+        private static Border Build(string message, string file, bool opensFolder, SpeechBubble bubble)
         {
+            bool game = NoticeArt.Available;
             TextBlock text = new TextBlock
             {
                 Text = message,
-                Foreground = Theme("Editor.Text", Brushes.White),
-                FontSize = 13,
+                Foreground = game ? new SolidColorBrush(NoticeArt.Ink()) : StatusBrushes.Look("Editor.Text", Brushes.White),
+                FontSize = game ? 15 : 13,
                 VerticalAlignment = VerticalAlignment.Center,
             };
             Control child = text;
@@ -125,12 +132,42 @@ namespace DSPRE.Avalonia
                 };
                 child = new StackPanel { Orientation = Orientation.Horizontal, Children = { text, show } };
             }
-            return Frame(child, file != null);
+            return game ? GameFrame(child, file != null, bubble) : Frame(child, file != null);
+        }
+
+        private const int GameScale = 2;
+
+        private static Border GameFrame(Control child, bool clickable, SpeechBubble bubble)
+        {
+            int tile = ROMFiles.FieldWindowFrame.TileSize * GameScale;
+            Image paper = new Image { Stretch = Stretch.Fill };
+            RenderOptions.SetBitmapInterpolationMode(paper, global::Avalonia.Media.Imaging.BitmapInterpolationMode.None);
+            child.Margin = new Thickness(2 * tile, tile, 3 * tile, tile);
+            child.HorizontalAlignment = HorizontalAlignment.Left;
+            child.VerticalAlignment = VerticalAlignment.Center;
+            Grid box = new Grid { VerticalAlignment = VerticalAlignment.Bottom, Children = { paper, child } };
+            // Buttons only get their real size once styled in the window, so the frame is drawn when the text is laid out.
+            child.SizeChanged += (_, e) =>
+            {
+                int tilesWide = Math.Max(4, (int)Math.Ceiling(e.NewSize.Width / tile));
+                int tilesHigh = Math.Max(2, (int)Math.Ceiling(e.NewSize.Height / tile));
+                global::Avalonia.Media.Imaging.Bitmap frame = NoticeArt.FrameBitmap(tilesWide, tilesHigh);
+                if (frame == null) return;
+                (paper.Source as IDisposable)?.Dispose();
+                paper.Source = frame;
+                paper.Width = box.Width = frame.PixelSize.Width * GameScale;
+                paper.Height = box.Height = frame.PixelSize.Height * GameScale;
+            };
+            return new Border
+            {
+                IsHitTestVisible = clickable,
+                Child = NoticeFigure.Beside(box, bubble, VerticalAlignment.Bottom, new Thickness(0, 0, 2, 0)),
+            };
         }
 
         private static Border Frame(Control child, bool clickable) => new Border
         {
-            Background = Theme("Editor.StatusBg", new SolidColorBrush(Color.FromArgb(0xF0, 0x20, 0x20, 0x20))),
+            Background = StatusBrushes.Look("Editor.StatusBg", new SolidColorBrush(Color.FromArgb(0xF0, 0x20, 0x20, 0x20))),
             BorderBrush = StatusBrushes.Good,
             BorderThickness = new Thickness(0, 0, 0, 2),
             CornerRadius = new CornerRadius(3),
@@ -148,14 +185,6 @@ namespace DSPRE.Avalonia
             Size size = notice.DesiredSize;
             Canvas.SetLeft(notice, Math.Max(0, (area.Width - size.Width) / 2));
             Canvas.SetTop(notice, Math.Max(0, area.Height - size.Height - 28));
-        }
-
-        private static IBrush Theme(string key, IBrush fallback)
-        {
-            Application app = Application.Current;
-            return app != null && app.TryGetResource(key, app.ActualThemeVariant, out object found) && found is IBrush b
-                ? b
-                : fallback;
         }
 
         private static Window ActiveWindow()

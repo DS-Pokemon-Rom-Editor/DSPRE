@@ -26,7 +26,7 @@ namespace DSPRE.Avalonia.Data
             _loadedFor = path;
             _values = new Dictionary<string, string>();
             if (path == null || !File.Exists(path)) return;
-            try { _values = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(path)) ?? new Dictionary<string, string>(); }
+            try { _values = PlainFiles.ReadJson<Dictionary<string, string>>(path) ?? new Dictionary<string, string>(); }
             catch (Exception ex) { AppLogger.Error("ProjectPrefs: " + ex.Message); }
         }
 
@@ -39,6 +39,15 @@ namespace DSPRE.Avalonia.Data
             }
         }
 
+        public static bool GetBool(string key, bool fallback) => Get(key, fallback ? "true" : "false") == "true";
+
+        public static void SetBool(string key, bool value) => Set(key, value ? "true" : "false");
+
+        public static int GetInt(string key, int fallback) =>
+            int.TryParse(Get(key, ""), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int value) ? value : fallback;
+
+        public static void SetInt(string key, int value) => Set(key, value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
         /// <summary>Stores a choice for this project; does nothing with no project open.</summary>
         public static void Set(string key, string value)
         {
@@ -49,7 +58,7 @@ namespace DSPRE.Avalonia.Data
                 if (path == null) return;
                 if (_values.TryGetValue(key, out string old) && old == value) return;
                 _values[key] = value;
-                try { PlainFiles.WriteText(path, JsonSerializer.Serialize(_values, new JsonSerializerOptions { WriteIndented = true })); }
+                try { PlainFiles.WriteJson(path, _values); }
                 catch (Exception ex) { AppLogger.Error("ProjectPrefs: " + ex.Message); }
             }
         }

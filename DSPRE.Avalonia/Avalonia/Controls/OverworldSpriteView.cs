@@ -19,6 +19,7 @@ namespace DSPRE.Avalonia.Controls
         public static readonly StyledProperty<int> EntryProperty = AvaloniaProperty.Register<OverworldSpriteView, int>(nameof(Entry), -1);
         public static readonly StyledProperty<int> FacingProperty = AvaloniaProperty.Register<OverworldSpriteView, int>(nameof(Facing), (int)MoveFacing.Down);
         public static readonly StyledProperty<int> ScaleProperty = AvaloniaProperty.Register<OverworldSpriteView, int>(nameof(Scale), 2);
+        public static readonly StyledProperty<bool> WalkInPlaceProperty = AvaloniaProperty.Register<OverworldSpriteView, bool>(nameof(WalkInPlace));
 
         /// <summary>The overworld table entry, or -1 for nothing.</summary>
         public int Entry { get => GetValue(EntryProperty); set => SetValue(EntryProperty, value); }
@@ -27,10 +28,15 @@ namespace DSPRE.Avalonia.Controls
         /// <summary>Screen pixels per sprite pixel; 0 fills the space with the largest whole number that fits, centred.</summary>
         public int Scale { get => GetValue(ScaleProperty); set => SetValue(ScaleProperty, value); }
 
-        private const int FrameMs = 1000 / 30;
-        private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(FrameMs) };
+        /// <summary>Steps on the spot at walking pace instead of standing.</summary>
+        public bool WalkInPlace { get => GetValue(WalkInPlaceProperty); set => SetValue(WalkInPlaceProperty, value); }
+
+        /// <summary>Draws nothing until the sprite archive is unpacked, and never unpacks or syncs it.</summary>
+        public bool IfUnpacked { get; init; }
+
+        private readonly DispatcherTimer _timer;
         private readonly FieldWalkCycle _cycle = new();
-        private readonly Dictionary<int, Bitmap> _pictures = new();
+        private readonly SpritePictures _pictures = new();
         private int _frames;
         private Bitmap _shown;
 
@@ -42,13 +48,13 @@ namespace DSPRE.Avalonia.Controls
         public OverworldSpriteView()
         {
             IsHitTestVisible = false;
-            _timer.Tick += (_, _) => Step();
+            _timer = SpritePictures.Clock(Step);
         }
 
         protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
         {
             base.OnPropertyChanged(change);
-            if (change.Property == EntryProperty || change.Property == FacingProperty) Reload();
+            if (change.Property == EntryProperty || change.Property == FacingProperty || change.Property == WalkInPlaceProperty) Reload();
         }
 
         protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -66,7 +72,6 @@ namespace DSPRE.Avalonia.Controls
 
         private void Forget()
         {
-            foreach (Bitmap b in _pictures.Values) b.Dispose();
             _pictures.Clear();
             _shown = null;
         }
@@ -77,26 +82,18 @@ namespace DSPRE.Avalonia.Controls
             Forget();
             _frames = Entry >= 0 && VisualRoot != null ? OverworldSprites.FrameCount((ushort)Entry) : 0;
             Step();
-            // Only banks with more than one picture for a facing move while standing.
-            if (FieldSpriteAnimation.PerFacing(_frames) > 1) _timer.Start();
+            if (FieldSpriteAnimation.PerFacing(_frames) > 1 || WalkInPlace && _frames > 0) _timer.Start();
         }
 
         private void Step()
         {
             _cycle.Tick();
-            _shown = Entry >= 0 && VisualRoot != null ? PictureAt(FieldSpriteAnimation.PictureFor(_frames, Facing, _cycle)) : null;
+            if (WalkInPlace) _cycle.Walk(OverworldAnimator.WalkFrames);
+            _shown = Entry >= 0 && VisualRoot != null
+                ? _pictures.At((ushort)Entry, Facing, FieldSpriteAnimation.PictureFor(_frames, Facing, _cycle), IfUnpacked)
+                : null;
             InvalidateMeasure();
             InvalidateVisual();
-        }
-
-        private Bitmap PictureAt(int picture)
-        {
-            if (_pictures.TryGetValue(picture, out Bitmap b)) return b;
-            OverworldSprites.SpritePixels pix = OverworldSprites.Get((ushort)Entry, (ushort)Facing, picture);
-            if (pix == null || pix.Width <= 0 || pix.Height <= 0) return null;
-            Bitmap bmp = ImageConverter.FromRgba(pix.Rgba, pix.Width, pix.Height);
-            _pictures[picture] = bmp;
-            return bmp;
         }
 
         protected override Size MeasureOverride(Size availableSize) =>
@@ -109,8 +106,7 @@ namespace DSPRE.Avalonia.Controls
             int scale = Scale > 0 ? Scale : Math.Max(1, (int)Math.Min(Bounds.Width / sw, Bounds.Height / sh));
             double w = sw * scale, h = sh * scale;
             double top = Scale > 0 ? Bounds.Height - h : (Bounds.Height - h) / 2;
-            using (context.PushRenderOptions(new RenderOptions { BitmapInterpolationMode = BitmapInterpolationMode.None }))
-                context.DrawImage(_shown, new Rect((Bounds.Width - w) / 2, top, w, h));
+            SpritePictures.Draw(context, _shown, new Rect((Bounds.Width - w) / 2, top, w, h));
         }
     }
 }

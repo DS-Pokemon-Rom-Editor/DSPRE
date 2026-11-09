@@ -52,7 +52,7 @@ namespace DSPRE.Avalonia.Views.Text
 
             if (VM.BorderNames.Count == 0)
             {
-                for (int i = 0; i < FieldWindowFrame.FrameCount; i++) VM.BorderNames.Add($"Frame {i + 1}");
+                foreach (string name in DSPRE.Avalonia.Data.WindowFrames.Names) VM.BorderNames.Add(name);
                 // The list filled after the box was bound, which leaves it showing nothing picked.
                 int picked = System.Math.Max(0, VM.BorderIndex);
                 VM.BorderIndex = -1;

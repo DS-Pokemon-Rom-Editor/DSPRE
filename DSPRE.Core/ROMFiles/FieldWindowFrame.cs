@@ -170,10 +170,26 @@ namespace DSPRE.ROMFiles
         /// <summary>The paper the writing sits on, as 0xAARRGGBB. </summary>
         public uint PaperArgb => _colours.Length > 15 ? _colours[15] : 0xFFFFFFFFu;
 
+        // The border never covers the writing area, so without paper the box is a rim round a hole.
+        private static void PaintPaper(byte[] rgba, int width, int height, int tilesWide, int tilesHigh, uint paperArgb)
+        {
+            byte a = (byte)(paperArgb >> 24), r = (byte)(paperArgb >> 16), g = (byte)(paperArgb >> 8), b = (byte)paperArgb;
+            int left = 2 * TileSize - 1, top = TileSize - 1;
+            int right = (2 + tilesWide) * TileSize + 1, bottom = (1 + tilesHigh) * TileSize + 1;
+            for (int y = Math.Max(0, top); y < Math.Min(height, bottom); y++)
+                for (int x = Math.Max(0, left); x < Math.Min(width, right); x++)
+                {
+                    int at = (y * width + x) * 4;
+                    if (rgba[at + 3] != 0) continue;
+                    rgba[at] = r; rgba[at + 1] = g; rgba[at + 2] = b; rgba[at + 3] = a;
+                }
+        }
+
         /// <summary>
-        /// Paints the whole border round a writing area of the given size in tiles, as straight RGBA.
+        /// Paints the whole border round a writing area of the given size in tiles, as straight RGBA, with the writing
+        /// area filled with <paramref name="paperArgb"/> when one is given.
         /// </summary>
-        public byte[] Compose(int tilesWide, int tilesHigh, out int width, out int height)
+        public byte[] Compose(int tilesWide, int tilesHigh, out int width, out int height, uint? paperArgb = null)
         {
             int cols = 2 + tilesWide + 3;      // two tiles left of the writing, three right
             int rows = 1 + tilesHigh + 1;      // one above, one below
@@ -212,6 +228,7 @@ namespace DSPRE.ROMFiles
             for (int i = 0; i < tilesWide; i++) Put(2 + i, 1 + tilesHigh, 14);
             Put(last, 1 + tilesHigh, 15); Put(last + 1, 1 + tilesHigh, 16); Put(last + 2, 1 + tilesHigh, 17);
 
+            if (paperArgb != null) PaintPaper(rgba, w, h, tilesWide, tilesHigh, paperArgb.Value);
             return rgba;
         }
 

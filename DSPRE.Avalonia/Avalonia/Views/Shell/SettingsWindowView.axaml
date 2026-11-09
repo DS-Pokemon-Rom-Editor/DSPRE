@@ -127,7 +127,7 @@
 
 	  <TabItem Header="Appearance">
 		<ScrollViewer>
-		  <Grid Margin="4,8" ColumnDefinitions="Auto,160,*" RowDefinitions="Auto,Auto" RowSpacing="10">
+		  <Grid Margin="4,8" ColumnDefinitions="Auto,160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="10">
 			<TextBlock Grid.Row="0" Grid.Column="0" Text="Theme" VerticalAlignment="Center" Margin="0,0,8,0"/>
 			<ComboBox  Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{Binding ThemeNames}"
 			           SelectedIndex="{Binding ThemeIndex}"/>
@@ -138,6 +138,30 @@
 			<NumericUpDown Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" Value="{Binding UiScale}" Minimum="0" Maximum="8" Increment="0.05" FormatString="0.00"/>
 			<TextBlock Grid.Row="1" Grid.Column="2" Text="0 is automatic. Needs a restart." VerticalAlignment="Center" Margin="8,0,0,0"
 			           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+
+			<TextBlock Grid.Row="3" Grid.Column="0" Text="Notice Pokémon" VerticalAlignment="Center" Margin="0,0,8,0"
+			           ToolTip.Tip="Saved with this project" IsVisible="{Binding ShowNoticeFollower}"/>
+			<ComboBox  Grid.Row="3" Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{Binding NoticeFollowerChoices}"
+			           SelectedIndex="{Binding NoticeFollowerIndex}" IsVisible="{Binding ShowNoticeFollower}"/>
+
+			<TextBlock Grid.Row="4" Grid.Column="0" Text="Pokémon" VerticalAlignment="Center" Margin="0,0,8,0"
+			           IsVisible="{Binding ShowNoticeFollower}"/>
+			<controls:IdNameSelector Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" HorizontalAlignment="Left" Width="320"
+			                         Value="{Binding NoticeFollowerSpecies}" Minimum="1" Maximum="{Binding MaxNoticeSpecies}"
+			                         Names="{Binding NoticeSpeciesNames}" IsEnabled="{Binding NoticeSpeciesEnabled}"
+			                         ToolTip.Tip="Used with Specific Pokémon" ToolTip.ShowOnDisabled="True"
+			                         IsVisible="{Binding ShowNoticeFollower}"/>
+
+			<TextBlock Grid.Row="2" Grid.Column="0" Text="Notice frame" VerticalAlignment="Center" Margin="0,0,8,0"
+			           ToolTip.Tip="Saved with this project" IsVisible="{Binding ShowNoticeFrame}"/>
+			<ComboBox  Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{Binding NoticeFrameChoices}"
+			           SelectedIndex="{Binding NoticeFrameIndex}" IsVisible="{Binding ShowNoticeFrame}"/>
+
+			<!-- Shown instead of the follower rows, so it takes their place. -->
+			<TextBlock Grid.Row="3" Grid.Column="0" Text="Notice player" VerticalAlignment="Center" Margin="0,0,8,0"
+			           ToolTip.Tip="Saved with this project" IsVisible="{Binding ShowNoticePlayer}"/>
+			<ComboBox  Grid.Row="3" Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{Binding NoticePlayerChoices}"
+			           SelectedIndex="{Binding NoticePlayerIndex}" IsVisible="{Binding ShowNoticePlayer}"/>
 		  </Grid>
 		</ScrollViewer>
 	  </TabItem>

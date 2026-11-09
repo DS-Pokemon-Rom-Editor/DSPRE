@@ -109,6 +109,60 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         public string[] ThemeNames { get; } = { "Dark", "Light" };
 
+        // ── Who stands beside notices and dialogs, saved with the project ──
+        private string _noticeProject;
+
+        /// <summary>Whether the follower rows show: HGSS projects whose followers can be read.</summary>
+        public bool ShowNoticeFollower { get; private set; }
+
+        /// <summary>Whether the player row shows: any other project.</summary>
+        public bool ShowNoticePlayer { get; private set; }
+
+        public string[] NoticeFollowerChoices { get; } = { "Shuckle", "Specific Pokémon", "Random" };
+        public string[] NoticePlayerChoices { get; } = { "Boy", "Girl" };
+
+        private int _noticeFollowerIndex;
+        public int NoticeFollowerIndex
+        {
+            get => _noticeFollowerIndex;
+            set { if (Set(ref _noticeFollowerIndex, value)) OnPropertyChanged(nameof(NoticeSpeciesEnabled)); }
+        }
+
+        public bool NoticeSpeciesEnabled => NoticeFollowerIndex == (int)Data.NoticeFollowerKind.Specific;
+
+        private int _noticeFollowerSpecies = Data.NoticeArt.DefaultSpecies;
+        public int NoticeFollowerSpecies
+        {
+            get => _noticeFollowerSpecies;
+            set => Set(ref _noticeFollowerSpecies, value);
+        }
+
+        public int MaxNoticeSpecies => DSPRE.ROMFiles.HgssFollowers.SpeciesCount;
+
+        /// <summary>Read once. Empty with no project open, so the picker shows numbers.</summary>
+        public string[] NoticeSpeciesNames => _speciesNames ??= HasProject ? RomInfo.GetPokemonNamesOrEmpty() : Array.Empty<string>();
+
+        private string[] _speciesNames;
+
+        public string[] NoticeFrameChoices => Data.WindowFrames.Names;
+
+        private int _noticeFrameIndex;
+        public int NoticeFrameIndex
+        {
+            get => _noticeFrameIndex;
+            set => Set(ref _noticeFrameIndex, value);
+        }
+
+        /// <summary>Whether the frame row shows: any open project.</summary>
+        public bool ShowNoticeFrame { get; private set; }
+
+        private int _noticePlayerIndex;
+        public int NoticePlayerIndex
+        {
+            get => _noticePlayerIndex;
+            set => Set(ref _noticePlayerIndex, value);
+        }
+
         // ── Emulator for Build and Run: index 0 asks each time, the rest follow Emulators.All ──
         public string[] EmulatorChoices { get; } = new[] { "Ask each time" }.Concat(Emulators.All.Select(Emulators.DisplayName)).ToArray();
 
@@ -243,6 +297,18 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             AskBeforeSwitchingProject = SettingsManager.Settings.AskBeforeSwitchingProject;
             ShowGuidedTourNextLoad = !SettingsManager.Settings.GuidedTourShown;
             UiScale           = (decimal)SettingsManager.Settings.UiScale;
+            // Saved only if the same project is still open, as with the test save.
+            _noticeProject = HasProject ? RomInfo.WorkDir : null;
+            ShowNoticeFollower = _noticeProject != null && Data.NoticeArt.ShowsFollower;
+            ShowNoticePlayer = _noticeProject != null && !ShowNoticeFollower;
+            ShowNoticeFrame = _noticeProject != null;
+            if (_noticeProject != null)
+            {
+                NoticeFollowerIndex = (int)Data.NoticeArt.Follower;
+                NoticeFollowerSpecies = Math.Clamp(Data.NoticeArt.FollowerSpecies, 1, Math.Max(1, MaxNoticeSpecies));
+                NoticePlayerIndex = Data.NoticeArt.PlayerGirl ? 1 : 0;
+                NoticeFrameIndex = Data.NoticeArt.FrameIndex;
+            }
             _themeIndex       = ThemeManager.IsDark ? 0 : 1;
 
             CamPanSpeed      = (decimal)SettingsManager.Settings.CamPanSpeed;
@@ -287,6 +353,20 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             SettingsManager.Settings.GuidedTourShown        = !ShowGuidedTourNextLoad;
             if (ShowGuidedTourNextLoad) SettingsManager.Settings.EditorToursShown?.Clear();
             SettingsManager.Settings.UiScale                = (double)UiScale;
+            if (_noticeProject != null && _noticeProject == RomInfo.WorkDir)
+            {
+                if (ShowNoticeFollower)
+                {
+                    Data.NoticeArt.Follower = (Data.NoticeFollowerKind)NoticeFollowerIndex;
+                    Data.NoticeArt.FollowerSpecies = NoticeFollowerSpecies;
+                }
+                if (ShowNoticePlayer) Data.NoticeArt.PlayerGirl = NoticePlayerIndex == 1;
+                if (Data.NoticeArt.FrameIndex != NoticeFrameIndex)
+                {
+                    Data.NoticeArt.FrameIndex = NoticeFrameIndex;
+                    Data.NoticeArt.Reset();
+                }
+            }
 
             SettingsManager.Settings.CamPanSpeed     = (float)CamPanSpeed;
             SettingsManager.Settings.CamOrbitSpeed   = (float)CamOrbitSpeed;

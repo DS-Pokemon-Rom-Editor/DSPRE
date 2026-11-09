@@ -19,14 +19,18 @@ namespace DSPRE.Avalonia
         /// </summary>
         public const int PixelsPerTile = 16;
 
-        /// <summary>One picture out of a sprite bank; with no picture given, the one standing facing <paramref name="orientation"/>.</summary>
-        public static SpritePixels Get(ushort eventEntryID, ushort orientation, int picture = -1)
+        /// <summary>
+        /// One picture from a sprite bank, or the standing picture facing <paramref name="orientation"/> when none is given.
+        /// With <paramref name="ifUnpacked"/>, null if the archive isn't unpacked yet.
+        /// </summary>
+        public static SpritePixels Get(ushort eventEntryID, ushort orientation, int picture = -1, bool ifUnpacked = false)
         {
+            if (ifUnpacked && !Unpacked) return null;
             eventEntryID = (ushort)VariableOverworldStandIn(eventEntryID);
             if (picture < 0) picture = FieldSpriteAnimation.PictureFor(FrameCount(eventEntryID), orientation, null);
             // The picture is part of what is being cached, so it gets its own room in the key.
             ushort cacheDir = (ushort)(orientation | ((picture & 0x1F) << 8));
-            return GetCached(eventEntryID, cacheDir, orientation, picture);
+            return GetCached(eventEntryID, cacheDir, orientation, picture, ifUnpacked);
         }
 
         /// <summary>How many pictures the bank has for each way of facing, so a caller can pace them.</summary>
@@ -40,7 +44,8 @@ namespace DSPRE.Avalonia
                 if (OverworldTable == null) { SetOWtable(); ReadOWTable(); }
                 if (OverworldTable != null && OverworldTable.TryGetValue(eventEntryID, out (uint spriteID, ushort properties) r) && r.spriteID != 0x3D3D)
                 {
-                    n = Tex0Block.ReadBtx0(File.ReadAllBytes(Path.Combine(GameDirs[DirNames.OWSprites].unpackedDir, r.spriteID.ToString("D4"))), out _)?.Textures.Count ?? 0;
+                    byte[] bank = Data.ScriptNarc.IfUnpacked(DirNames.OWSprites).GetFromDisk((int)r.spriteID);
+                    n = bank == null ? 0 : Tex0Block.ReadBtx0(bank, out _)?.Textures.Count ?? 0;
                 }
             }
             catch { }   // a sprite that can't be read reports no frames and is tried again next time
@@ -50,14 +55,14 @@ namespace DSPRE.Avalonia
 
         private static readonly Dictionary<ushort, int> FrameCounts = new Dictionary<ushort, int>();
 
-        private static SpritePixels GetCached(ushort eventEntryID, ushort cacheDir, ushort orientation, int picture)
+        private static SpritePixels GetCached(ushort eventEntryID, ushort cacheDir, ushort orientation, int picture, bool ifUnpacked)
         {
             (ushort eventEntryID, ushort cacheDir) key = (eventEntryID, cacheDir);
             if (Cache.TryGetValue(key, out SpritePixels cached)) return cached;
             SpritePixels result = null;
             try
             {
-                RawImage raw = LoadRaw(eventEntryID, orientation, picture);
+                RawImage raw = LoadRaw(eventEntryID, orientation, picture, ifUnpacked);
                 if (raw != null) result = ToRgba(raw);
             }
             catch (Exception ex) { AppLogger.Error("OW sprite load failed: " + ex.Message); }
@@ -66,6 +71,9 @@ namespace DSPRE.Avalonia
             if (result != null) Cache[key] = result;
             return result;
         }
+
+        /// <summary>Whether the sprite archive is already unpacked, so drawing a sprite never waits on unpacking it.</summary>
+        public static bool Unpacked => ArchiveMembers.IsUnpacked(DirNames.OWSprites);
 
         public static void ClearCache() { Cache.Clear(); FrameCounts.Clear(); _outlined.Clear(); }
 
@@ -105,7 +113,7 @@ namespace DSPRE.Avalonia
         }
 
         // Sprite bank frames use the bank's first palette; the fixed fallbacks come from ResourceImages.
-        private static DSPRE.RawImage LoadRaw(ushort eventEntryID, ushort orientation, int picture)
+        private static DSPRE.RawImage LoadRaw(ushort eventEntryID, ushort orientation, int picture, bool ifUnpacked)
         {
             // The lookup tables are populated during ROM/event setup; make sure they exist.
             if (Ow3DSpriteDict == null) try { Set3DOverworldsDict(); } catch (Exception ex) { AppLogger.Warn("Overworld 3D sprite table: " + ex.Message); }
@@ -117,13 +125,12 @@ namespace DSPRE.Avalonia
             if (OverworldTable == null || !OverworldTable.TryGetValue(eventEntryID, out (uint spriteID, ushort properties) result))
                 return ResourceImages.GetRaw("overworld");
 
-            // Waits for an unpack in progress, so a sprite isn't read from a half-written folder.
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.OWSprites });
-            string path = Path.Combine(GameDirs[DirNames.OWSprites].unpackedDir, result.spriteID.ToString("D4"));
-            if (!File.Exists(path)) return null;
+            // Saved bytes only: an editor's pending sprite would otherwise stay in the cache after a Discard.
+            Data.ScriptNarc sprites = Data.ScriptNarc.Open(DirNames.OWSprites, ifUnpacked);
+            byte[] bank = sprites.GetFromDisk((int)result.spriteID);
+            if (bank == null) return null;
             try
             {
-                byte[] bank = File.ReadAllBytes(path);
                 Tex0Block block = Tex0Block.ReadBtx0(bank, out _);
                 if (block == null) return ResourceImages.GetRaw("overworldUnreadable");
                 int n = block.Textures.Count;

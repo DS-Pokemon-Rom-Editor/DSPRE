@@ -403,9 +403,8 @@ namespace DSPRE.Avalonia.Data
                 if (frame == null) piece.Whynot = "The window frames couldn't be read from this ROM.";
                 else
                 {
-                    piece.Rgba = frame.Compose(MessageTilesWide, MessageTilesHigh, out int w, out int h);
+                    piece.Rgba = frame.Compose(MessageTilesWide, MessageTilesHigh, out int w, out int h, frame.PaperArgb);
                     piece.Width = w; piece.Height = h;
-                    PaintPaper(piece, frame.PaperArgb);
                     BlackOutTheRest(piece);
                     piece.Drawing = FieldWindowFrame.FirstGraphicEntry + windowStyle;
                     piece.Colours = frame.PaletteEntry;
@@ -413,26 +412,6 @@ namespace DSPRE.Avalonia.Data
             }
             catch (Exception ex) { piece.Whynot = "This message box couldn't be drawn: " + ex.Message; }
             return piece;
-        }
-
-        /// <summary>
-        /// Fills the middle of the box with the paper colour. The border the games draw never covers
-        /// the middle, so without this the box is a rim round a hole.
-        /// </summary>
-        private static void PaintPaper(Piece piece, uint paperArgb)
-        {
-            const int Tile = FieldWindowFrame.TileSize;
-            byte a = (byte)(paperArgb >> 24), r = (byte)(paperArgb >> 16),
-                 g = (byte)(paperArgb >> 8), b = (byte)paperArgb;
-            int left = 2 * Tile - 1, top = Tile - 1;
-            int right = (2 + MessageTilesWide) * Tile + 1, bottom = (1 + MessageTilesHigh) * Tile + 1;
-            for (int y = Math.Max(0, top); y < Math.Min(piece.Height, bottom); y++)
-                for (int x = Math.Max(0, left); x < Math.Min(piece.Width, right); x++)
-                {
-                    int at = (y * piece.Width + x) * 4;
-                    if (piece.Rgba[at + 3] != 0) continue;   // the border itself stays as it is
-                    piece.Rgba[at] = r; piece.Rgba[at + 1] = g; piece.Rgba[at + 2] = b; piece.Rgba[at + 3] = a;
-                }
         }
 
         /// <summary>One of the touch screen's layers: which arrangement it shows and how the hardware stacks it.</summary>

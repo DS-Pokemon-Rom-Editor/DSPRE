@@ -139,7 +139,7 @@ namespace DSPRE.Avalonia.Views.Controls
             Rect textArea = new Rect(ox + FieldMessageWindow.TextLeft * s, oy + FieldMessageWindow.TextTop * s,
                                     FieldMessageWindow.TextWidth * s, FieldMessageWindow.TextHeight * s);
 
-            if (!DrawRomFrame(ctx, frame, textArea)) DrawPlainFrame(ctx, frame, s);
+            if (!DrawRomFrame(ctx, frame)) DrawPlainFrame(ctx, frame, s);
 
             using (ctx.PushClip(textArea))
             {
@@ -151,21 +151,15 @@ namespace DSPRE.Avalonia.Views.Controls
         }
 
         // The games' own border, which also paints the paper the writing sits on.
-        private static bool DrawRomFrame(DrawingContext ctx, Rect frame, Rect textArea)
+        private static bool DrawRomFrame(DrawingContext ctx, Rect frame)
         {
             FieldWindowFrame f = _frame;
             if (f == null) return false;
 
-            // The border never covers the middle, so the paper the writing sits on goes down first.
-            uint paper = f.PaperArgb;
-            ctx.FillRectangle(new SolidColorBrush(Color.FromArgb(
-                (byte)(paper >> 24), (byte)(paper >> 16), (byte)(paper >> 8), (byte)paper)),
-                textArea.Inflate(1));
-
             if (_frameBitmap == null)
             {
                 byte[] rgba = f.Compose(FieldMessageWindow.TilesWide, FieldMessageWindow.TilesHigh,
-                                        out int w, out int h);
+                                        out int w, out int h, f.PaperArgb);
                 _frameBitmap = ImageConverter.FromRgba(rgba, w, h);
             }
             if (_frameBitmap == null) return false;

@@ -22,7 +22,7 @@ namespace DSPRE.Avalonia
             DSPRE.AppMessages.InfoHook = (msg, title) =>
                 Dispatcher.UIThread.Post(() => _ = DialogHelper.ShowInfoAsync(msg, Coalesce(title, "Information")));
             DSPRE.AppMessages.WarningHook = (msg, title) =>
-                Dispatcher.UIThread.Post(() => _ = DialogHelper.ShowErrorAsync(msg, Coalesce(title, "Warning")));
+                Dispatcher.UIThread.Post(() => _ = DialogHelper.ShowWarningAsync(msg, Coalesce(title, "Warning")));
             DSPRE.AppMessages.NoticeHook = msg => Dispatcher.UIThread.Post(() => SaveNotice.Show(msg));
 
             // Save picker must return synchronously (the core export APIs are sync); pump a nested

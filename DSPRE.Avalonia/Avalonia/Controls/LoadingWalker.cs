@@ -7,6 +7,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using DSPRE.Avalonia.Data;
 using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Controls
@@ -19,12 +20,9 @@ namespace DSPRE.Avalonia.Controls
     {
         private const int Scale = 2;
         private const int FacingRight = 3;
-        private const int FrameMs = 1000 / 30;
-
-        private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(FrameMs) };
+        private readonly DispatcherTimer _timer;
         private readonly FieldWalkCycle _cycle = new();
-        private readonly Dictionary<int, Bitmap> _pictures = new();
-        private static readonly Random Pick = new();
+        private readonly SpritePictures _pictures = new();
 
         private enum Pace { Walk, Run, Bike }
 
@@ -45,7 +43,7 @@ namespace DSPRE.Avalonia.Controls
         {
             Height = 32 * Scale;
             IsHitTestVisible = false;
-            _timer.Tick += (_, _) => Step();
+            _timer = SpritePictures.Clock(Step);
         }
 
         protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -62,7 +60,6 @@ namespace DSPRE.Avalonia.Controls
         {
             base.OnDetachedFromVisualTree(e);
             _timer.Stop();
-            foreach (Bitmap b in _pictures.Values) b.Dispose();
             _pictures.Clear();
             _shown = null;
         }
@@ -71,30 +68,23 @@ namespace DSPRE.Avalonia.Controls
         {
             try
             {
-                if (!AvaloniaEditorLauncher.IsRomLoaded) return false;
-                if (!RomInfo.GameDirs.TryGetValue(RomInfo.DirNames.OWSprites, out (string packedDir, string unpackedDir) dirs)) return false;
-                if (!Directory.Exists(dirs.unpackedDir) || Directory.GetFiles(dirs.unpackedDir).Length == 0) return false;
+                if (!AvaloniaEditorLauncher.IsRomLoaded || !OverworldSprites.Unpacked) return false;
 
                 _pace = Pace.Walk;
-                if (RomInfo.GameFamily != RomInfo.GameFamilies.HGSS)
+                if (RomInfo.GameFamily == RomInfo.GameFamilies.HGSS)
                 {
-                    // DP and Platinum have no followers, so the player comes by instead.
-                    int first = Pick.Next(Players.Length);
-                    for (int i = 0; i < Players.Length; i++)
-                    {
-                        (ushort entry, Pace pace) = Players[(first + i) % Players.Length];
-                        int frames = OverworldSprites.FrameCount(entry);
-                        if (frames <= 0) continue;
-                        _entry = entry; _frames = frames; _pace = pace;
-                        return true;
-                    }
-                    return false;
-                }
-                for (int tries = 0; tries < 16; tries++)
-                {
-                    _entry = (ushort)(HgssFollowers.FirstSprite + Pick.Next(HgssFollowers.SpeciesCount));
-                    _frames = OverworldSprites.FrameCount(_entry);
+                    (_entry, _frames) = NoticeArt.RandomFollower();
                     if (_frames > 0) return true;
+                }
+                // The player comes by in DP and Platinum, and in HGSS projects whose followers can't be read.
+                int first = Random.Shared.Next(Players.Length);
+                for (int i = 0; i < Players.Length; i++)
+                {
+                    (ushort entry, Pace pace) = Players[(first + i) % Players.Length];
+                    int frames = OverworldSprites.FrameCount(entry);
+                    if (frames <= 0) continue;
+                    _entry = entry; _frames = frames; _pace = pace;
+                    return true;
                 }
                 return false;
             }
@@ -112,7 +102,8 @@ namespace DSPRE.Avalonia.Controls
             _x += OverworldSprites.PixelsPerTile * Scale / (double)stepFrames;
             if (_x > Bounds.Width) NextWalker();
             int picture = FieldSpriteAnimation.PictureFor(_frames, FacingRight, _cycle);
-            _shown = PictureAt(picture);
+            // Never unpacks: the card is up because something else is working.
+            _shown = _pictures.At(_entry, FacingRight, picture, ifUnpacked: true);
             InvalidateVisual();
         }
 
@@ -120,28 +111,16 @@ namespace DSPRE.Avalonia.Controls
         private void NextWalker()
         {
             _x = -32 * Scale;
-            foreach (Bitmap b in _pictures.Values) b.Dispose();
             _pictures.Clear();
             _shown = null;
             if (!Choose()) { _timer.Stop(); IsVisible = false; }
-        }
-
-        private Bitmap PictureAt(int picture)
-        {
-            if (_pictures.TryGetValue(picture, out Bitmap b)) return b;
-            OverworldSprites.SpritePixels pix = OverworldSprites.Get(_entry, FacingRight, picture);
-            if (pix == null || pix.Width <= 0 || pix.Height <= 0) return null;
-            Bitmap bmp = ImageConverter.FromRgba(pix.Rgba, pix.Width, pix.Height);
-            _pictures[picture] = bmp;
-            return bmp;
         }
 
         public override void Render(DrawingContext context)
         {
             if (_shown == null) return;
             double w = _shown.PixelSize.Width * Scale, h = _shown.PixelSize.Height * Scale;
-            using (context.PushRenderOptions(new RenderOptions { BitmapInterpolationMode = BitmapInterpolationMode.None }))
-                context.DrawImage(_shown, new Rect(_x, Bounds.Height - h, w, h));
+            SpritePictures.Draw(context, _shown, new Rect(_x, Bounds.Height - h, w, h));
         }
     }
 }

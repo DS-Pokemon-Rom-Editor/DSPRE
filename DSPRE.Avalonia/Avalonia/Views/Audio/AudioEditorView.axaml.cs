@@ -231,7 +231,7 @@ namespace DSPRE.Avalonia.Views.Audio
             try
             {
                 PlainFiles.WriteBytes(path, sf2);
-                SaveNotice.Exported(path);
+                SaveNotice.Exported(path, SpeechBubble.Note);
                 vm.StatusText = note ?? "";
             }
             catch (System.Exception ex)
@@ -263,7 +263,7 @@ namespace DSPRE.Avalonia.Views.Audio
             try
             {
                 PlainFiles.WriteBytes(path, midi);
-                SaveNotice.Exported(path);
+                SaveNotice.Exported(path, SpeechBubble.Note);
             }
             catch (Exception ex)
             {
@@ -290,7 +290,7 @@ namespace DSPRE.Avalonia.Views.Audio
                 {
                     if (!vm.ExportSelectedSample(path))
                         await DialogHelper.ShowInfoAsync("This ROM has no cry for that Pokémon.", "Save sound");
-                    else SaveNotice.Exported(path);
+                    else SaveNotice.Exported(path, SpeechBubble.Note);
                     return;
                 }
 
@@ -299,7 +299,7 @@ namespace DSPRE.Avalonia.Views.Audio
                 {
                     if (!vm.ExportSelectedSample(path))
                         await DialogHelper.ShowInfoAsync("This sound is empty, so there is nothing to save.", "Save sound");
-                    else SaveNotice.Exported(path);
+                    else SaveNotice.Exported(path, SpeechBubble.Note);
                     return;
                 }
 
@@ -309,7 +309,7 @@ namespace DSPRE.Avalonia.Views.Audio
                     return;
                 }
                 SseqPlayer.WriteWav(path, _pcm, Rate);
-                SaveNotice.Exported(path);
+                SaveNotice.Exported(path, SpeechBubble.Note);
             }
             catch (Exception ex) { await DialogHelper.ShowErrorAsync("It couldn't be saved:\n" + ex.Message, "Audio editor"); }
         }
@@ -341,14 +341,14 @@ namespace DSPRE.Avalonia.Views.Audio
                 if (!sample && SoundArchive.CriesGoToCheckout)
                 {
                     SoundArchive.PendingCry cry = SoundArchive.PrepareCheckoutCry(item.Number, path, out why);
-                    if (cry != null) { vm.StageCry(item, cry); SaveNotice.Imported(item.Name, path); return; }
+                    if (cry != null) { vm.StageCry(item, cry); SaveNotice.Imported(item.Name, path, SpeechBubble.Note); return; }
                 }
                 else
                 {
                     SoundArchive.PendingSample held = sample
                         ? SoundArchive.PrepareSample(item.WaveArc, item.SampleIndex, path, out why)
                         : SoundArchive.PrepareCry(item.Number, path, out why);
-                    if (held != null) { vm.StageSample(item, held); SaveNotice.Imported(item.Name, path); return; }
+                    if (held != null) { vm.StageSample(item, held); SaveNotice.Imported(item.Name, path, SpeechBubble.Note); return; }
                 }
                 await DialogHelper.ShowInfoAsync(why ?? "That couldn't be imported.", title);
             }

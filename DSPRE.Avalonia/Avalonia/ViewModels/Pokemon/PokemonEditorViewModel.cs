@@ -8,6 +8,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using DSPRE.Avalonia.Data;
 
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
@@ -320,7 +321,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (SpriteVM.HasUnsavedChanges) SpriteVM.SaveChanges();
             if (PokewalkerVM.HasUnsavedChanges) PokewalkerVM.SaveChanges();
             // Announced after the children so the one visible notice names the whole save.
-            if (!HasUnsavedChanges) SaveNotice.Saved(UnsavedChangesDescription);
+            if (!HasUnsavedChanges) SaveNotice.Saved(UnsavedChangesDescription, SpeechBubble.Heart);
         }
 
         public async Task<bool> SaveAllAsync()
@@ -353,7 +354,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             int added = -1;
             if (_pendingSpecies != null && (added = await SavePendingSpeciesAsync()) < 0) return false;
 
-            SaveNotice.Saved(UnsavedChangesDescription);
+            SaveNotice.Saved(UnsavedChangesDescription, SpeechBubble.Heart);
             if (added >= 0 && added < PokemonNames.Count && !HasUnsavedChanges)
             {
                 // The same index can now be a different species, so load it even when it is already selected.

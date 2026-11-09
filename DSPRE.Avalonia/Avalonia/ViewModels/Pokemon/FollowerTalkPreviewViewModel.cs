@@ -155,11 +155,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (_followerEntry >= 0 || _species == null) return _followerEntry;
                 try
                 {
-                    if (HgssFollowers.WhyNot() == null)
-                    {
-                        List<(int index, string label)> models = HgssFollowers.ModelsOf(_species.Value);
-                        if (models.Count > 0) _followerEntry = HgssFollowers.FirstSprite + models[0].index;
-                    }
+                    if (HgssFollowers.WhyNot() == null) _followerEntry = HgssFollowers.SpriteOf(_species.Value);
                 }
                 catch (Exception e) when (e is IOException || e is InvalidDataException) { AppLogger.WarnOnce("FollowerTalkPreview.Entry", e); }
                 return _followerEntry;

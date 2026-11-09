@@ -1,3 +1,4 @@
+using System.Linq;
 using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
 
@@ -6,9 +7,13 @@ namespace DSPRE.Avalonia.Data
     /// <summary>The message and menu borders read through the archive members, so pending and saved edits show.</summary>
     public static class WindowFrames
     {
-        public static FieldWindowFrame Load(int frameIndex)
+        /// <summary>The frames as the game's options list them, for a picker.</summary>
+        public static string[] Names { get; } = Enumerable.Range(1, FieldWindowFrame.FrameCount).Select(n => $"Frame {n}").ToArray();
+
+        /// <summary>With <paramref name="ifUnpacked"/>, null unless the archive is already unpacked.</summary>
+        public static FieldWindowFrame Load(int frameIndex, bool ifUnpacked = false)
         {
-            ScriptNarc frames = new ScriptNarc(DirNames.WindowFrames);
+            ScriptNarc frames = ScriptNarc.Open(DirNames.WindowFrames, ifUnpacked);
             return frames.Available ? FieldWindowFrame.Load(frameIndex, frames.Get, frames.Count) : null;
         }
 
@@ -19,9 +24,9 @@ namespace DSPRE.Avalonia.Data
             return frames.Available ? FieldWindowFrame.LoadStandard(frames.Get, frames.Count, drawing) : null;
         }
 
-        public static uint[] LoadSystemFontColours()
+        public static uint[] LoadSystemFontColours(bool ifUnpacked = false)
         {
-            ScriptNarc fonts = new ScriptNarc(DirNames.Fonts);
+            ScriptNarc fonts = ScriptNarc.Open(DirNames.Fonts, ifUnpacked);
             return fonts.Available ? FieldWindowFrame.LoadSystemFontColours(fonts.Get) : null;
         }
     }

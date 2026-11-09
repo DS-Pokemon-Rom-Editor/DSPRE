@@ -541,10 +541,14 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Two tiles left, three right, one above and below, in message frame type <paramref name="type"/>.</summary>
         internal static void MessageWindow(byte[] rgba, int x, int y, int w, int h, ushort paper, int type = 0)
         {
-            Fill(rgba, paper, x * 8 - 1, y * 8 - 1, w * 8 + 2, h * 8 + 2);
             FieldWindowFrame frame = WindowFrames.Load(type);
-            if (frame == null) return;
-            byte[] piece = frame.Compose(w, h, out int pw, out int ph);
+            if (frame == null)
+            {
+                Fill(rgba, paper, x * 8 - 1, y * 8 - 1, w * 8 + 2, h * 8 + 2);
+                return;
+            }
+            (byte r, byte g, byte b) = NitroBgCodec.Colour(paper);
+            byte[] piece = frame.Compose(w, h, out int pw, out int ph, 0xFF000000u | (uint)r << 16 | (uint)g << 8 | b);
             Blit(rgba, piece, pw, ph, (x - 2) * 8, (y - 1) * 8);
         }
 
@@ -755,7 +759,7 @@ namespace DSPRE.Avalonia.Data
         {
             OptionsShown before = _optionsShown;
             _optionsShown = shown;
-            return new Restore(() => _optionsShown = before);
+            return new OnDispose(() => _optionsShown = before);
         }
 
         private static OptionsMenuPatch.ScreenLayout OptionsLayout() => _optionsShown?.Layout ?? OptionsMenuPatch.Layout();
@@ -987,14 +991,7 @@ namespace DSPRE.Avalonia.Data
             (int, int, BannerMotionPatch.Effect) step = _bannerStep;
             _usingBanner = (saved, shown);
             _bannerStep = (scroll, level, effect);
-            return new Restore(() => { _usingBanner = before; _bannerStep = step; });
-        }
-
-        private sealed class Restore : IDisposable
-        {
-            private readonly Action _undo;
-            public Restore(Action undo) => _undo = undo;
-            public void Dispose() => _undo();
+            return new OnDispose(() => { _usingBanner = before; _bannerStep = step; });
         }
 
         public static Shot BannerOf(int line) => Banner(line, Hg);

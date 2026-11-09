@@ -6,6 +6,8 @@ using Avalonia.Controls;
 using Avalonia.Input.Platform;
 using Avalonia.Layout;
 using Avalonia.Platform.Storage;
+using DSPRE.Avalonia.Controls;
+using DSPRE.Avalonia.Data;
 
 namespace DSPRE.Avalonia
 {
@@ -89,15 +91,18 @@ namespace DSPRE.Avalonia
         public static Task ShowInfoAsync(string message, string title = "Information")
             => ShowMsgAsync(message, title, MsgButtons.Ok);
 
+        public static Task ShowWarningAsync(string message, string title = "Warning", Window owner = null)
+            => ShowMsgAsync(message, title, MsgButtons.Ok, owner: owner, bubble: SpeechBubble.Exclamation);
+
         public static Task ShowErrorAsync(string message, string title = "Error", Window owner = null)
-            => ShowMsgAsync(message, title, MsgButtons.Ok, owner: owner);
+            => ShowMsgAsync(message, title, MsgButtons.Ok, owner: owner, bubble: SpeechBubble.Troubled);
 
         /// <summary>
         /// Error box with a "Copy details" button: <paramref name="details"/> (e.g. the full
         /// exception text) goes to the clipboard so users can paste it into a bug report.
         /// </summary>
         public static Task ShowErrorAsync(string message, string title, string details)
-            => ShowMsgAsync(message, title, MsgButtons.Ok, details);
+            => ShowMsgAsync(message, title, MsgButtons.Ok, details, bubble: SpeechBubble.Troubled);
 
         /// <summary>Runs something the user started; an unexpected error is logged and shown, and the editor stays open.</summary>
         public static async Task GuardAsync(Func<Task> action, string failed, string title, Window owner = null)
@@ -107,6 +112,18 @@ namespace DSPRE.Avalonia
             {
                 CrashReporter.LogHandled(ex);
                 await ShowErrorAsync(failed + "\n" + ex.Message, title, owner);
+            }
+        }
+
+        /// <summary>Like <see cref="GuardAsync(Func{Task}, string, string, Window)"/> for an action with a result, false when it threw.</summary>
+        public static async Task<bool> GuardAsync(Func<Task<bool>> action, string failed, string title, Window owner = null)
+        {
+            try { return await action(); }
+            catch (Exception ex)
+            {
+                CrashReporter.LogHandled(ex);
+                await ShowErrorAsync(failed + "\n" + ex.Message, title, owner);
+                return false;
             }
         }
 
@@ -145,8 +162,9 @@ namespace DSPRE.Avalonia
             => await ShowMsgAsync(message, title, MsgButtons.YesNo, labels: (dismiss, never, null)) == MsgResult.No;
 
         /// <summary>Two-way question whose buttons say what they do. True for <paramref name="yes"/>.</summary>
-        public static async Task<bool> AskTwoWayAsync(string message, string title, string yes, string no, Window owner = null)
-            => await ShowMsgAsync(message, title, MsgButtons.YesNo, owner: owner, labels: (yes, no, null)) == MsgResult.Yes;
+        public static async Task<bool> AskTwoWayAsync(string message, string title, string yes, string no, Window owner = null,
+                                                     SpeechBubble? bubble = null)
+            => await ShowMsgAsync(message, title, MsgButtons.YesNo, owner: owner, labels: (yes, no, null), bubble: bubble) == MsgResult.Yes;
 
         /// <summary>Asked by every Discard button: a discard cannot be undone.</summary>
         public static async Task<bool> ConfirmDiscardAsync(global::Avalonia.Visual from)
@@ -155,8 +173,8 @@ namespace DSPRE.Avalonia
 
         /// <summary>Three-way question whose buttons say what they do instead of Yes and No.</summary>
         public static Task<MsgResult> AskThreeWayAsync(string message, string title,
-                                                  string yes, string no, string cancel = "Cancel")
-            => ShowMsgAsync(message, title, MsgButtons.YesNoCancel, labels: (yes, no, cancel));
+                                                  string yes, string no, string cancel = "Cancel", Window owner = null)
+            => ShowMsgAsync(message, title, MsgButtons.YesNoCancel, owner: owner, labels: (yes, no, cancel));
 
         /// <summary>Two-way question with a checkbox under the text. Returns which button was pressed and the box's state.</summary>
         public static async Task<(bool Yes, bool Checked)> AskWithCheckAsync(string message, string title, string yes, string no,
@@ -179,25 +197,14 @@ namespace DSPRE.Avalonia
                 SizeToContent = SizeToContent.Height,
             };
 
-            TextBlock msgText = new TextBlock
-            {
-                Text = message,
-                TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
-                Margin = new global::Avalonia.Thickness(16, 16, 16, 8),
-            };
+            TextBlock msgText = MessageText(message, 8);
             CheckBox[] boxes = options.Select(o => new CheckBox { Content = o.Label, IsChecked = o.IsChecked, Margin = new global::Avalonia.Thickness(16, 0, 16, 4) }).ToArray();
 
             Button yesBtn = new Button { Content = yes, MinWidth = 72 };
             yesBtn.Click += (_, _) => { answer = true; win.Close(); };
             Button noBtn = new Button { Content = no, MinWidth = 72, IsCancel = true };
             noBtn.Click += (_, _) => win.Close();
-            StackPanel btnRow = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                HorizontalAlignment = HorizontalAlignment.Right,
-                Margin = new global::Avalonia.Thickness(8, 0, 8, 12),
-                Spacing = 6,
-            };
+            StackPanel btnRow = ButtonRow();
             btnRow.Children.Add(yesBtn);
             btnRow.Children.Add(noBtn);
 
@@ -206,19 +213,10 @@ namespace DSPRE.Avalonia
             // A long list scrolls instead of growing the window past the screen.
             ScrollViewer list = new ScrollViewer { Content = boxList, MaxHeight = 420 };
             btnRow.Margin = new global::Avalonia.Thickness(8, 8, 8, 12);
-            win.Content = DialogSizing.Body(list, btnRow, msgText);
+            win.Content = DialogSizing.Body(list, btnRow, WithFigure(msgText, SpeechBubble.Question));
             DialogSizing.Grow(win, list);
 
-            owner ??= ActiveOwner();
-            if (owner != null)
-                await win.ShowDialog(owner);
-            else
-            {
-                TaskCompletionSource closed = new TaskCompletionSource();
-                win.Closed += (_, _) => closed.TrySetResult();
-                win.Show();
-                await closed.Task;
-            }
+            await ShowOwnedAsync(win, owner);
             return (answer, boxes.Select(b => b.IsChecked == true).ToArray());
         }
 
@@ -255,24 +253,14 @@ namespace DSPRE.Avalonia
             Button closeBtn = new Button { Content = "Close", MinWidth = 72, IsCancel = true, IsDefault = true };
             closeBtn.Click += (_, _) => win.Close();
 
-            StackPanel btnRow = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                HorizontalAlignment = HorizontalAlignment.Right,
-                Margin = new global::Avalonia.Thickness(8, 0, 8, 12),
-                Spacing = 6,
-            };
+            StackPanel btnRow = ButtonRow();
             btnRow.Children.Add(copyBtn);
             btnRow.Children.Add(closeBtn);
 
             win.Content = DialogSizing.Body(box, btnRow);
             DialogSizing.Grow(win, box);
 
-            owner ??= ActiveOwner();
-            if (owner != null)
-                await win.ShowDialog(owner);
-            else
-                win.Show();
+            await ShowOwnedAsync(win, owner);
         }
 
         /// <summary>Prompts for a single line of free text. Returns null if cancelled or closed without
@@ -289,12 +277,7 @@ namespace DSPRE.Avalonia
                 SizeToContent = SizeToContent.Height,
             };
 
-            TextBlock msgText = new TextBlock
-            {
-                Text = message,
-                TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
-                Margin = new global::Avalonia.Thickness(16, 16, 16, 8),
-            };
+            TextBlock msgText = MessageText(message, 8);
 
             TextBox input = new TextBox
             {
@@ -302,13 +285,7 @@ namespace DSPRE.Avalonia
                 Margin = new global::Avalonia.Thickness(16, 0, 16, 12),
             };
 
-            StackPanel btnRow = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                HorizontalAlignment = HorizontalAlignment.Right,
-                Margin = new global::Avalonia.Thickness(8, 0, 8, 12),
-                Spacing = 6,
-            };
+            StackPanel btnRow = ButtonRow();
 
             Button okBtn = new Button { Content = "OK", MinWidth = 72, IsDefault = true };
             okBtn.Click += (_, _) => { tcs.TrySetResult(input.Text ?? ""); win.Close(); };
@@ -326,14 +303,8 @@ namespace DSPRE.Avalonia
             win.Content = root;
             DialogSizing.Grow(win);
 
-            owner ??= ActiveOwner();
-
             input.AttachedToVisualTree += (_, _) => input.Focus();
-
-            if (owner != null)
-                await win.ShowDialog(owner);
-            else
-                win.Show();
+            await ShowOwnedAsync(win, owner);
 
             string result = await tcs.Task;
             return result?.Trim();
@@ -417,7 +388,7 @@ namespace DSPRE.Avalonia
         private enum MsgButtons { Ok, YesNo, YesNoCancel }
 
         private static async Task<MsgResult> ShowMsgAsync(string message, string title, MsgButtons buttons, string details = null, Window owner = null,
-                                                     (string Yes, string No, string Cancel)? labels = null)
+                                                     (string Yes, string No, string Cancel)? labels = null, SpeechBubble? bubble = null)
         {
             TaskCompletionSource<MsgResult> tcs = new TaskCompletionSource<MsgResult>();
 
@@ -430,20 +401,9 @@ namespace DSPRE.Avalonia
                 SizeToContent = SizeToContent.Height,
             };
 
-            TextBlock msgText = new TextBlock
-            {
-                Text = message,
-                TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
-                Margin = new global::Avalonia.Thickness(16, 16, 16, 12),
-            };
+            TextBlock msgText = MessageText(message, 12);
 
-            StackPanel btnRow = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                HorizontalAlignment = HorizontalAlignment.Right,
-                Margin = new global::Avalonia.Thickness(8, 0, 8, 12),
-                Spacing = 6,
-            };
+            StackPanel btnRow = ButtonRow();
 
             void AddBtn(string label, MsgResult result, bool enterOrEscape = false)
             {
@@ -472,6 +432,7 @@ namespace DSPRE.Avalonia
             win.Closed += (_, _) => tcs.TrySetResult(MsgResult.Cancel);
 
             ScrollViewer text = new ScrollViewer { Content = msgText, MaxHeight = 380 };
+            Control body = WithFigure(text, bubble ?? (buttons == MsgButtons.Ok ? SpeechBubble.Smile : SpeechBubble.Question));
             StackPanel bottom = new StackPanel();
             if (!string.IsNullOrEmpty(details))
             {
@@ -493,20 +454,45 @@ namespace DSPRE.Avalonia
                 bottom.Children.Add(copyBtn);
             }
             bottom.Children.Add(btnRow);
-            win.Content = DialogSizing.Body(text, bottom);
+            win.Content = DialogSizing.Body(body, bottom);
             DialogSizing.Grow(win, text);
 
-            // ShowDialog requires a parent; fall back to Show if none available. Callers may pass an
-            // explicit owner (e.g. a modal batch dialog) so nested prompts stack on top of it instead
-            // of re-attaching to the main window.
-            owner ??= ActiveOwner();
-
-            if (owner != null)
-                await win.ShowDialog(owner);
-            else
-                win.Show();
-
+            await ShowOwnedAsync(win, owner);
             return await tcs.Task;
+        }
+
+        private static Control WithFigure(Control text, SpeechBubble bubble) =>
+            NoticeFigure.Beside(text, bubble, VerticalAlignment.Top, new global::Avalonia.Thickness(12, 12, 0, 0));
+
+        private static TextBlock MessageText(string message, double below) => new TextBlock
+        {
+            Text = message,
+            TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
+            Margin = new global::Avalonia.Thickness(16, 16, 16, below),
+        };
+
+        private static StackPanel ButtonRow() => new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new global::Avalonia.Thickness(8, 0, 8, 12),
+            Spacing = 6,
+        };
+
+        // ShowDialog needs a parent, so with none it shows the window on its own and waits for it to close. A caller may
+        // pass its own owner, such as a modal batch dialog, so a nested prompt stacks on top of it.
+        private static async Task ShowOwnedAsync(Window win, Window owner)
+        {
+            owner ??= ActiveOwner();
+            if (owner != null)
+            {
+                await win.ShowDialog(owner);
+                return;
+            }
+            TaskCompletionSource closed = new TaskCompletionSource();
+            win.Closed += (_, _) => closed.TrySetResult();
+            win.Show();
+            await closed.Task;
         }
     }
 }

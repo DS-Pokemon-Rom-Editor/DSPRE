@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using System.Text;
 using static DSPRE.RomInfo;
 
@@ -51,6 +52,23 @@ namespace DSPRE.Avalonia
             return ok;
         }
 
+        private static int _loading;
+
+        /// <summary>True while a project's folders and RomInfo are being swapped, when nothing should read game data.</summary>
+        public static bool Loading => Volatile.Read(ref _loading) > 0;
+
+        private static IDisposable LoadingScope()
+        {
+            Interlocked.Increment(ref _loading);
+            return new OnDispose(() => Interlocked.Decrement(ref _loading));
+        }
+
+        private static void OnUiThread(Action action)
+        {
+            if (global::Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) action();
+            else global::Avalonia.Threading.Dispatcher.UIThread.Invoke(action);
+        }
+
         /// <summary>Open an already-extracted ROM folder (ds-rom or ndstool layout).</summary>
         public static bool LoadFromFolder(string folder, out string error) => LoadFromFolder(folder, out error, recordRecent: true);
 
@@ -68,28 +86,33 @@ namespace DSPRE.Avalonia
             // Refused before anything is reset, so the ROM already open keeps working.
             if (!RomInfo.IsSupportedGameCode(gameCode)) { error = UnsupportedMessage(gameCode); return false; }
 
-            // Sprites are kept by overworld number, which means a different ROM's are a different
-            // picture under the same number.
-            OverworldSprites.ClearCache();
-            DSPRE.ROMFiles.Overworld3DObjects.Forget();
-            // The font and its letter numbering belong to the ROM that was open, not the new one.
-            Views.Controls.FieldMessageBoxView.Font = null;
-            Views.Controls.FieldMessageBoxView.Frame = null;
-            Views.Controls.FieldMenuWindowView.Font = null;
-            Views.Controls.FieldMenuWindowView.Frame = null;
-            Views.Controls.FieldMenuWindowView.Colours = null;
-            Views.Controls.PoketchView.Screen = null;
-            Views.Controls.HgssTouchScreenView.Screen = null;
-            Views.Controls.HgssTouchScreenView.Font = null;
-            Views.Controls.HgssTouchScreenView.IconFont = null;
-            Data.SoundArchive.Reset();
-            ROMFiles.FieldFontCharacters.Reset();
-            ViewModels.Graphics.FontEditorViewModel.Forget();
-            // Unsaved label edits were made for the project being closed.
-            Data.LabelStore.DiscardDraft();
+            using (LoadingScope())
+            {
+                // Cached by overworld number, which is a different picture in another ROM.
+                // Cleared on the UI thread, where the loading walker reads them.
+                OnUiThread(OverworldSprites.ClearCache);
+                DSPRE.ROMFiles.Overworld3DObjects.Forget();
+                // The font and its letter numbering come from the previous ROM.
+                Views.Controls.FieldMessageBoxView.Font = null;
+                Views.Controls.FieldMessageBoxView.Frame = null;
+                Views.Controls.FieldMenuWindowView.Font = null;
+                Views.Controls.FieldMenuWindowView.Frame = null;
+                Views.Controls.FieldMenuWindowView.Colours = null;
+                Views.Controls.PoketchView.Screen = null;
+                Views.Controls.HgssTouchScreenView.Screen = null;
+                Views.Controls.HgssTouchScreenView.Font = null;
+                Views.Controls.HgssTouchScreenView.IconFont = null;
+                Data.SoundArchive.Reset();
+                ROMFiles.FieldFontCharacters.Reset();
+                ViewModels.Graphics.FontEditorViewModel.Forget();
+                // Unsaved label edits were made for the project being closed.
+                Data.LabelStore.DiscardDraft();
 
-            try { _ = new RomInfo(gameCode, folder); }   // populates the static RomInfo.* (gameFamily, workDir, gameDirs, …)
-            catch (Exception ex) { error = "Couldn't initialise ROM data: " + ex.Message; AppLogger.Error(error); return false; }
+                try { _ = new RomInfo(gameCode, folder); }   // populates the static RomInfo.* (gameFamily, workDir, gameDirs, …)
+                catch (Exception ex) { error = "Couldn't initialise ROM data: " + ex.Message; AppLogger.Error(error); return false; }
+                // Cleared again after RomInfo, in case a notice or dialog cached art while the folders were changing.
+                OnUiThread(() => { OverworldSprites.ClearCache(); Data.NoticeArt.Reset(); });
+            }
 
             if (GameFamily == GameFamilies.NULL) { error = "Unsupported ROM (Gen IV Pokémon only)."; return false; }
             AppLogger.Info($"ROM loaded: {RomInfo.RomID} ({RomInfo.ProjectName})");

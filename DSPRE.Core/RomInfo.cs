@@ -48,21 +48,9 @@ namespace DSPRE
         /// <summary>The checkout's .dspre/ folder for its base/ tree, created with a .gitignore that ignores it.</summary>
         private static string HgEngineDspreDirFor(string basePath)
         {
-            try
-            {
-                string checkout = Path.GetDirectoryName(basePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-                if (checkout == null) return null;
-                string dir = Path.Combine(checkout, HgEngineDspreFolder);
-                Directory.CreateDirectory(dir);
-                string ignore = Path.Combine(dir, ".gitignore");
-                if (!File.Exists(ignore)) PlainFiles.WriteText(ignore, "*\n");
-                return dir + Path.DirectorySeparatorChar;
-            }
-            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
-            {
-                AppLogger.Error("RomInfo.HgEngineDspreDirFor: " + ex.Message);
-                return null;
-            }
+            string checkout = Path.GetDirectoryName(basePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            string dir = checkout == null ? null : HgEngine.HgEngineProject.DspreFolder(checkout);
+            return dir == null ? null : dir + Path.DirectorySeparatorChar;
         }
         public static string RomID { get; private set; }
 
@@ -1261,9 +1249,14 @@ namespace DSPRE
         /// <summary>Whether an overworld id takes its picture from a map variable instead of the sprite table.</summary>
         public static bool IsVariableOverworld(uint id) => id >= FirstVariableOverworld && id <= LastVariableOverworld;
 
-        // pokeheartgold SPRITE_HEROINE. 101 takes its sprite from 0x4020, which scripts set to the friend in HGSS
-        // (ScrCmd_GetFriendSprite) or the counterpart in Platinum (pokeplatinum scripts_jubilife_city.s).
-        private const uint HeroineOverworld = 97;
+        /// <summary>
+        /// pokediamond and pokeheartgold SPRITE_HEROINE, pokeplatinum OBJ_EVENT_GFX_PLAYER_F. Also stands in for 101, whose
+        /// sprite scripts set through 0x4020 (ScrCmd_GetFriendSprite in HGSS, scripts_jubilife_city.s in Platinum).
+        /// </summary>
+        public const uint HeroineOverworld = 97;
+
+        /// <summary>pokediamond and pokeheartgold SPRITE_HERO, pokeplatinum OBJ_EVENT_GFX_PLAYER_M.</summary>
+        public const uint HeroOverworld = 0;
 
         // pokeplatinum scripts_pokemon_center_daily_trainers.s: the Pokémon Centre daily trainers in 111 and 112
         // change with the day; Kinsey and Tevin, the reporter and cameraman, stand in for them.
@@ -2099,6 +2092,13 @@ namespace DSPRE
             HgEngine.HgEngineFormNames.ApplyFallback(names);
             HgEngine.HgEngineCustomLabel.ApplySpeciesLabel(names);
             return names;
+        }
+
+        /// <summary>The species names, or none when the text archive can't be read. The reason goes to the log.</summary>
+        public static string[] GetPokemonNamesOrEmpty()
+        {
+            try { return GetPokemonNames() ?? Array.Empty<string>(); }
+            catch (Exception ex) { AppLogger.WarnOnce("RomInfo.GetPokemonNamesOrEmpty", ex); return Array.Empty<string>(); }
         }
 
         /// <summary>A species by name where the ROM knows one, else "Pokémon 25".</summary>

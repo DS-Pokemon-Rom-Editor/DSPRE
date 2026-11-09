@@ -96,7 +96,7 @@ namespace DSPRE.Avalonia.Views.Battle
             TouchMenu.AReleased = () => _vm.ReleaseA();
             if (_vm.BorderNames.Count == 0)
             {
-                for (int i = 0; i < FieldWindowFrame.FrameCount; i++) _vm.BorderNames.Add($"Frame {i + 1}");
+                foreach (string name in DSPRE.Avalonia.Data.WindowFrames.Names) _vm.BorderNames.Add(name);
                 _vm.BorderChanged += (_, _) =>
                 {
                     FieldMessageBoxView.Frame = DSPRE.Avalonia.Data.WindowFrames.Load(_vm.BorderIndex);
