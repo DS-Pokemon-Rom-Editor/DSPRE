@@ -1662,13 +1662,11 @@ namespace DSPRE.Avalonia.ViewModels.World
         // Indoor HGSS maps take their building models from the interior archive.
         private string BuildingModelsDir()
         {
-            bool interior = false;
-            if (_family == GameFamilies.HGSS && GameDirs.ContainsKey(DirNames.InteriorBuildingModels))
-            {
-                try { interior = new AreaData(_areaId).AreaType == AreaData.TYPE_INDOOR; } catch { }   // without the area data the area is treated as outdoors
-                if (interior) DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.InteriorBuildingModels });
-            }
-            return GameDirs[interior ? DirNames.InteriorBuildingModels : DirNames.ExteriorBuildingModels].unpackedDir;
+            DirNames models = DirNames.ExteriorBuildingModels;
+            if (_family == GameFamilies.HGSS)
+                try { models = new AreaData(_areaId).BuildingModels; } catch { }   // without the area data the area is treated as outdoors
+            if (models == DirNames.InteriorBuildingModels) DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.InteriorBuildingModels });
+            return GameDirs[models].unpackedDir;
         }
 
         /// <summary>Buildings whose texture or palette is missing from the area's building pack, so they draw pink; null when none.</summary>

@@ -135,9 +135,8 @@ namespace DSPRE.Avalonia.Gl
         {
             if (!areaCache.TryGetValue(areaId, out AreaData area)) { area = new AreaData(areaId); areaCache[areaId] = area; }
 
-            // HGSS indoor areas use the interior building model set.
-            bool interior = gameFamily == GameFamilies.HGSS && area.AreaType == AreaData.TYPE_INDOOR;
-            string bldDir = (interior && intBldDir != null) ? intBldDir : extBldDir;
+            bool interior = area.BuildingModels == DirNames.InteriorBuildingModels;
+            string bldDir = interior && intBldDir != null ? intBldDir : extBldDir;
 
             BdhcFile.TryParse(map.Bdhc, out BdhcFile bdhc);
 

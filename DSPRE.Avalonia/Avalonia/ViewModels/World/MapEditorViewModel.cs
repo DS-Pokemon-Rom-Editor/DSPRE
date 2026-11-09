@@ -1257,17 +1257,17 @@ namespace DSPRE.Avalonia.ViewModels.World
                 area = AreaForMap(_selectedMapIndex);
                 pack = _buildingTilesetIndex - 1;
             }
-            bool interior = false;
+            DirNames models = DirNames.ExteriorBuildingModels;
             if (area is byte aid)
                 try
                 {
                     AreaData data = new AreaData(aid);
-                    interior = GameFamily == GameFamilies.HGSS && GameDirs.ContainsKey(DirNames.InteriorBuildingModels) && data.AreaType == AreaData.TYPE_INDOOR;
+                    models = data.BuildingModels;
                     if (IsHeaderView) pack = data.BuildingsTileset;
                 }
                 catch (Exception ex) when (ex is IOException || ex is ArgumentException) { AppLogger.Warn($"Area {aid} unreadable: {ex.Message}"); }
             string texture = pack >= 0 ? Path.Combine(GameDirs[DirNames.BuildingTextures].unpackedDir, pack.ToString("D4")) : null;
-            return (GameDirs[interior ? DirNames.InteriorBuildingModels : DirNames.ExteriorBuildingModels].unpackedDir, texture);
+            return (GameDirs[models].unpackedDir, texture);
         }
 
         /// <summary>A box around the highlighted triangles, as thin crossed strips per edge, so the building shows through trees.</summary>
@@ -2604,13 +2604,11 @@ namespace DSPRE.Avalonia.ViewModels.World
                 // exterior building set is a fact of the map's own area data (same rule as the stitched
                 // matrix/header views in MatrixSceneBuilder), not a user preference.
                 List<PlacedBuilding> buildings = new List<PlacedBuilding>();
-                bool interior = false;
-                if (GameFamily == GameFamilies.HGSS && GameDirs.ContainsKey(DirNames.InteriorBuildingModels))
-                {
-                    try { if (AreaForMap(_selectedMapIndex) is byte aid) interior = new AreaData(aid).AreaType == AreaData.TYPE_INDOOR; }
+                DirNames models = DirNames.ExteriorBuildingModels;
+                if (GameFamily == GameFamilies.HGSS)
+                    try { if (AreaForMap(_selectedMapIndex) is byte aid) models = new AreaData(aid).BuildingModels; }
                     catch { /* fall back to exterior */ }
-                }
-                string bdir = GameDirs[interior ? DirNames.InteriorBuildingModels : DirNames.ExteriorBuildingModels].unpackedDir;
+                string bdir = GameDirs[models].unpackedDir;
                 byte[] bldTex = null;
                 if (_buildingTilesetIndex > 0)
                 {

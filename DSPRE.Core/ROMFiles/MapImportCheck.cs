@@ -100,9 +100,9 @@ namespace DSPRE.ROMFiles
                 foreach (NSBMDPalette p in palettes) have.Add(p.Palname.TrimEnd('\0'));
             }
 
-            bool interior = area != null && family == GameFamilies.HGSS && GameDirs.ContainsKey(DirNames.InteriorBuildingModels) && area.AreaType == AreaData.TYPE_INDOOR;
-            if (interior) DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.InteriorBuildingModels });
-            string dir = GameDirs[interior ? DirNames.InteriorBuildingModels : DirNames.ExteriorBuildingModels].unpackedDir;
+            DirNames models = area?.BuildingModels ?? DirNames.ExteriorBuildingModels;
+            if (models == DirNames.InteriorBuildingModels) DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.InteriorBuildingModels });
+            string dir = GameDirs[models].unpackedDir;
 
             foreach (IGrouping<uint, Building> same in map.Buildings.GroupBy(b => b.ModelID).OrderBy(g => g.Key))
             {

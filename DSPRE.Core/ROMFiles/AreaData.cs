@@ -21,6 +21,9 @@ namespace DSPRE.ROMFiles
         public byte AreaType = TYPE_OUTDOOR; //HGSS ONLY
         public ushort LightType; //using an overabundant size. HGSS only needs a byte
         public bool IsIndoor => RomInfo.GameFamily == GameFamilies.HGSS && AreaType == TYPE_INDOOR;
+        /// <summary>The building model archive this area's maps use: the interior set for HGSS indoor areas.</summary>
+        public DirNames BuildingModels =>
+            IsIndoor && GameDirs.ContainsKey(DirNames.InteriorBuildingModels) ? DirNames.InteriorBuildingModels : DirNames.ExteriorBuildingModels;
         #endregion
 
         #region Constructors (1)
