@@ -374,6 +374,7 @@ namespace DSPRE
                 FileInfo fi = new FileInfo(c.PackedPath);
                 lock (PutOffs) PutOffs[Path.GetFullPath(c.PackedPath)] = (fi.Length, fi.LastWriteTimeUtc.Ticks);
             }
+            // An archive that can't be read now isn't remembered, so the next sync just asks again.
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { }
         }
 

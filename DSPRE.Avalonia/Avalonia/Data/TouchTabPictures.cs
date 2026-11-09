@@ -11,8 +11,6 @@ namespace DSPRE.Avalonia.Data
         private static readonly TouchMenu[] Panels =
             { TouchMenu.Command, TouchMenu.Fight, TouchMenu.Target, TouchMenu.YesNo, TouchMenu.Command, TouchMenu.Command, TouchMenu.Playback };
 
-        private const int PalParkPage = 5;
-
         // pokeplatinum battle_subscreen.c clears every button under FIGHT in the first battle, and the buttons beside RUN in Pal Park.
         private static readonly (int X, int Y, int W, int H)[][] Blanks =
             { null, null, null, null, new[] { (0, 16, 32, 8) }, new[] { (0, 16, 10, 8), (22, 16, 10, 8) }, null };
@@ -66,18 +64,18 @@ namespace DSPRE.Avalonia.Data
             int line = page switch
             {
                 YesNoPage => RomInfo.BattleUseNextPokemonLine,
-                ParkPage => RomInfo.BattleWhatWillPlayerThrowLine,
+                PalParkPage => RomInfo.BattleWhatWillPlayerThrowLine,
                 _ => RomInfo.BattleWhatWillPokemonDoLine,
             };
             // The one placeholder is the Pokémon's nickname, or the player's name when throwing.
             List<string> lines = new ROMFiles.TextArchive(RomInfo.BattleStringsTextNumber).Messages;
             if (line < lines.Count)
-                BattleMessageText.Draw(top, lines[line], (_, _, _) => page == ParkPage ? "PLAYER" : look.PokemonName, 0);
+                BattleMessageText.Draw(top, lines[line], (_, _, _) => page == PalParkPage ? "PLAYER" : look.PokemonName, 0);
             return top;
         }
 
         // BattleCommandButtons page order.
-        private const int YesNoPage = 3, ParkPage = 5, RecordedPage = 6;
+        private const int YesNoPage = 3, PalParkPage = 5, RecordedPage = 6;
 
         /// <summary>Draws Platinum's Pokétch with the named app, or the digital watch when app is null.</summary>
         public static byte[] Poketch(string app)

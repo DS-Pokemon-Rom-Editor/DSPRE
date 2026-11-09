@@ -4,7 +4,6 @@ using DSPRE.ROMFiles;
 using LibGit2Sharp;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -763,7 +762,6 @@ namespace DSPRE
         /// <summary>Entries in the field camera table: 16 in DP, 17 in Pt and HGSS.</summary>
         public static int CameraCount { get; private set; }
 
-        public Dictionary<List<uint>, (Color background, Color foreground)> MapCellsColorDictionary;
         public static SortedDictionary<uint, (uint spriteID, ushort properties)> OverworldTable { get; private set; }
         public static uint[] OverworldTableKeys { get; private set; }
         public static Dictionary<uint, string> Ow3DSpriteDict { get; private set; }
