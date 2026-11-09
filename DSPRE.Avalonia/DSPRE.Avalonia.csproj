@@ -19,7 +19,7 @@
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-    <!-- Keep in sync with DS_Map\Properties\AssemblyInfo.cs (AppInfo.GetDSPREVersion shows this). -->
+    <!-- AppInfo.GetDSPREVersion shows this. -->
     <AssemblyVersion>3.0.0.0</AssemblyVersion>
     <FileVersion>3.0.0.0</FileVersion>
     <InformationalVersion>$(FileVersion)</InformationalVersion>
