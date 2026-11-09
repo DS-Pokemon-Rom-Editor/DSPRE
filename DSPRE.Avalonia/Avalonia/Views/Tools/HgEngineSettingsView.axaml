@@ -47,6 +47,15 @@
           <ItemsControl ItemsSource="{Binding AssemblerSettings}" ItemTemplate="{StaticResource SettingRow}" Margin="8"/>
         </ScrollViewer>
       </TabItem>
+      <TabItem Header="Build">
+        <StackPanel Margin="12" Spacing="6">
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <TextBlock Text="Make arguments" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            <controls:HelpTip Text="{Binding MakeArgumentsHelp}"/>
+          </StackPanel>
+          <TextBox Text="{Binding MakeArguments}" FontFamily="{StaticResource CodeFont}"/>
+        </StackPanel>
+      </TabItem>
     </TabControl>
   </DockPanel>
 </Window>

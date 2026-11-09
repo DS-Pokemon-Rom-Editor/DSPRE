@@ -144,7 +144,12 @@ namespace DSPRE.HgEngine
         {
             Reset();
             _loadedFor = WorkDir;   // the project still open must not refresh this away before the folder loads
-            SetFolderState(checkout.TrimEnd('\\', '/'), HostIsPosix ? HgEngineShell.Native : shell);
+            string root = checkout.TrimEnd('\\', '/');
+            HgEngineShell chosen = HostIsPosix ? HgEngineShell.Native : shell;
+            SetFolderState(root, chosen);
+            // The caller's shell wins over the saved one.
+            ReadFolderConfig(root);
+            Shell = chosen;
             if (!string.IsNullOrWhiteSpace(msysBashPath)) MsysBashPath = msysBashPath;
             Save();
         }
@@ -156,6 +161,7 @@ namespace DSPRE.HgEngine
             WslDistro = TryParseWslUncPath(checkout, out string distro, out _) ? distro : null;
             IsLinked = true;
             Enabled = true;
+            HgEngineBaseEdits.Listen();
         }
 
         /// <summary>The name Build and Run passes as make's BUILDROM, so emulator saves follow it; null until chosen.</summary>
@@ -173,6 +179,29 @@ namespace DSPRE.HgEngine
             Save();
         }
 
+        /// <summary>One job per core, as in hg-engine's README. Uses getconf since macOS has no nproc, and a bare -j has no limit.</summary>
+        public const string DefaultMakeArguments = "-j$(getconf _NPROCESSORS_ONLN)";
+
+        /// <summary>Extra arguments every make call gets. Empty runs plain make.</summary>
+        public static string MakeArguments { get; private set; } = DefaultMakeArguments;
+
+        /// <summary>False with the reason when no checkout is linked or the settings file couldn't be written.</summary>
+        public static bool TrySetMakeArguments(string arguments, out string error)
+        {
+            error = null;
+            EnsureCurrent();
+            if (!IsLinked) { error = "No hg-engine checkout is linked."; return false; }
+            string before = MakeArguments;
+            MakeArguments = CleanMakeArguments(arguments);
+            if (TrySave(out error)) return true;
+            MakeArguments = before;
+            return false;
+        }
+
+        // One line only: the arguments go inside a bash -lc command.
+        private static string CleanMakeArguments(string arguments) =>
+            (arguments ?? "").ReplaceLineEndings(" ").Trim();
+
         /// <summary>
         /// The build shell chosen the first time this folder was opened on this kind of host, or null when it hasn't
         /// been. The same checkout can be opened from Linux and from Windows, and each stores the shell it used.
@@ -183,7 +212,7 @@ namespace DSPRE.HgEngine
             if (!File.Exists(path)) return null;
             try
             {
-                HgEngineConfig cfg = JsonSerializer.Deserialize<HgEngineConfig>(File.ReadAllText(path), ReadOptions);
+                HgEngineConfig cfg = PlainFiles.ReadJson<HgEngineConfig>(path, ReadOptions);
                 if (cfg == null || !Enum.TryParse(cfg.Shell, out HgEngineShell shell)) return null;
                 if (HostIsPosix) return shell == HgEngineShell.Native ? shell : null;
                 if (shell == HgEngineShell.Native) return null;
@@ -204,7 +233,7 @@ namespace DSPRE.HgEngine
             if (!File.Exists(path)) return;
             try
             {
-                HgEngineConfig cfg = JsonSerializer.Deserialize<HgEngineConfig>(File.ReadAllText(path), ReadOptions);
+                HgEngineConfig cfg = PlainFiles.ReadJson<HgEngineConfig>(path, ReadOptions);
                 if (cfg == null) return;
                 // The shell only matters on Windows, and a WSL path can only build one way.
                 if (!HostIsPosix && !IsWslPath(checkout) && Enum.TryParse(cfg.Shell, out HgEngineShell stored) && stored != HgEngineShell.Native)
@@ -212,12 +241,17 @@ namespace DSPRE.HgEngine
                 if (!string.IsNullOrWhiteSpace(cfg.MsysBashPath)) MsysBashPath = cfg.MsysBashPath;
                 SuppressManagedFileSaveNotice = cfg.SuppressManagedFileSaveNotice;
                 BuildRomName = IsSafeBuildRomName(cfg.BuildRomName) ? cfg.BuildRomName : null;
+                if (cfg.MakeArguments != null) MakeArguments = CleanMakeArguments(cfg.MakeArguments);
             }
             catch (Exception ex) { AppLogger.Error("HgEngineProject.ReadFolderConfig: " + ex.Message); }
         }
 
-        /// <summary>The checkout's .dspre/ settings file, which also makes sure .dspre/ ignores itself in git.</summary>
-        internal static string FolderConfigPath(string checkout)
+        /// <summary>The checkout's .dspre/ settings file.</summary>
+        internal static string FolderConfigPath(string checkout) =>
+            Path.Combine(DspreFolder(checkout) ?? Path.Combine(checkout, RomInfo.HgEngineDspreFolder), "hgengine.json");
+
+        /// <summary>The checkout's .dspre/ folder, created with a .gitignore that ignores all of it. Null when it can't be made.</summary>
+        public static string DspreFolder(string checkout)
         {
             string dir = Path.Combine(checkout, RomInfo.HgEngineDspreFolder);
             try
@@ -225,12 +259,13 @@ namespace DSPRE.HgEngine
                 Directory.CreateDirectory(dir);
                 string ignore = Path.Combine(dir, ".gitignore");
                 if (!File.Exists(ignore)) PlainFiles.WriteText(ignore, "*\n");
+                return dir;
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                AppLogger.Error("HgEngineProject.FolderConfigPath: " + ex.Message);
+                AppLogger.Error("HgEngineProject.DspreFolder: " + ex.Message);
+                return null;
             }
-            return Path.Combine(dir, "hgengine.json");
         }
 
         /// <summary>Ensures the state matches the currently open project (workDir may have changed since Refresh).</summary>
@@ -337,6 +372,7 @@ namespace DSPRE.HgEngine
             MsysBashPath = DefaultMsysBash;
             SuppressManagedFileSaveNotice = false;
             BuildRomName = null;
+            MakeArguments = DefaultMakeArguments;
             HgEngineSymbolTable.ClearCache();
             HgEngineFileCache.ClearCache();
             HgEngineLoadedEntries.Clear();
@@ -344,10 +380,13 @@ namespace DSPRE.HgEngine
             HgEngineSync.ClearSyncState();
         }
 
-        private static void Save()
+        private static void Save() => TrySave(out _);
+
+        private static bool TrySave(out string error)
         {
+            error = null;
             string path = ConfigPath;
-            if (path == null) return;
+            if (path == null) { error = "The checkout's .dspre folder isn't known."; return false; }
             try
             {
                 HgEngineConfig cfg = new HgEngineConfig
@@ -360,10 +399,17 @@ namespace DSPRE.HgEngine
                     Enabled = Enabled,
                     SuppressManagedFileSaveNotice = SuppressManagedFileSaveNotice,
                     BuildRomName = BuildRomName,
+                    MakeArguments = MakeArguments,
                 };
-                PlainFiles.WriteText(path, JsonSerializer.Serialize(cfg, new JsonSerializerOptions { WriteIndented = true }));
+                PlainFiles.WriteJson(path, cfg);
+                return true;
             }
-            catch (Exception ex) { AppLogger.Error("HgEngineProject.Save: " + ex.Message); }
+            catch (Exception ex)
+            {
+                AppLogger.Error("HgEngineProject.Save: " + ex.Message);
+                error = ex.Message;
+                return false;
+            }
         }
 
         /// <summary>
@@ -396,6 +442,9 @@ namespace DSPRE.HgEngine
             public bool Enabled { get; set; }
             public bool SuppressManagedFileSaveNotice { get; set; }
             public string BuildRomName { get; set; }
+
+            /// <summary>Null in files written before the setting existed, which get the default.</summary>
+            public string MakeArguments { get; set; }
         }
     }
 }

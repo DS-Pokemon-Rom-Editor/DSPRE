@@ -1,4 +1,3 @@
-using System.Collections.Specialized;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -15,15 +14,16 @@ namespace DSPRE.Avalonia.Views.Shell
         {
             AvaloniaXamlLoader.Load(this);
             DataContext = new CompileRomViewModel();
-            VM.LogLines.CollectionChanged += LogLines_CollectionChanged;
+            VM.LinesAdded += ScrollToEnd;
             Closing += (_, e) => { if (!VM.CanClose) e.Cancel = true; };
         }
 
-        private void LogLines_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        // By index: make repeats lines, and scrolling by item would find the first copy.
+        private void ScrollToEnd()
         {
             ListBox listBox = this.FindControl<ListBox>("LogList");
             if (listBox != null && VM.LogLines.Count > 0)
-                listBox.ScrollIntoView(VM.LogLines[VM.LogLines.Count - 1]);
+                listBox.ScrollIntoView(VM.LogLines.Count - 1);
         }
 
         private void Close_Click(object sender, RoutedEventArgs e) => Close();

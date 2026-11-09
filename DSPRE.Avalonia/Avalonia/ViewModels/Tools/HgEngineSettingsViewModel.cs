@@ -62,7 +62,18 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         private string _status = "";
         public string StatusText { get => _status; set { _status = value; Raise(); } }
 
+        private string _makeArguments = "";
+        public string MakeArguments
+        {
+            get => _makeArguments;
+            set { if (_makeArguments == (value ?? "")) return; _makeArguments = value ?? ""; Raise(); Changed(); }
+        }
+
+        public string MakeArgumentsHelp => "Default: one job per CPU core. Left empty, make runs with no arguments.";
+
         private byte[] _saved;
+        private byte[] _savedSettings;
+        private string _savedMakeArguments;
         private ByteStateUndo _undo;
         public bool CanUndo => _undo?.CanUndo == true;
         public bool CanRedo => _undo?.CanRedo == true;
@@ -71,16 +82,26 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         private byte[] TakeState() => ByteStateUndo.Pack(w =>
         {
-            foreach (HgEngineConfig.Setting s in _settings) { w.Write(s.Enabled); w.Write(s.Value != null); w.Write(s.Value ?? ""); }
+            WriteSettings(w);
+            w.Write(_makeArguments);
         });
+
+        private byte[] TakeSettingsState() => ByteStateUndo.Pack(WriteSettings);
+
+        private void WriteSettings(System.IO.BinaryWriter w)
+        {
+            foreach (HgEngineConfig.Setting s in _settings) { w.Write(s.Enabled); w.Write(s.Value != null); w.Write(s.Value ?? ""); }
+        }
 
         private void ApplyState(byte[] state)
         {
             ByteStateUndo.Unpack(state, r =>
             {
                 foreach (HgEngineConfig.Setting s in _settings) { s.Enabled = r.ReadBoolean(); bool has = r.ReadBoolean(); string v = r.ReadString(); s.Value = has ? v : null; }
+                _makeArguments = r.ReadString();
             });
             foreach (HgEngineSettingRow row in _all) row.Refresh();
+            Raise(nameof(MakeArguments));
             Changed();
         }
 
@@ -98,7 +119,11 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         {
             if (!HgEngineConfig.TryRead(out _settings, out string error)) { StatusText = error; _settings = new(); }
             _all = _settings.Where(s => !s.FollowsHeader).Select(s => new HgEngineSettingRow(s, Changed)).ToList();
+            _makeArguments = HgEngineProject.MakeArguments;
+            _savedMakeArguments = _makeArguments;
+            Raise(nameof(MakeArguments));
             _saved = TakeState();
+            _savedSettings = TakeSettingsState();
             _undo = new ByteStateUndo(TakeState, ApplyState, () => { Raise(nameof(CanUndo)); Raise(nameof(CanRedo)); });
             Raise(nameof(CanUndo)); Raise(nameof(CanRedo));
             Raise(nameof(HasUnsavedChanges));
@@ -124,10 +149,18 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         public async Task<bool> SaveChangesAsync()
         {
             if (!HasUnsavedChanges) return true;
-            (bool saved, string error) = await HgEngineSave.RunAsync(() => HgEngineConfig.TryWrite(_settings, out string e) ? null : e);
-            if (!saved)
+            if (!TakeSettingsState().AsSpan().SequenceEqual(_savedSettings))
             {
-                if (error != null) await DialogHelper.ShowErrorAsync("The settings weren't saved:\n" + error, "hg-engine settings");
+                (bool saved, string error) = await HgEngineSave.RunAsync(() => HgEngineConfig.TryWrite(_settings, out string e) ? null : e);
+                if (!saved)
+                {
+                    if (error != null) await DialogHelper.ShowErrorAsync("The settings weren't saved:\n" + error, "hg-engine settings");
+                    return false;
+                }
+            }
+            if (_makeArguments != _savedMakeArguments && !HgEngineProject.TrySetMakeArguments(_makeArguments, out string makeError))
+            {
+                await DialogHelper.ShowErrorAsync("The make arguments weren't saved:\n" + makeError, "hg-engine settings");
                 return false;
             }
             Load();

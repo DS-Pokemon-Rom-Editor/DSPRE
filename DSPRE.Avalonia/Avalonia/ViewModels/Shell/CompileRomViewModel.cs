@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -43,8 +44,29 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         public IBrush ResultBrush => Succeeded ? Brushes.LimeGreen : Brushes.OrangeRed;
 
+        private string _buildRom;
+
         /// <summary>The ROM make writes; test.nds unless a build name was chosen.</summary>
-        public string BuildRom { get; set; }
+        public string BuildRom
+        {
+            get => _buildRom;
+            set { _buildRom = value; OnPropertyChanged(); OnPropertyChanged(nameof(Command)); }
+        }
+
+        public string Command => HgEngineProject.IsLinked ? HgEngineBuild.FullBuildCommand(BuildRom) : "make";
+
+        /// <summary>Raised after each batch of lines is added, so the view scrolls once per batch.</summary>
+        public event Action LinesAdded;
+
+        // A parallel make prints faster than the UI can add lines one at a time, so they are added in batches.
+        private readonly ConcurrentQueue<string> _pendingLines = new();
+
+        private void FlushLines()
+        {
+            if (_pendingLines.IsEmpty) return;
+            while (_pendingLines.TryDequeue(out string line)) LogLines.Add(line);
+            LinesAdded?.Invoke();
+        }
 
         public async Task RunAsync()
         {
@@ -52,6 +74,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             LogLines.Clear();
             ResultText = "";
             Succeeded = false;
+            DispatcherTimer flush = new DispatcherTimer(TimeSpan.FromMilliseconds(100), DispatcherPriority.Background, (_, _) => FlushLines());
+            flush.Start();
             // The window can't close while this runs, so every way out has to clear it.
             try
             {
@@ -59,7 +83,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                 DateTime? beforeWriteTimeUtc = File.Exists(ndsPath) ? File.GetLastWriteTimeUtc(ndsPath) : (DateTime?)null;
 
                 bool ok = await Task.Run(() => HgEngineBuild.RunFullBuild(
-                    line => Dispatcher.UIThread.Post(() => LogLines.Add(line)),
+                    _pendingLines.Enqueue,
                     out _, BuildRom));
 
                 bool ndsProduced = File.Exists(ndsPath) &&
@@ -85,6 +109,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             }
             finally
             {
+                flush.Stop();
+                FlushLines();
                 IsRunning = false;
             }
         }
