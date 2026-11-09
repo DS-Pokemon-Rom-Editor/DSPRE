@@ -242,7 +242,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 string full;
                 try { full = Path.GetFullPath(path); } catch (Exception ex) { AppLogger.WarnOnce("CellAnimationPickerViewModel.Everywhere", ex); continue; }
                 if (mappedFiles.Contains(full) || !StartsLikeANarc(full)) continue;
-                string name = Path.GetRelativePath(DataPath, full).Replace('\\', '/');
+                string name = ProjectPaths.RelativeKey(DataPath, full);
                 found.AddRange(InArchive(ArchiveFiles.Loose(full, name)));
             }
             return found;
@@ -322,8 +322,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     ? NanrFile.Read(bytes[IconAnimation]) : null;
                 if (iconFile != null)
                 {
-                    string[] names;
-                    try { names = GetPokemonNames(); } catch (Exception ex) { AppLogger.WarnOnce("CellAnimationPickerViewModel.InArchive", ex); names = Array.Empty<string>(); }
+                    string[] names = GetPokemonNamesOrEmpty();
                     int banks = BanksOf(IconLayout).Count;
                     for (int f = PokemonIconFiles.SharedFiles + 1; f < count; f++)
                     {

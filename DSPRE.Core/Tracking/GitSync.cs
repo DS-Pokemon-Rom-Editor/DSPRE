@@ -205,7 +205,7 @@ namespace DSPRE.Tracking
             foreach (string file in files.Where(f => f.EndsWith(".json", StringComparison.Ordinal)))
             {
                 string text = File.ReadAllText(file);
-                string rel = Path.GetRelativePath(folder, file).Replace('\\', '/');
+                string rel = ProjectPaths.RelativeKey(folder, file);
                 if (text.Contains("<<<<<<<", StringComparison.Ordinal) || text.Contains(">>>>>>>", StringComparison.Ordinal)) return rel;
                 try { JsonNode.Parse(text); }
                 catch (JsonException) { return rel; }

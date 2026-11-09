@@ -48,7 +48,7 @@ namespace DSPRE.ROMFiles
                 return "HeartGold and SoulSilver build their Battle Point exchange menus in scripts. Use the Script and Text editors.";
             BpShopSites sites = RomLocator.BpShopSites;
             if (sites == null) return "Only US Platinum (Rev 1) and Diamond are supported.";
-            if (!IsDsRomProject && ARM9.CheckCompressionMark()) return "The ARM9 is still compressed. Convert this project to ds-rom format first.";
+            if (!IsDsRomProject && ARM9.IsStillCompressed()) return "The ARM9 is still compressed. Convert this project to ds-rom format first.";
             if (!File.Exists(Arm9Path)) return "The ARM9 is missing from this project.";
             if (sites.ListPointers >= 0 && !File.Exists(OverlayUtils.GetPath(7))) return "Overlay 7 is missing from this project.";
             return null;

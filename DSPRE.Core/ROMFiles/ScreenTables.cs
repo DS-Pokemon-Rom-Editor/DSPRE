@@ -38,7 +38,7 @@ namespace DSPRE.ROMFiles
         public byte[] FileOf(int file)
         {
             if (_files.TryGetValue(file, out byte[] bytes)) return bytes;
-            bool compressed = file == InArm9 && !RomInfo.IsDsRomProject && ARM9.CheckCompressionMark();
+            bool compressed = file == InArm9 && !RomInfo.IsDsRomProject && ARM9.IsStillCompressed();
             string path = compressed ? null : PathOf(file);
             return _files[file] = path != null && File.Exists(path) ? File.ReadAllBytes(path) : null;
         }

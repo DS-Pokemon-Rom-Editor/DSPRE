@@ -429,24 +429,7 @@ namespace DSPRE.Tracking
             return null;
         }
 
-        private static List<(int At, int Length)> Differences(byte[] was, byte[] now)
-        {
-            List<(int, int)> ranges = new List<(int, int)>();
-            int i = 0;
-            while (i < now.Length)
-            {
-                if (was[i] == now[i]) { i++; continue; }
-                int start = i, end = i + 1, same = 0;
-                for (int j = i + 1; j < now.Length && same < RangeGap; j++)
-                {
-                    if (was[j] == now[j]) same++;
-                    else { same = 0; end = j + 1; }
-                }
-                ranges.Add((start, end - start));
-                i = end;
-            }
-            return ranges;
-        }
+        private static List<(int At, int Length)> Differences(byte[] was, byte[] now) => ByteRanges.Changed(was, now, RangeGap);
 
         private static bool Untouched(byte[] current, byte[] baseSha) => baseSha == null ? current == null : Sha(current, baseSha);
 
@@ -456,7 +439,7 @@ namespace DSPRE.Tracking
             string full = project.FullPath(file);
             if (full == null) return file.Key;
             string root = (RomInfo.DspreDir ?? project.Root).TrimEnd('\\', '/');
-            return Path.GetRelativePath(Path.GetDirectoryName(root) ?? root, full).Replace('\\', '/');
+            return ProjectPaths.RelativeKey(Path.GetDirectoryName(root) ?? root, full);
         }
 
         private static bool Sha(byte[] bytes, byte[] sha) => bytes != null && sha != null && SHA1.HashData(bytes).AsSpan().SequenceEqual(sha);

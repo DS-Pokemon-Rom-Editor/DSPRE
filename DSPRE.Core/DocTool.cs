@@ -142,7 +142,7 @@ namespace DSPRE
                 DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
             };
 
-            PlainFiles.WriteText(outputPath, System.Text.Json.JsonSerializer.Serialize(root, opts));
+            PlainFiles.WriteJson(outputPath, root, opts);
         }
 
 

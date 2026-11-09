@@ -75,18 +75,7 @@ namespace DSPRE.ROMFiles
         public static IDisposable Hold()
         {
             lock (Gate) _holds++;
-            return new Release();
-        }
-
-        private sealed class Release : IDisposable
-        {
-            private bool _done;
-            public void Dispose()
-            {
-                if (_done) return;
-                _done = true;
-                lock (Gate) { _holds--; _quietUntil = DateTime.UtcNow + OwnWriteWindow; }
-            }
+            return new OnDispose(() => { lock (Gate) { _holds--; _quietUntil = DateTime.UtcNow + OwnWriteWindow; } });
         }
 
         /// <summary>Marks a file DSPRE is about to write, so its change is not taken for an outside edit.</summary>
@@ -103,9 +92,9 @@ namespace DSPRE.ROMFiles
 
         private static void Note(string path)
         {
-            bool script = IsUnder(path, _scriptsDir) && (path.EndsWith(".rotom", StringComparison.OrdinalIgnoreCase)
+            bool script = ProjectPaths.IsInside(path, _scriptsDir) && (path.EndsWith(".rotom", StringComparison.OrdinalIgnoreCase)
                                                          || path.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
-            bool text = IsUnder(path, _textDir) && path.EndsWith(".json", StringComparison.OrdinalIgnoreCase);
+            bool text = ProjectPaths.IsInside(path, _textDir) && path.EndsWith(".json", StringComparison.OrdinalIgnoreCase);
             if (!script && !text) return;
             lock (Gate)
             {
@@ -116,9 +105,6 @@ namespace DSPRE.ROMFiles
                 _settle.Change(400, Timeout.Infinite);
             }
         }
-
-        private static bool IsUnder(string path, string dir) =>
-            dir != null && Path.GetFullPath(path).StartsWith(dir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
 
         private static async Task SettledAsync()
         {
@@ -135,11 +121,11 @@ namespace DSPRE.ROMFiles
                     OwnWrites.Remove(old);
             }
 
-            foreach (string path in changed.Where(p => IsUnder(p, _textDir)))
+            foreach (string path in changed.Where(p => ProjectPaths.IsInside(p, _textDir)))
                 if (int.TryParse(Path.GetFileNameWithoutExtension(path), out int id))
                     TextArchive.RaiseSaved(null, id);
 
-            List<string> scripts = changed.Where(p => IsUnder(p, _scriptsDir)).ToList();
+            List<string> scripts = changed.Where(p => ProjectPaths.IsInside(p, _scriptsDir)).ToList();
             if (scripts.Count == 0 || !RomInfo.HasRotomProject || !RotomTool.IsAvailable) return;
             try
             {

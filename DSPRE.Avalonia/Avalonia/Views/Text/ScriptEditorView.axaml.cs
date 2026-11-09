@@ -406,7 +406,7 @@ namespace DSPRE.Avalonia.Views.Text
                         panel.Children.Add(new SelectableTextBlock
                         {
                             Text = code.ToString().TrimEnd('\n'),
-                            FontFamily = new FontFamily("monospace"),
+                            FontFamily = DSPRE.Avalonia.Data.UiFonts.Code,
                             FontSize = 12,
                             TextWrapping = TextWrapping.Wrap,
                             Background = new SolidColorBrush(Color.FromArgb(0x22, 0x80, 0x80, 0x80)),
@@ -477,7 +477,7 @@ namespace DSPRE.Avalonia.Views.Text
                 panel.Children.Add(new SelectableTextBlock
                 {
                     Text = code.ToString().TrimEnd('\n'),
-                    FontFamily = new FontFamily("monospace"),
+                    FontFamily = DSPRE.Avalonia.Data.UiFonts.Code,
                     FontSize = 12,
                     TextWrapping = TextWrapping.Wrap,
                     Background = new SolidColorBrush(Color.FromArgb(0x22, 0x80, 0x80, 0x80)),
@@ -513,7 +513,7 @@ namespace DSPRE.Avalonia.Views.Text
                     {
                         textBlock.Inlines.Add(new Run(text.Substring(i + 1, end - i - 1))
                         {
-                            FontFamily = new FontFamily("monospace")
+                            FontFamily = DSPRE.Avalonia.Data.UiFonts.Code
                         });
                         i = end + 1;
                         continue;

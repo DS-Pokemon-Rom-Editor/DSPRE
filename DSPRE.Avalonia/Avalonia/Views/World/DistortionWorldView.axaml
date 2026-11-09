@@ -84,7 +84,7 @@
                     </ComboBox.ItemTemplate>
                   </ComboBox>
                   <TextBlock Text="{Binding PlatformNote}" Foreground="{DynamicResource Editor.Subtle}"/>
-                  <TextBlock Text="{Binding HoverNote}" MinHeight="16" FontFamily="Consolas,monospace"/>
+                  <TextBlock Text="{Binding HoverNote}" MinHeight="16" FontFamily="{StaticResource CodeFont}"/>
                   <TextBlock Text="{Binding PaintedGroundWarning}" TextWrapping="Wrap"
                              IsVisible="{Binding PaintedGroundWarning, Converter={x:Static ObjectConverters.IsNotNull}}"
                              Foreground="{DynamicResource Editor.Warning}"/>

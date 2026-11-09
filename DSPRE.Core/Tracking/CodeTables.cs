@@ -27,10 +27,10 @@ namespace DSPRE.Tracking
         {
             List<CodeTable> tables = new List<CodeTable>();
             if (!MapHeader.UsesDynamicHeaders && HeaderTableOffset > 0 && File.Exists(InternalNamesPath))
-                tables.Add(new CodeTable("MapHeaders", Path.GetRelativePath(projectRoot, Arm9Path).Replace(Path.DirectorySeparatorChar, '/'),
+                tables.Add(new CodeTable("MapHeaders", ProjectPaths.RelativeKey(projectRoot, Arm9Path),
                     HeaderTableOffset, MapHeader.Length, GetHeaderCount()));
             if (File.Exists(InternalNamesPath) && new FileInfo(InternalNamesPath).Length >= (long)InternalNameLength * GetHeaderCount())
-                tables.Add(new CodeTable("MapNames", Path.GetRelativePath(projectRoot, InternalNamesPath).Replace(Path.DirectorySeparatorChar, '/'),
+                tables.Add(new CodeTable("MapNames", ProjectPaths.RelativeKey(projectRoot, InternalNamesPath),
                     0, InternalNameLength, GetHeaderCount()));
             foreach ((RomLocator.Thing thing, string name, string title, int rowSize, int count, ArrayField[] fields, Func<int, string> key) in Specs())
             {
@@ -39,7 +39,7 @@ namespace DSPRE.Tracking
                 if (spot.Overlay >= 0 && OverlayUtils.IsStillCompressed(spot.Overlay)) continue;
                 string path = spot.Overlay < 0 ? Arm9Path : OverlayUtils.GetPath(spot.Overlay);
                 if (!File.Exists(path) || new FileInfo(path).Length < spot.Offset + (long)rowSize * count) continue;
-                tables.Add(new CodeTable(name, Path.GetRelativePath(projectRoot, path).Replace(Path.DirectorySeparatorChar, '/'),
+                tables.Add(new CodeTable(name, ProjectPaths.RelativeKey(projectRoot, path),
                     spot.Offset, rowSize, count, title, fields, key));
             }
             foreach ((int overlay, long offset, string name, string title, int rowSize, int count, ArrayField[] fields, Func<int, string> key) in Located())
@@ -47,13 +47,13 @@ namespace DSPRE.Tracking
                 if (count <= 0 || offset < 0 || overlay >= 0 && OverlayUtils.IsStillCompressed(overlay)) continue;
                 string path = overlay < 0 ? Arm9Path : OverlayUtils.GetPath(overlay);
                 if (!File.Exists(path) || new FileInfo(path).Length < offset + (long)rowSize * count) continue;
-                tables.Add(new CodeTable(name, Path.GetRelativePath(projectRoot, path).Replace(Path.DirectorySeparatorChar, '/'),
+                tables.Add(new CodeTable(name, ProjectPaths.RelativeKey(projectRoot, path),
                     offset, rowSize, count, title, fields, key, Insertable: name == "egg-moves"));
             }
             // HGSS keeps the tutor learner masks in a plain file, one 8-byte mask per personal file.
             string masks = Path.Combine(DataPath, "fielddata", "wazaoshie", "waza_oshie.bin");
             if (GameFamily == GameFamilies.HGSS && !HgEngine.HgEngineProject.IsActive && File.Exists(masks) && new FileInfo(masks).Length == MoveTutorData.Rows * 8)
-                tables.Add(new CodeTable("tutor-learners", Path.GetRelativePath(projectRoot, masks).Replace(Path.DirectorySeparatorChar, '/'), 0, 8, MoveTutorData.Rows,
+                tables.Add(new CodeTable("tutor-learners", ProjectPaths.RelativeKey(projectRoot, masks), 0, 8, MoveTutorData.Rows,
                     "Move tutor learners", new[] { new ArrayField("tutors", 0, 8, Flags: TutorNames(52, 4)) },
                     i => (i < 493 ? i + 1 : i + 3).ToString(CultureInfo.InvariantCulture)));
             // The Pokégear phone book: a count, then one 20-byte contact each.
@@ -63,7 +63,7 @@ namespace DSPRE.Tracking
                 byte[] book = File.ReadAllBytes(phone);
                 int contacts = book.Length >= PokegearPhoneBook.HeaderSize ? BitConverter.ToInt32(book, 0) : 0;
                 if (contacts > 0 && PokegearPhoneBook.HeaderSize + (long)contacts * PokegearPhoneBook.EntrySize <= book.Length)
-                    tables.Add(new CodeTable("phone-book", Path.GetRelativePath(projectRoot, phone).Replace(Path.DirectorySeparatorChar, '/'),
+                    tables.Add(new CodeTable("phone-book", ProjectPaths.RelativeKey(projectRoot, phone),
                         PokegearPhoneBook.HeaderSize, PokegearPhoneBook.EntrySize, contacts, "Pokégear phone book", new[]
                         {
                             new ArrayField("id", 0, 1), new ArrayField("type", 1, 1), new ArrayField("unused_2", 2, 1), new ArrayField("title", 3, 1),
@@ -84,7 +84,7 @@ namespace DSPRE.Tracking
                         sites.Add((method.Boundaries[b][s], "slot_" + (b + 1).ToString(CultureInfo.InvariantCulture) + (s == 0 ? "" : "_copy_" + s.ToString(CultureInfo.InvariantCulture))));
                 if (!File.Exists(path) || sites.Count == 0 || new FileInfo(path).Length <= sites.Max(x => x.At)) continue;
                 string name = "slot-odds-" + new string(method.Name.ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
-                tables.Add(new CodeTable(name, Path.GetRelativePath(projectRoot, path).Replace(Path.DirectorySeparatorChar, '/'), sites[0].At, 1, sites.Count,
+                tables.Add(new CodeTable(name, ProjectPaths.RelativeKey(projectRoot, path), sites[0].At, 1, sites.Count,
                     "Encounter slot odds, " + method.Name, new[] { new ArrayField("boundary", 0, 1) }, i => sites[i].Key, Sites: sites.Select(x => x.At).ToArray()));
             }
             return tables;
@@ -189,7 +189,7 @@ namespace DSPRE.Tracking
             BattleMusicTables music = null;
             try { music = BattleMusicTables.IsSupported ? BattleMusicTables.LoadRom() : null; }
             catch (IOException) { }
-            if (music != null && string.Equals(Path.GetFullPath(music.Combos.Path), Path.GetFullPath(Arm9Path), StringComparison.OrdinalIgnoreCase))
+            if (music != null && ProjectPaths.Same(music.Combos.Path, Arm9Path))
                 yield return (-1, music.Combos.Start, "battle-intros", "Battle intros and music", 4, music.Combos.Rows.Count,
                     new[] { new ArrayField("transition", 0, 2), new ArrayField("sequence", 2, 2) }, null);
             // HGSS picks an intro by class and by species from packed rows: the id in the low 10 bits, the intro above.
@@ -199,7 +199,7 @@ namespace DSPRE.Tracking
                          (music?.Species, "battle-intro-species", "Battle intros by Pokémon", species),
                      })
                 if (packed != null && packed.Rows.Count > 0 && !packed.Repointed && packed.Path != null
-                    && string.Equals(Path.GetFullPath(packed.Path), Path.GetFullPath(Arm9Path), StringComparison.OrdinalIgnoreCase))
+                    && ProjectPaths.Same(packed.Path, Arm9Path))
                     yield return (-1, packed.Start, name, title, 2, packed.Rows.Count,
                         new[] { new ArrayField("id", 0, 2, Values: ids, Bits: 10), new ArrayField("intro", 0, 2, Shift: 10, Bits: 6) }, null);
 

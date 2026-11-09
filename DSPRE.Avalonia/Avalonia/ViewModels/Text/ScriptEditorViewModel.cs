@@ -153,7 +153,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
             if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "script")) return false;
 
-            int at = _sourceFiles.FindIndex(p => SamePath(p, path));
+            int at = _sourceFiles.FindIndex(p => ProjectPaths.Same(p, path));
             if (at < 0) return false;
             SetClean();
             if (at != _selectedIndex)
@@ -251,7 +251,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             {
                 string source = _sourceFiles.FirstOrDefault(f => _scriptIdByPath.TryGetValue(f, out int x) && x == id);
                 NewProjectFiles.DeleteScriptFile(id);
-                bool wasShown = SelectedScriptIndex >= 0 && SelectedScriptIndex < _sourceFiles.Count && SamePath(_sourceFiles[SelectedScriptIndex], source);
+                bool wasShown = SelectedScriptIndex >= 0 && SelectedScriptIndex < _sourceFiles.Count && ProjectPaths.Same(_sourceFiles[SelectedScriptIndex], source);
                 RefreshScriptList();
                 if (wasShown || SelectedScriptIndex >= _sourceFiles.Count) SelectedScriptIndex = _sourceFiles.Count - 1;
                 StatusText = $"Removed script file {id}.";
@@ -391,7 +391,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             Dispatcher.UIThread.Post(async () =>
             {
                 if (_lsp != null) _ = _lsp.DidChangeWatchedFilesAsync(paths);
-                bool current = _currentPath != null && paths.Any(p => SamePath(p, _currentPath));
+                bool current = _currentPath != null && paths.Any(p => ProjectPaths.Same(p, _currentPath));
                 if (current) await ReloadSavedElsewhereAsync(_currentPath);
                 if (!current || result.Success) return;
                 UpdateCompileDiagnostics(result);
@@ -430,7 +430,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (_askingAboutSavedElsewhere || _saving) return;
             if (path == null && _currentPath != null && ManagedSource == null) RefreshScriptList();
             if (_currentPath == null || _selectedIndex < 0) return;
-            if (path == null ? ManagedSource != null : !SamePath(path, _currentPath)) return;
+            if (path == null ? ManagedSource != null : !ProjectPaths.Same(path, _currentPath)) return;
 
             string onDisk;
             try { onDisk = System.IO.File.ReadAllText(_currentPath); }
@@ -571,7 +571,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 string text;
                 try
                 {
-                    text = _currentPath != null && SamePath(path, _currentPath)
+                    text = _currentPath != null && ProjectPaths.Same(path, _currentPath)
                         ? ScriptText ?? ""
                         : System.IO.File.ReadAllText(path);
                 }
@@ -638,7 +638,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             {
                 if (!files.TryGetValue(use.Path, out string[] lines))
                 {
-                    if (SamePath(use.Path, _currentPath)) lines = (ScriptText ?? "").Replace("\r\n", "\n").Split('\n');
+                    if (ProjectPaths.Same(use.Path, _currentPath)) lines = (ScriptText ?? "").Replace("\r\n", "\n").Split('\n');
                     else
                     {
                         try { lines = File.ReadAllLines(use.Path); }
@@ -669,7 +669,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             if (result == null) return false;
 
-            int index = _sourceFiles.FindIndex(path => SamePath(path, result.Path));
+            int index = _sourceFiles.FindIndex(path => ProjectPaths.Same(path, result.Path));
             if (index < 0)
             {
                 SearchStatusText = "Result source no longer exists.";
@@ -685,7 +685,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             if (diagnostic == null) return false;
 
-            int index = _sourceFiles.FindIndex(path => SamePath(path, diagnostic.Path));
+            int index = _sourceFiles.FindIndex(path => ProjectPaths.Same(path, diagnostic.Path));
             if (index < 0)
             {
                 DiagnosticsStatusText = "Diagnostic source no longer exists.";
@@ -783,11 +783,11 @@ namespace DSPRE.Avalonia.ViewModels.Text
                     return null;
                 }
 
-                int index = _sourceFiles.FindIndex(path => SamePath(path, target.Path));
+                int index = _sourceFiles.FindIndex(path => ProjectPaths.Same(path, target.Path));
                 if (index < 0)
                 {
                     RefreshScriptList();
-                    index = _sourceFiles.FindIndex(path => SamePath(path, target.Path));
+                    index = _sourceFiles.FindIndex(path => ProjectPaths.Same(path, target.Path));
                 }
 
                 if (index < 0)
@@ -1031,7 +1031,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             if (e == null || string.IsNullOrWhiteSpace(e.Path) || string.IsNullOrWhiteSpace(_currentPath))
                 return;
-            if (!SamePath(e.Path, _currentPath)) return;
+            if (!ProjectPaths.Same(e.Path, _currentPath)) return;
 
             foreach (ScriptDiagnostic diagnostic in Diagnostics.Where(d => d.IsLive).ToList())
                 Diagnostics.Remove(diagnostic);
@@ -1071,7 +1071,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             {
                 (int _, string path) = NewProjectFiles.AddScript();
                 RefreshScriptList();
-                SelectedScriptIndex = _sourceFiles.FindIndex(p => SamePath(p, path));
+                SelectedScriptIndex = _sourceFiles.FindIndex(p => ProjectPaths.Same(p, path));
                 StatusText = "Added " + DisplayPath(path) + ".";
             }
             catch (Exception ex)
@@ -1273,7 +1273,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             // Clearing the names resets the list's selection, and an added file can shift the rest.
             if (_currentPath != null)
             {
-                int current = _sourceFiles.FindIndex(p => SamePath(p, _currentPath));
+                int current = _sourceFiles.FindIndex(p => ProjectPaths.Same(p, _currentPath));
                 if (current >= 0 && current != _selectedIndex)
                 {
                     _selectedIndex = current;
@@ -1334,7 +1334,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             ScriptText = System.IO.File.ReadAllText(_currentPath);
             _suppress = false;
             SetClean();
-            if (string.IsNullOrWhiteSpace(oldPath) || !SamePath(oldPath, _currentPath))
+            if (string.IsNullOrWhiteSpace(oldPath) || !ProjectPaths.Same(oldPath, _currentPath))
             {
                 foreach (ScriptDiagnostic diagnostic in Diagnostics.Where(d => d.IsLive).ToList())
                     Diagnostics.Remove(diagnostic);
@@ -1394,7 +1394,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             {
                 if (!string.IsNullOrWhiteSpace(_lspOpenPath))
                 {
-                    if (SamePath(_lspOpenPath, _currentPath))
+                    if (ProjectPaths.Same(_lspOpenPath, _currentPath))
                     {
                         _documentVersion++;
                         await lsp.DidChangeAsync(_currentPath, _documentVersion, ScriptText ?? "");
@@ -1425,7 +1425,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
             try
             {
-                if (string.IsNullOrWhiteSpace(_lspOpenPath) || !SamePath(_lspOpenPath, _currentPath))
+                if (string.IsNullOrWhiteSpace(_lspOpenPath) || !ProjectPaths.Same(_lspOpenPath, _currentPath))
                 {
                     await OpenCurrentDocumentInLspAsync();
                     return;
@@ -1496,7 +1496,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 List<RotomLspSymbol> symbols = await _lsp.DocumentSymbolsAsync(path);
                 List<RotomLspInlineText> lenses = await _lsp.CodeLensAsync(path);
                 List<RotomLspInlineText> hints = await _lsp.InlayHintsAsync(path, lastLine);
-                if (token.IsCancellationRequested || !SamePath(path, _currentPath)) return;
+                if (token.IsCancellationRequested || !ProjectPaths.Same(path, _currentPath)) return;
 
                 Outline.Clear();
                 // Numbered scripts first, by number, then everything else in file order.
@@ -1636,7 +1636,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         private string ReadSourceForPath(string path)
         {
             if (string.IsNullOrWhiteSpace(path)) return "";
-            if (_currentPath != null && SamePath(path, _currentPath)) return ScriptText ?? "";
+            if (_currentPath != null && ProjectPaths.Same(path, _currentPath)) return ScriptText ?? "";
             try { return System.IO.File.Exists(path) ? System.IO.File.ReadAllText(path) : ""; }
             catch (Exception ex) { AppLogger.WarnOnce("ScriptEditorViewModel.ReadSourceForPath", ex); return ""; }
         }
@@ -1747,9 +1747,6 @@ namespace DSPRE.Avalonia.ViewModels.Text
             column = firstMatch + 1;
             return true;
         }
-
-        private static bool SamePath(string left, string right)
-            => string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
 
         private static string LanguageIdForPath(string path)
             => Path.GetExtension(path).Equals(".json", StringComparison.OrdinalIgnoreCase) ? "json" : "rotom";

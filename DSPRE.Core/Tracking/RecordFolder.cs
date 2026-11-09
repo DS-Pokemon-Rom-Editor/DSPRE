@@ -46,7 +46,7 @@ namespace DSPRE.Tracking
                 .ToList();
         }
 
-        public string Key(string path) => Path.GetRelativePath(Folder, path).Replace('\\', '/');
+        public string Key(string path) => ProjectPaths.RelativeKey(Folder, path);
 
         /// <summary>Every record file, skipping the folder's own files (dot folders and top-level files).</summary>
         public IEnumerable<string> Files()

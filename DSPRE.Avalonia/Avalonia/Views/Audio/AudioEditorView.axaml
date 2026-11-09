@@ -82,7 +82,7 @@
           <CheckBox Grid.Column="4" x:Name="LoopBox" Content="Loop"
                     ToolTip.Tip="Keep playing it round until you press Stop."/>
           <TextBlock Grid.Column="6" x:Name="TimeText" Text="0:00.0 / 0:00.0" VerticalAlignment="Center"
-                     FontFamily="Consolas,monospace" FontSize="12"
+                     FontFamily="{StaticResource CodeFont}" FontSize="12"
                      Foreground="{DynamicResource Editor.Subtle}"/>
           <TextBlock Grid.Column="7" Margin="14,0,0,0" Text="{Binding SelectedDescription}"
                      VerticalAlignment="Center" FontSize="12" TextWrapping="Wrap"/>
@@ -102,7 +102,7 @@
         <ListBox ItemsSource="{Binding Cries}" SelectedItem="{Binding SelectedCry}"
                  DoubleTapped="List_DoubleTapped">
           <ListBox.ItemTemplate>
-            <DataTemplate><TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="13"/></DataTemplate>
+            <DataTemplate><TextBlock Text="{Binding Label}" FontFamily="{StaticResource CodeFont}" FontSize="13"/></DataTemplate>
           </ListBox.ItemTemplate>
         </ListBox>
       </TabItem>
@@ -110,7 +110,7 @@
         <TreeView ItemsSource="{Binding MusicBanks}" SelectedItem="{Binding SelectedMusicNode, Mode=TwoWay}"
                   DoubleTapped="List_DoubleTapped">
           <TreeView.DataTemplates>
-            <DataTemplate DataType="vm:AudioItem"><TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="13"/></DataTemplate>
+            <DataTemplate DataType="vm:AudioItem"><TextBlock Text="{Binding Label}" FontFamily="{StaticResource CodeFont}" FontSize="13"/></DataTemplate>
           </TreeView.DataTemplates>
         </TreeView>
       </TabItem>
@@ -118,7 +118,7 @@
         <ListBox ItemsSource="{Binding Fanfares}" SelectedItem="{Binding SelectedFanfare}"
                  DoubleTapped="List_DoubleTapped">
           <ListBox.ItemTemplate>
-            <DataTemplate><TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="13"/></DataTemplate>
+            <DataTemplate><TextBlock Text="{Binding Label}" FontFamily="{StaticResource CodeFont}" FontSize="13"/></DataTemplate>
           </ListBox.ItemTemplate>
         </ListBox>
       </TabItem>
@@ -128,7 +128,7 @@
           <TreeView ItemsSource="{Binding EffectBanks}" SelectedItem="{Binding SelectedEffectNode, Mode=TwoWay}"
                     DoubleTapped="List_DoubleTapped">
             <TreeView.DataTemplates>
-              <DataTemplate DataType="vm:AudioItem"><TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="13"/></DataTemplate>
+              <DataTemplate DataType="vm:AudioItem"><TextBlock Text="{Binding Label}" FontFamily="{StaticResource CodeFont}" FontSize="13"/></DataTemplate>
             </TreeView.DataTemplates>
           </TreeView>
         </DockPanel>
@@ -138,7 +138,7 @@
         <TreeView ItemsSource="{Binding SoundSets}" SelectedItem="{Binding SelectedSoundNode, Mode=TwoWay}"
                   DoubleTapped="List_DoubleTapped">
           <TreeView.DataTemplates>
-            <DataTemplate DataType="vm:AudioItem"><TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="13"/></DataTemplate>
+            <DataTemplate DataType="vm:AudioItem"><TextBlock Text="{Binding Label}" FontFamily="{StaticResource CodeFont}" FontSize="13"/></DataTemplate>
           </TreeView.DataTemplates>
         </TreeView>
       </TabItem>

@@ -36,17 +36,7 @@ namespace DSPRE.Tracking
         private static IDisposable Working()
         {
             if (Interlocked.Increment(ref _working) == 1) WorkingChanged?.Invoke(true);
-            return new Done();
-        }
-
-        private sealed class Done : IDisposable
-        {
-            private int _done;
-            public void Dispose()
-            {
-                if (Interlocked.Exchange(ref _done, 1) == 1) return;
-                if (Interlocked.Decrement(ref _working) == 0) WorkingChanged?.Invoke(false);
-            }
+            return new OnDispose(() => { if (Interlocked.Decrement(ref _working) == 0) WorkingChanged?.Invoke(false); });
         }
 
         private TrackingNames _names;
@@ -81,7 +71,7 @@ namespace DSPRE.Tracking
             _kinds = ChangeKinds.ForOpenGame();
             _records = new RecordFolder(Folder, _kinds);
             _state = SyncState.Load(_projectDir);
-            if (_state.Repo == null || !SamePath(_state.Repo, Folder) || _state.BaseSha1 != null && _state.BaseSha1 != manifest.BaseSha1)
+            if (_state.Repo == null || !ProjectPaths.Same(_state.Repo, Folder) || _state.BaseSha1 != null && _state.BaseSha1 != manifest.BaseSha1)
                 _state = new SyncState();
             _state.Repo = Folder;
             _state.BaseSha1 = manifest.BaseSha1;
@@ -144,15 +134,18 @@ namespace DSPRE.Tracking
             _debounce.Change(600, Timeout.Infinite);
         }
 
-        private void OnCodeWritten(string path, long at, int length, string by)
+        private void OnCodeWritten(string path, IReadOnlyList<(long Offset, int Length)> ranges, string by)
         {
             if (string.IsNullOrEmpty(by) || !IsTrackedPath(path)) return;
-            string key = Path.GetRelativePath(_project.Root, path).Replace('\\', '/');
+            string key = ProjectPaths.RelativeKey(_project.Root, path);
             lock (_gate)
             {
                 if (!_state.CodeWrites.TryGetValue(key, out List<SyncState.CodeWrite> list)) _state.CodeWrites[key] = list = new List<SyncState.CodeWrite>();
-                list.RemoveAll(w => w.At >= at && w.At + w.Length <= at + length);
-                list.Add(new SyncState.CodeWrite { At = at, Length = length, By = by });
+                foreach ((long at, int length) in ranges)
+                {
+                    list.RemoveAll(w => w.At >= at && w.At + w.Length <= at + length);
+                    list.Add(new SyncState.CodeWrite { At = at, Length = length, By = by });
+                }
             }
         }
 
@@ -165,7 +158,7 @@ namespace DSPRE.Tracking
         {
             string full = Path.GetFullPath(path);
             if (Path.GetFileName(full).StartsWith(".dspre", StringComparison.Ordinal)) return false;
-            return Inside(full, _project.Root) || Inside(full, Path.Combine(_projectDir, "unpacked")) || Inside(full, Path.Combine(_projectDir, "expanded"));
+            return ProjectPaths.IsInside(full, _project.Root) || ProjectPaths.IsInside(full, Path.Combine(_projectDir, "unpacked")) || ProjectPaths.IsInside(full, Path.Combine(_projectDir, "expanded"));
         }
 
         private void SafeRefresh()
@@ -622,7 +615,7 @@ namespace DSPRE.Tracking
                 string path = project.FullPath(w.Key) ?? throw new InvalidOperationException($"{w.Key} has no place in this project.");
                 // File names come from the changes folder, which may be someone else's repo.
                 string full = Path.GetFullPath(path);
-                if (!Inside(full, project.Root) && !Inside(full, projectDir))
+                if (!ProjectPaths.IsInside(full, project.Root) && !ProjectPaths.IsInside(full, projectDir))
                 {
                     error = $"{w.Key} points outside the project, so nothing was applied.";
                     return false;
@@ -653,14 +646,6 @@ namespace DSPRE.Tracking
             return ok;
         }
 
-        private static bool Inside(string full, string root)
-        {
-            string r = Path.GetFullPath(root).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
-            return full.StartsWith(r, StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static bool SamePath(string a, string b) =>
-            string.Equals(Path.GetFullPath(a).TrimEnd('\\', '/'), Path.GetFullPath(b).TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase);
 
         private static bool Same(byte[] a, byte[] b) => a == null ? b == null : b != null && a.AsSpan().SequenceEqual(b);
     }

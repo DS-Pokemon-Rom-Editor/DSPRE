@@ -289,7 +289,7 @@
       </TabControl>
 
       <Grid Grid.Column="1" RowDefinitions="Auto,*" Margin="8,0">
-        <TextBlock Grid.Row="0" Text="{Binding Under}" FontFamily="Consolas,monospace" MinHeight="16"
+        <TextBlock Grid.Row="0" Text="{Binding Under}" FontFamily="{StaticResource CodeFont}" MinHeight="16"
                    Margin="0,0,0,4" TextTrimming="CharacterEllipsis"/>
         <Viewbox Grid.Row="1" Stretch="Uniform" StretchDirection="Both">
           <Border AutomationProperties.Name="PaintingGrid" Width="640" Height="640"

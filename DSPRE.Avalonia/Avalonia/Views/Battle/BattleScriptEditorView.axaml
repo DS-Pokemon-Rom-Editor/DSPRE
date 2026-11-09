@@ -57,7 +57,7 @@
       <TextBlock DockPanel.Dock="Top" Margin="4,4,4,8" TextWrapping="Wrap" FontSize="11"
                  Foreground="{DynamicResource Editor.Subtle}" Text="{Binding SourceNote}"/>
       <TextBox Text="{Binding SourceText}" AcceptsReturn="True" AcceptsTab="True"
-               FontFamily="Consolas,Menlo,monospace" FontSize="12"
+               FontFamily="{StaticResource CodeFont}" FontSize="12"
                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                TextWrapping="NoWrap"
                ScrollViewer.HorizontalScrollBarVisibility="Auto"
@@ -90,7 +90,7 @@
                         <StackPanel Grid.Column="0" VerticalAlignment="Center" ToolTip.Tip="{Binding Summary}">
                           <TextBlock Text="{Binding OpDisplay}" TextTrimming="CharacterEllipsis" FontSize="12" FontWeight="SemiBold"/>
                           <TextBlock Text="{Binding ValuesSummary}" IsVisible="{Binding HasValues}" TextTrimming="CharacterEllipsis"
-                                     FontFamily="Consolas,monospace" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+                                     FontFamily="{StaticResource CodeFont}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
                         </StackPanel>
                         <Button Grid.Column="1" controls:Icon.Key="arrowup" Click="Up_Click" ToolTip.Tip="Move up" Padding="6,0" FontSize="12"/>
                         <Button Grid.Column="2" controls:Icon.Key="arrowdown" Click="Down_Click" ToolTip.Tip="Move down" Padding="6,0" FontSize="12"/>
@@ -131,7 +131,7 @@
                         <TextBlock Grid.Column="0" Text="Raw values" VerticalAlignment="Center" FontSize="12"
                                    Foreground="{DynamicResource Editor.Subtle}"/>
                         <TextBox Grid.Column="1" Text="{Binding RawArgs, Mode=OneWay}" IsReadOnly="True"
-                                 FontFamily="Consolas,monospace" FontSize="12" Background="Transparent"/>
+                                 FontFamily="{StaticResource CodeFont}" FontSize="12" Background="Transparent"/>
                       </Grid>
                     </StackPanel>
                   </Expander>
@@ -144,7 +144,7 @@
             <!-- The same commands as typed lines; Cards stays locked while a line has an error. -->
             <TabItem Header="Script">
               <ae:TextEditor x:Name="CommandsTextEditor" ShowLineNumbers="True" WordWrap="False"
-                             FontFamily="Consolas,monospace" FontSize="12"
+                             FontFamily="{StaticResource CodeFont}" FontSize="12"
                              BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"/>
             </TabItem>
             <TabItem Header="Read">
@@ -169,7 +169,7 @@
                              Background="Transparent" BorderThickness="0">
                       <ListBox.ItemTemplate>
                         <DataTemplate>
-                          <TextBlock Text="{Binding Display}" FontFamily="Consolas,monospace" FontSize="12"/>
+                          <TextBlock Text="{Binding Display}" FontFamily="{StaticResource CodeFont}" FontSize="12"/>
                         </DataTemplate>
                       </ListBox.ItemTemplate>
                     </ListBox>
@@ -341,12 +341,12 @@
               <TextBox Text="{Binding Storyboard}" IsReadOnly="True" AcceptsReturn="True"
                        IsVisible="{Binding Storyboard, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                        TextWrapping="{Binding StoryboardWrap}" VerticalAlignment="Top"
-                       FontFamily="Consolas,monospace" FontSize="12" BorderThickness="0" Background="Transparent"/>
+                       FontFamily="{StaticResource CodeFont}" FontSize="12" BorderThickness="0" Background="Transparent"/>
               <ItemsControl ItemsSource="{Binding StoryboardLines}" Margin="6,4">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="data:BattleAnimStoryboard+Line">
                     <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,1">
-                      <TextBlock Text="{Binding Frame}" FontFamily="Consolas,monospace" FontSize="12"
+                      <TextBlock Text="{Binding Frame}" FontFamily="{StaticResource CodeFont}" FontSize="12"
                                  Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
                       <StackPanel Orientation="Horizontal" Spacing="6" Margin="{Binding Indent}">
                         <Panel Width="16" Height="16">

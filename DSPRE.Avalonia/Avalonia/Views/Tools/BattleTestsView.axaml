@@ -58,7 +58,7 @@
             <TextBlock DockPanel.Dock="Bottom" Text="{Binding ProblemText}" IsVisible="{Binding ProblemText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                        Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap" Margin="0,6,0,0"/>
             <ae:TextEditor x:Name="Code" ShowLineNumbers="True" WordWrap="False"
-                           FontFamily="Cascadia Mono, Consolas, monospace" FontSize="13"
+                           FontFamily="{StaticResource CodeFont}" FontSize="13"
                            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"/>
           </DockPanel>
         </TabItem>

@@ -393,7 +393,7 @@ namespace DSPRE.HgEngine
             return Path.Combine(root, rel.Replace('/', Path.DirectorySeparatorChar));
         }
 
-        private static string Rel(string path) => Path.GetRelativePath(HgEngineProject.RepoPathUnc, path).Replace('\\', '/');
+        private static string Rel(string path) => ProjectPaths.RelativeKey(HgEngineProject.RepoPathUnc, path);
 
         private static bool TryReadTableText(out string text, out string path, out string error)
         {

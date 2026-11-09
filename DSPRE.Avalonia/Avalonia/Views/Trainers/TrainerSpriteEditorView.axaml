@@ -243,7 +243,7 @@
                   <Button Content="Save animation JSON" controls:Icon.Key="saveButton" Click="SaveAnimJson_Click" IsEnabled="{Binding AnimJsonDirty}"/>
                 </StackPanel>
                 <ae:TextEditor x:Name="AnimJsonEditor" ShowLineNumbers="True" WordWrap="False"
-                               FontFamily="Consolas,monospace" FontSize="12"
+                               FontFamily="{StaticResource CodeFont}" FontSize="12"
                                SyntaxHighlighting="{x:Static av:JsonSyntax.Definition}"
                                BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"
                                IsReadOnly="{Binding !CanEditAnimJson}"/>

@@ -210,7 +210,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (!GameDirs.TryGetValue(DirNames.EncounterEffectGraphics, out (string packedDir, string unpackedDir) dirs)) return;
             ArchiveFiles source = ArchiveFiles.Mapped(DirNames.EncounterEffectGraphics);
             ScriptNarc narc = new ScriptNarc(DirNames.EncounterEffectGraphics);
-            string relative = string.IsNullOrEmpty(DataPath) ? dirs.packedDir : Path.GetRelativePath(DataPath, dirs.packedDir).Replace('\\', '/');
+            string relative = string.IsNullOrEmpty(DataPath) ? dirs.packedDir : ProjectPaths.RelativeKey(DataPath, dirs.packedDir);
             for (int f = 0; f < narc.Count; f++)
             {
                 (string category, string name) = ParticleFileNames.Loose(GameFamily, relative, f);
@@ -236,7 +236,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 try { using FileStream fs = File.OpenRead(full); if (fs.Read(head, 0, 4) < 4) continue; } catch (Exception ex) { AppLogger.WarnOnce("ParticleLibraryViewModel.GatherLoose", ex); continue; }
                 if (head[0] != 'N' || head[1] != 'A' || head[2] != 'R' || head[3] != 'C') continue;
 
-                string relative = Path.GetRelativePath(DataPath, full).Replace('\\', '/');
+                string relative = ProjectPaths.RelativeKey(DataPath, full);
                 ArchiveFiles source = ArchiveFiles.Loose(full, relative);
                 int count;
                 try { count = source.Count; } catch (Exception ex) { AppLogger.WarnOnce("ParticleLibraryViewModel.GatherLoose", ex); continue; }

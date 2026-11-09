@@ -486,7 +486,7 @@ namespace DSPRE.ROMFiles
             {
                 // Editors change the unpacked copy and Save ROM packs it, so it wins.
                 if (RomInfo.GameDirs.TryGetValue(DirNames.EncounterEffectGraphics, out (string packedDir, string unpackedDir) art)
-                    && Directory.Exists(art.unpackedDir) && Directory.EnumerateFiles(art.unpackedDir).Any())
+                    && ArchiveMembers.HasMembers(art.unpackedDir))
                     archive = Narc.FromFolder(art.unpackedDir);
                 else
                     archive = Narc.Open(archivePath);

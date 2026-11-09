@@ -21,7 +21,7 @@ namespace DSPRE.HgEngine
         {
             if (!HgEngineProject.IsActive || !Directory.Exists(Root)) return new List<string>();
             return Directory.EnumerateFiles(Root, "*.c", SearchOption.AllDirectories)
-                .Select(f => Path.GetRelativePath(Root, f).Replace('\\', '/'))
+                .Select(f => ProjectPaths.RelativeKey(Root, f))
                 .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
                 .ToList();
         }

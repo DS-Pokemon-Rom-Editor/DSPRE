@@ -873,9 +873,7 @@ namespace DSPRE.ROMFiles
             if (string.IsNullOrWhiteSpace(folder) || string.IsNullOrWhiteSpace(RomInfo.ProjectName)) return false;
             try
             {
-                return string.Equals(Path.GetFullPath(folder).TrimEnd('\\', '/'),
-                    Path.GetFullPath(CurrentRomDatabaseFolder()).TrimEnd('\\', '/'),
-                    StringComparison.OrdinalIgnoreCase);
+                return ProjectPaths.Same(folder, CurrentRomDatabaseFolder());
             }
             catch (Exception ex) { AppLogger.WarnOnce("ScriptFile.IsCurrentRomDatabaseFolder", ex); return false; }
         }

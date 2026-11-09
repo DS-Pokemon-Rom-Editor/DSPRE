@@ -419,7 +419,7 @@ namespace DSPRE.Avalonia.Data
 
         private static int SpeciesCount()
         {
-            try { return RomInfo.GetPokemonNames()?.Length ?? 0; } catch (Exception) { return 0; }
+            return RomInfo.GetPokemonNamesOrEmpty().Length;
         }
 
         private static FieldFont Font(int entry)

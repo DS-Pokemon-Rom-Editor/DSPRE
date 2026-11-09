@@ -414,7 +414,7 @@ namespace DSPRE.Avalonia.Data
                     return null;
                 }
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
-                PlainFiles.WriteText(path, JsonSerializer.Serialize(file, new JsonSerializerOptions { WriteIndented = true }));
+                PlainFiles.WriteJson(path, file);
                 return null;
             }
             catch (Exception ex)

@@ -80,7 +80,7 @@ namespace DSPRE.Tracking
             if (WhyNotBase(baseNds) is string bad) return (null, bad);
             if (Directory.Exists(folder) && Directory.EnumerateFileSystemEntries(folder).Any(e => Path.GetFileName(e) != ".git"))
                 return (null, "That folder isn't empty. Pick an empty folder, or open it as a changes folder instead.");
-            if (Inside(folder, ProjectKey)) return (null, "The changes folder can't be inside the project folder.");
+            if (ProjectPaths.IsInside(folder, ProjectKey)) return (null, "The changes folder can't be inside the project folder.");
 
             (string sha, string root, string error) = await Task.Run(() => PrepareBase(baseNds)).ConfigureAwait(false);
             if (error != null) return (null, error);
@@ -117,7 +117,7 @@ namespace DSPRE.Tracking
             if (!ChangesManifest.TryRead(folder, out ChangesManifest manifest, out string error)) return (OpenResult.Failed, null, error);
             if (!string.Equals(manifest.Code, RomInfo.RomID, StringComparison.Ordinal))
                 return (OpenResult.Failed, manifest, $"That changes folder is for {manifest.Describe()}, but this project is {RomInfo.RomID}.");
-            if (Inside(folder, ProjectKey)) return (OpenResult.Failed, manifest, "The changes folder can't be inside the project folder.");
+            if (ProjectPaths.IsInside(folder, ProjectKey)) return (OpenResult.Failed, manifest, "The changes folder can't be inside the project folder.");
 
             baseNds ??= await Task.Run(() => KnownBaseRom(manifest.BaseSha1)).ConfigureAwait(false);
             if (baseNds == null) return (OpenResult.NeedsBaseRom, manifest, null);
@@ -229,10 +229,6 @@ namespace DSPRE.Tracking
             SettingsManager.Settings.ChangesFolders.Remove(ProjectKey);
             SettingsManager.Save();
         }
-
-        private static bool Inside(string path, string root) =>
-            (Path.GetFullPath(path).TrimEnd('\\', '/') + Path.DirectorySeparatorChar)
-            .StartsWith(Path.GetFullPath(root).TrimEnd('\\', '/') + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
 
         private static string KnownBaseRom(string sha)
         {

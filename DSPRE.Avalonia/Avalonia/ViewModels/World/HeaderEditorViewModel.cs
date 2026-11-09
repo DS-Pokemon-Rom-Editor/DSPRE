@@ -1400,10 +1400,10 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public int CopyFromIndex
         {
-            get => ProjectPrefs.Get(CopyFromKey, "false") == "true" ? 1 : 0;
+            get => ProjectPrefs.GetBool(CopyFromKey, false) ? 1 : 0;
             set
             {
-                ProjectPrefs.Set(CopyFromKey, value == 1 ? "true" : "false");
+                ProjectPrefs.SetBool(CopyFromKey, value == 1);
                 OnPropertyChanged(nameof(CopyFromIndex));
             }
         }

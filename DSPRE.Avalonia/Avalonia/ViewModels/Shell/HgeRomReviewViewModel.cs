@@ -115,8 +115,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         private void LoadSpecies()
         {
-            string[] names;
-            try { names = GetPokemonNames(); } catch (Exception ex) { AppLogger.WarnOnce("HgeRomReviewViewModel.LoadSpecies", ex); names = Array.Empty<string>(); }
+            string[] names = GetPokemonNamesOrEmpty();
 
             // With a linked checkout, use the count its editors use.
             int count;

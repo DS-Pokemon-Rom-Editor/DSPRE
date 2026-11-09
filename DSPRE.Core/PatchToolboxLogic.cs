@@ -21,7 +21,7 @@ namespace DSPRE
     /// </summary>
     public static class PatchToolboxLogic
     {
-        private const string BackupSuffix = ".backup";
+        private const string BackupSuffix = DSUtils.BackupSuffix;
 
         // ── Prompt hooks (pluggable so each shell shows native dialogs) ───────────────────────────
         /// <summary>Yes/No confirmation. Returns true for Yes. Default = <see cref="AppMessages"/>.</summary>

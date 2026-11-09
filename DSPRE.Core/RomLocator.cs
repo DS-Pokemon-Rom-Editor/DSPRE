@@ -315,7 +315,7 @@ namespace DSPRE
             if (spot == null) return "Works on " + DescribeDumps(WorksOn(thing)) + ".";
             string path = PathOf(spot);
             if (!File.Exists(path)) return $"{Path.GetFileName(path)} is missing from this project.";
-            if (spot.Overlay < 0 && !IsDsRomProject && ARM9.CheckCompressionMark())
+            if (spot.Overlay < 0 && !IsDsRomProject && ARM9.IsStillCompressed())
                 return "arm9 is still compressed. Convert this project to ds-rom format first.";
             // A compressed overlay is shorter on disk than once it's decompressed for the read.
             long size = spot.Overlay >= 0 && OverlayUtils.IsStillCompressed(spot.Overlay)

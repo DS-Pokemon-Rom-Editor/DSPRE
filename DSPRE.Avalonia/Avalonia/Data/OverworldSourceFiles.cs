@@ -178,6 +178,6 @@ namespace DSPRE.Avalonia.Data
         }
 
         private static string Rel(string path) =>
-            path == null ? "" : Path.GetRelativePath(HgEngineProject.RepoPathUnc, path).Replace('\\', '/');
+            path == null ? "" : ProjectPaths.RelativeKey(HgEngineProject.RepoPathUnc, path);
     }
 }

@@ -76,7 +76,7 @@
               <StackPanel Orientation="Horizontal" Spacing="10">
                 <TextBlock Text="{Binding Number}" Width="42"
                            Foreground="{DynamicResource Editor.Subtle}"
-                           FontFamily="Consolas,monospace"/>
+                           FontFamily="{StaticResource CodeFont}"/>
                 <TextBlock Text="{Binding Letter}" IsVisible="{Binding IsMapped}"/>
                 <TextBlock Text="{Binding Describe}" IsVisible="{Binding !IsMapped}"
                            FontSize="11" FontStyle="Italic"

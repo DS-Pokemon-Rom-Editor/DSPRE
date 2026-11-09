@@ -619,22 +619,11 @@ namespace DSPRE.Avalonia.Views.Shell
         {
             MainWindowViewModel main = (global::Avalonia.Application.Current?.ApplicationLifetime
                 as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.MainWindow?.DataContext as MainWindowViewModel;
-            if (main == null || main.IsBusy) return new BusyScope(null);
+            if (main == null || main.IsBusy) return new OnDispose(null);
             main.BusyText = text;
             main.BusyHint = hint;
             main.IsBusy = true;
-            return new BusyScope(main);
-        }
-
-        private sealed class BusyScope : IDisposable
-        {
-            private MainWindowViewModel _main;
-            public BusyScope(MainWindowViewModel main) { _main = main; }
-            public void Dispose()
-            {
-                if (_main != null) _main.IsBusy = false;
-                _main = null;
-            }
+            return new OnDispose(() => main.IsBusy = false);
         }
 
         private static async Task RunAsync(ChangesViewModel vm, Func<Task> work)

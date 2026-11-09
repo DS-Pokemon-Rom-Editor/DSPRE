@@ -40,7 +40,7 @@ namespace DSPRE.Avalonia.Views.Controls
         public IBrush Foreground { get => GetValue(ForegroundProperty); set => SetValue(ForegroundProperty, value); }
         public IBrush Accent { get => GetValue(AccentProperty); set => SetValue(AccentProperty, value); }
 
-        private static readonly Typeface Numbers = new Typeface(new FontFamily("Cascadia Mono, Consolas, Menlo, monospace"));
+        private static readonly Typeface Numbers = new Typeface(DSPRE.Avalonia.Data.UiFonts.Code);
         private const double FontSize = 10;
 
         static PixelRuler()

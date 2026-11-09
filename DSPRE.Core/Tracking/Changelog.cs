@@ -52,7 +52,7 @@ namespace DSPRE.Tracking
         {
             string path = Path.Combine(folder, FileName);
             if (!File.Exists(path)) return new ChangelogOptions();
-            try { return JsonSerializer.Deserialize<ChangelogOptions>(File.ReadAllText(path), Json) ?? new ChangelogOptions(); }
+            try { return PlainFiles.ReadJson<ChangelogOptions>(path, Json) ?? new ChangelogOptions(); }
             catch (JsonException) { return new ChangelogOptions(); }
         }
 

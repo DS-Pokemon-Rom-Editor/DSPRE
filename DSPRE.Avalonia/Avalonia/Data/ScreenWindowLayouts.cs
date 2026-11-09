@@ -19,14 +19,7 @@ namespace DSPRE.Avalonia.Data
         {
             (string, ScreenWindowLayout, PartyPanelLayout) before = _using;
             _using = (screen, layout, panels);
-            return new Restore(before);
-        }
-
-        private sealed class Restore : IDisposable
-        {
-            private readonly (string, ScreenWindowLayout, PartyPanelLayout) _before;
-            public Restore((string, ScreenWindowLayout, PartyPanelLayout) before) { _before = before; }
-            public void Dispose() => _using = _before;
+            return new OnDispose(() => _using = before);
         }
 
         [ThreadStatic] private static (bool Item, int[] Windows)? _usingMenu;
@@ -36,7 +29,7 @@ namespace DSPRE.Avalonia.Data
         {
             (bool, int[])? before = _usingMenu;
             _usingMenu = menu;
-            return new MenuRestore(before);
+            return new OnDispose(() => _usingMenu = before);
         }
 
         internal static (bool Item, int[] Windows)? Menu => _usingMenu;
@@ -48,24 +41,10 @@ namespace DSPRE.Avalonia.Data
         {
             IScreenButtons before = _usingButtons;
             _usingButtons = buttons;
-            return new ButtonsRestore(before);
+            return new OnDispose(() => _usingButtons = before);
         }
 
         internal static T ButtonsInUse<T>() where T : class, IScreenButtons => _usingButtons as T;
-
-        private sealed class ButtonsRestore : IDisposable
-        {
-            private readonly IScreenButtons _before;
-            public ButtonsRestore(IScreenButtons before) { _before = before; }
-            public void Dispose() => _usingButtons = _before;
-        }
-
-        private sealed class MenuRestore : IDisposable
-        {
-            private readonly (bool, int[])? _before;
-            public MenuRestore((bool, int[])? before) { _before = before; }
-            public void Dispose() => _usingMenu = _before;
-        }
 
         public static ScreenWindowLayout For(string screen)
         {
@@ -92,14 +71,7 @@ namespace DSPRE.Avalonia.Data
         {
             IReadOnlyDictionary<string, int> before = _usingFonts;
             _usingFonts = fonts;
-            return new FontsRestore(before);
-        }
-
-        private sealed class FontsRestore : IDisposable
-        {
-            private readonly IReadOnlyDictionary<string, int> _before;
-            public FontsRestore(IReadOnlyDictionary<string, int> before) { _before = before; }
-            public void Dispose() => _usingFonts = _before;
+            return new OnDispose(() => _usingFonts = before);
         }
 
         /// <summary>The font number a party window part prints in, or 0 (the game's font) when the patch hasn't set one.</summary>

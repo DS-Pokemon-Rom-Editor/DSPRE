@@ -159,7 +159,7 @@
                   <TextBlock Grid.Row="2" Grid.Column="0" Text="Size" Classes="label"/>
                   <ComboBox  Grid.Row="2" Grid.Column="1" ItemsSource="{Binding FollowerSizeOptions}" SelectedIndex="{Binding FollowerSizeIndex}"/>
                   <TextBlock Grid.Row="2" Grid.Column="2" Text="Stored value" Classes="label" Margin="12,0,6,0" ToolTip.Tip="Raw bits"/>
-                  <TextBox   Grid.Row="2" Grid.Column="3" Text="{Binding FollowerRawBits}" MaxLength="4" FontFamily="Consolas,monospace"
+                  <TextBox   Grid.Row="2" Grid.Column="3" Text="{Binding FollowerRawBits}" MaxLength="4" FontFamily="{StaticResource CodeFont}"
                              Width="70" HorizontalAlignment="Left"/>
                   <TextBlock Grid.Row="4" Grid.Column="0" Text="Hover" Classes="label"/>
                   <ComboBox  Grid.Row="4" Grid.Column="1" ItemsSource="{Binding FollowerMotionOptions}" SelectedIndex="{Binding FollowerMotionIndex}"

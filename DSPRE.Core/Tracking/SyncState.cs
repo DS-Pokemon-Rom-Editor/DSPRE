@@ -44,7 +44,7 @@ namespace DSPRE.Tracking
         {
             string path = PathIn(projectDir);
             if (!File.Exists(path)) return new SyncState();
-            try { return JsonSerializer.Deserialize<SyncState>(File.ReadAllText(path), Options) ?? new SyncState(); }
+            try { return PlainFiles.ReadJson<SyncState>(path, Options) ?? new SyncState(); }
             catch (Exception ex) when (ex is IOException || ex is JsonException)
             {
                 AppLogger.Warn("Track changes: the sync state couldn't be read, so every file is checked again: " + ex.Message);
@@ -52,6 +52,6 @@ namespace DSPRE.Tracking
             }
         }
 
-        public void Save(string projectDir) => PlainFiles.WriteText(PathIn(projectDir), JsonSerializer.Serialize(this, Options));
+        public void Save(string projectDir) => PlainFiles.WriteJson(PathIn(projectDir), this, Options);
     }
 }

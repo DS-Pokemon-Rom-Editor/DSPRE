@@ -689,8 +689,7 @@ namespace DSPRE.Avalonia.Data
             }
             if (lead.Parts.Count > 0) units.Add(lead);
 
-            string[] names;
-            try { names = RomInfo.GetPokemonNames(); } catch (Exception ex) { AppLogger.WarnOnce("GraphicUnits.PartyIcons", ex); names = Array.Empty<string>(); }
+            string[] names = RomInfo.GetPokemonNamesOrEmpty();
 
             // Files run species by species, then eggs and forms, so every species has its row before its forms.
             Dictionary<int, GraphicAssets.Unit> rowOf = new Dictionary<int, GraphicAssets.Unit>();

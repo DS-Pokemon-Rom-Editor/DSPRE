@@ -120,26 +120,7 @@ namespace DSPRE.Tracking.Kinds
         }
 
         /// <summary>Differing spans; a length change ends with a span reaching the longer file's end.</summary>
-        private static List<(int, int)> Ranges(byte[] a, byte[] b)
-        {
-            List<(int, int)> ranges = new List<(int, int)>();
-            int shared = Math.Min(a.Length, b.Length);
-            int start = -1, last = -1;
-            for (int i = 0; i < shared; i++)
-            {
-                if (a[i] == b[i]) continue;
-                if (start >= 0 && i - last - 1 >= Join)
-                {
-                    ranges.Add((start, last - start + 1));
-                    start = -1;
-                }
-                if (start < 0) start = i;
-                last = i;
-            }
-            if (start >= 0) ranges.Add((start, last - start + 1));
-            if (a.Length != b.Length) ranges.Add((shared, Math.Max(a.Length, b.Length) - shared));
-            return ranges;
-        }
+        private static List<(int At, int Length)> Ranges(byte[] a, byte[] b) => ByteRanges.Changed(a, b, Join);
 
         private static byte[] Slice(byte[] data, int at, int length)
         {

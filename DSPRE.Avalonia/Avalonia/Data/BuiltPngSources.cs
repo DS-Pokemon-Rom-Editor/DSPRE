@@ -135,6 +135,6 @@ namespace DSPRE.Avalonia.Data
         private static int BitDepth(byte[] png, int colours) => png.Length > 24 && png[24] == 4 && colours <= 16 ? 4 : 8;
 
         private static string Rel(string path) =>
-            Path.GetRelativePath(HgEngineProject.RepoPathUnc, path).Replace('\\', '/');
+            ProjectPaths.RelativeKey(HgEngineProject.RepoPathUnc, path);
     }
 }

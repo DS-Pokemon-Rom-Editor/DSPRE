@@ -46,7 +46,7 @@ namespace DSPRE.ROMFiles
             if (key == _tableKey) return _table;
             _tableKey = key;
             _table = null;
-            if (ARM9.CheckCompressionMark()) return null;
+            if (ARM9.IsStillCompressed()) return null;
             byte[] bytes = DSUtils.ReadFromFile(Arm9Path, offset, (LastSpecies + 1) * 2);
             if (bytes == null || bytes.Length < (LastSpecies + 1) * 2) return null;
             ushort[] table = new ushort[LastSpecies + 1];

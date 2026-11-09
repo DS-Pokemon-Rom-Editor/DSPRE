@@ -17,14 +17,14 @@
               Background="{DynamicResource Editor.PanelBg}"
               BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
         <StackPanel Spacing="4">
-          <SelectableTextBlock Text="{Binding Code}" FontFamily="Consolas, monospace" FontWeight="SemiBold"/>
+          <SelectableTextBlock Text="{Binding Code}" FontFamily="{StaticResource CodeFont}" FontWeight="SemiBold"/>
           <TextBlock Text="{Binding What}" TextWrapping="Wrap"/>
           <TextBlock Text="{Binding Note}" IsVisible="{Binding HasNote}" TextWrapping="Wrap"
                      FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
           <TextBlock Text="From the game" IsVisible="{Binding HasExample}" FontSize="12" Margin="0,4,0,0"
                      Foreground="{DynamicResource Editor.Subtle}"/>
           <SelectableTextBlock Text="{Binding Example}" IsVisible="{Binding HasExample}"
-                               FontFamily="Consolas, monospace" TextWrapping="Wrap"/>
+                               FontFamily="{StaticResource CodeFont}" TextWrapping="Wrap"/>
         </StackPanel>
       </Border>
     </DataTemplate>
@@ -54,7 +54,7 @@
                 <Border IsVisible="{Binding HasCode}" Padding="10" CornerRadius="4"
                         Background="{DynamicResource Editor.PanelBg}"
                         BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
-                  <TextBlock Text="{Binding Code}" FontFamily="Consolas, monospace"
+                  <TextBlock Text="{Binding Code}" FontFamily="{StaticResource CodeFont}"
                              TextWrapping="Wrap"/>
                 </Border>
 
@@ -71,11 +71,11 @@
                           <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>
                           <TextBlock Text="Script" FontSize="12"
                                      Foreground="{DynamicResource Editor.Subtle}"/>
-                          <TextBlock Text="{Binding Script}" FontFamily="Consolas, monospace"
+                          <TextBlock Text="{Binding Script}" FontFamily="{StaticResource CodeFont}"
                                      TextWrapping="Wrap"/>
                           <TextBlock Text="Message" FontSize="12" Margin="0,4,0,0"
                                      Foreground="{DynamicResource Editor.Subtle}"/>
-                          <TextBlock Text="{Binding Message}" FontFamily="Consolas, monospace"
+                          <TextBlock Text="{Binding Message}" FontFamily="{StaticResource CodeFont}"
                                      TextWrapping="Wrap"/>
                         </StackPanel>
                       </Border>
@@ -90,7 +90,7 @@
                               Background="{DynamicResource Editor.PanelBg}"
                               BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
                         <StackPanel Spacing="4">
-                          <TextBlock Text="{Binding Pattern}" FontFamily="Consolas, monospace"
+                          <TextBlock Text="{Binding Pattern}" FontFamily="{StaticResource CodeFont}"
                                      FontWeight="SemiBold" TextWrapping="Wrap"/>
                           <StackPanel Orientation="Horizontal" Spacing="6">
                             <TextBlock Text="Type" FontWeight="SemiBold"/>

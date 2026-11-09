@@ -77,14 +77,7 @@ namespace DSPRE.Avalonia.Data
         {
             int? before = _usingNameFont;
             _usingNameFont = font;
-            return new NameFontRestore(before);
-        }
-
-        private sealed class NameFontRestore : IDisposable
-        {
-            private readonly int? _before;
-            public NameFontRestore(int? before) { _before = before; }
-            public void Dispose() => _usingNameFont = _before;
+            return new OnDispose(() => _usingNameFont = before);
         }
 
         /// <summary>Loads the font for HP bar names: the system font, unless the HP bar fonts patch picked another.</summary>

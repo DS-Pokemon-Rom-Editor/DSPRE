@@ -102,8 +102,7 @@ namespace NarcAPI
 
         private static bool IsMember(FileInfo file)
         {
-            string ext = file.Extension.ToLowerInvariant();
-            if (ext == ".bak" || ext == ".backup") return false;
+            if (DSPRE.DSUtils.IsSideFile(file.Name)) return false;
             if (file.Name.StartsWith(".")
                 || file.Name.Equals("Thumbs.db", StringComparison.OrdinalIgnoreCase)
                 || file.Name.Equals("desktop.ini", StringComparison.OrdinalIgnoreCase)) return false;
@@ -123,9 +122,24 @@ namespace NarcAPI
 
         public void Save(String filePath)
         {
+            using (FileStream file = File.Create(filePath)) WriteTo(file);
+            AppLogger.Debug($"Saved NARC \"{Name}\" with {_elements.Length} elements to file: {filePath}");
+            DSPRE.NarcSync.NoteSaved(_sourceFolder, filePath);
+        }
+
+        /// <summary>The packed archive, for writing a copy outside the project.</summary>
+        public byte[] ToBytes()
+        {
+            using MemoryStream packed = new MemoryStream();
+            WriteTo(packed);
+            return packed.ToArray();
+        }
+
+        private void WriteTo(Stream stream)
+        {
             uint fileSizeOffset, fileImageSizeOffset, curOffset;
 
-            BinaryWriter bw = new BinaryWriter(File.Create(filePath));
+            using BinaryWriter bw = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true);
             // Write NARC Section
             bw.Write(NarcFileMagicNum);
             bw.Write(0x0100FFFE);
@@ -188,10 +202,7 @@ namespace NarcAPI
             bw.Seek((int)fileImageSizeOffset, SeekOrigin.Begin);         // seeks back to FIMG size
             bw.Write((UInt32)curOffset + FileImageHeaderSize);   // FIMG size == Last end offset + File image header size
 
-            AppLogger.Debug($"Saved NARC \"{Name}\" with {_elements.Length} elements and filesize {fileSize} Bytes to file: {filePath}");
-
-            bw.Close();
-            DSPRE.NarcSync.NoteSaved(_sourceFolder, filePath);
+            bw.Flush();
         }
 
         public int ElementCount => _elements.Length;

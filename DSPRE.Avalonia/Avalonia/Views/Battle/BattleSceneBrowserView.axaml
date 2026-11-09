@@ -50,7 +50,7 @@
                ScrollViewer.HorizontalScrollBarVisibility="Disabled">
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="data:BattleScenes+Scene">
-            <TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="12"
+            <TextBlock Text="{Binding Label}" FontFamily="{StaticResource CodeFont}" FontSize="12"
                        TextWrapping="Wrap"/>
           </DataTemplate>
         </ListBox.ItemTemplate>

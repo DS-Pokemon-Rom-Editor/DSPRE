@@ -74,7 +74,7 @@ namespace DSPRE.Tracking
             foreach (KeyValuePair<DirNames, (string packedDir, string unpackedDir)> d in GameDirs)
             {
                 if (string.IsNullOrEmpty(d.Value.packedDir)) continue;
-                paths[d.Key] = Path.GetRelativePath(projectRoot, d.Value.packedDir).Replace('\\', '/');
+                paths[d.Key] = ProjectPaths.RelativeKey(projectRoot, d.Value.packedDir);
             }
             return paths;
         }
@@ -163,10 +163,9 @@ namespace DSPRE.Tracking
                 {
                     foreach (string file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
                     {
-                        string relative = Path.GetRelativePath(Root, file).Replace('\\', '/');
+                        string relative = ProjectPaths.RelativeKey(Root, file);
                         // Backups DSPRE leaves beside a file aren't part of the ROM, as archive packing also skips them.
-                        if (_archivePaths.Contains(relative) || relative.EndsWith(".dspre.tmp", StringComparison.Ordinal)
-                            || relative.EndsWith(DSUtils.BackupSuffix, StringComparison.Ordinal) || relative.EndsWith(".bak", StringComparison.Ordinal)) continue;
+                        if (_archivePaths.Contains(relative) || DSUtils.IsSideFile(relative)) continue;
                         yield return TrackedFile.Tree(relative);
                     }
                 }

@@ -127,7 +127,7 @@ namespace DSPRE.ROMFiles
         {
             data = null;
             if (HgEngine.HgEngineProject.IsActive) { error = "hg-engine keeps its roamers in src/field_roamer.c."; return false; }
-            if (!IsDsRomProject && ARM9.CheckCompressionMark()) { error = "arm9 is still compressed. Convert this project to ds-rom format first."; return false; }
+            if (!IsDsRomProject && ARM9.IsStillCompressed()) { error = "arm9 is still compressed. Convert this project to ds-rom format first."; return false; }
             Family? family = GameFamily switch { GameFamilies.DP => Family.DP, GameFamilies.Plat => Family.Plat, GameFamilies.HGSS => Family.HGSS, _ => (Family?)null };
             if (family == null) { error = "This game has no roamers DSPRE knows."; return false; }
             byte[] code;

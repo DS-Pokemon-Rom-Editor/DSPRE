@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace DSPRE.Tracking
@@ -14,8 +13,7 @@ namespace DSPRE.Tracking
 
         public static string Sha1Of(string ndsPath)
         {
-            using FileStream stream = File.OpenRead(ndsPath);
-            return "sha1:" + Convert.ToHexString(SHA1.HashData(stream)).ToLowerInvariant();
+            return "sha1:" + FileHash.Sha1(ndsPath);
         }
 
         /// <summary>Game code and revision from an .nds header.</summary>

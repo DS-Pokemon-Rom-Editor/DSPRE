@@ -54,7 +54,7 @@ namespace DSPRE.ROMFiles
                 return HgEngine.HgEngineSwarms.WhyNot() ?? (HgEngine.HgEngineSwarms.TryRead(out _, out string error) ? null : error);
             SwarmSites sites = RomLocator.SwarmSites;
             if (sites == null) return "Works on " + DescribeDumps(RomLocator.SwarmDumps) + ".";
-            if (sites.Overlay < 0 && !IsDsRomProject && ARM9.CheckCompressionMark()) return "arm9 is still compressed. Convert this project to ds-rom format first.";
+            if (sites.Overlay < 0 && !IsDsRomProject && ARM9.IsStillCompressed()) return "arm9 is still compressed. Convert this project to ds-rom format first.";
             try { Load(); }
             catch (Exception e) when (e is InvalidDataException || e is IOException || e is ArgumentException) { return e.Message; }
             return null;

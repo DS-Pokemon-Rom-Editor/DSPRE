@@ -80,7 +80,7 @@
         <ListBox x:Name="ItemList" ItemsSource="{Binding Shown}" SelectedItem="{Binding Selected}">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:ModelBrowserViewModel+Item">
-              <TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="13"/>
+              <TextBlock Text="{Binding Label}" FontFamily="{StaticResource CodeFont}" FontSize="13"/>
             </DataTemplate>
           </ListBox.ItemTemplate>
         </ListBox>

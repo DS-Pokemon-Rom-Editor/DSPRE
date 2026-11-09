@@ -28,8 +28,7 @@ namespace DSPRE.ROMFiles
             if (RomInfo.GameDirs == null || !RomInfo.GameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) paths)) return null;
             if (!HgEngineDomains.IsOwned(dir))
                 DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { dir });
-            string unpacked = Directory.Exists(paths.unpackedDir) && Directory.EnumerateFiles(paths.unpackedDir).Any()
-                ? paths.unpackedDir : null;
+            string unpacked = ArchiveMembers.HasMembers(paths.unpackedDir) ? paths.unpackedDir : null;
             string packed = File.Exists(paths.packedDir) ? paths.packedDir : null;
             return unpacked == null && packed == null ? null : new PokemonBattleSpriteArchive(dir, packed, unpacked);
         }

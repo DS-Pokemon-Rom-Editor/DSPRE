@@ -74,7 +74,7 @@ namespace DSPRE.HgEngine
         {
             cells = null; error = null;
             CellJson doc;
-            try { doc = JsonSerializer.Deserialize<CellJson>(File.ReadAllText(cellJsonPath)); }
+            try { doc = PlainFiles.ReadJson<CellJson>(cellJsonPath); }
             catch (Exception ex) { error = cellJsonPath + " couldn't be read: " + ex.Message; return false; }
             if (doc?.Cells == null || doc.Cells.Length == 0) { error = cellJsonPath + " has no cells."; return false; }
 
@@ -99,7 +99,7 @@ namespace DSPRE.HgEngine
         {
             cells = null; durations = null; error = null;
             AnimJson doc;
-            try { doc = JsonSerializer.Deserialize<AnimJson>(File.ReadAllText(animJsonPath)); }
+            try { doc = PlainFiles.ReadJson<AnimJson>(animJsonPath); }
             catch (Exception ex) { error = animJsonPath + " couldn't be read: " + ex.Message; return false; }
             if (doc?.Sequences == null || doc.Sequences.Length == 0 || doc.AnimationResults == null || doc.AnimationResults.Length == 0)
             {

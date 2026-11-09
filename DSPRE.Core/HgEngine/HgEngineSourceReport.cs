@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 
 namespace DSPRE.HgEngine
 {
@@ -169,7 +168,7 @@ namespace DSPRE.HgEngine
                 string Hash(string rel)
                 {
                     string path = Path.Combine(root, rel.Replace('/', Path.DirectorySeparatorChar));
-                    return File.Exists(path) ? Convert.ToHexString(SHA1.HashData(File.ReadAllBytes(path))) : null;
+                    return File.Exists(path) ? FileHash.Sha1(path) : null;
                 }
                 if (Hash(reference) is not string wanted) return;
                 List<string> copies = paths.Where(p => p.Key != bulbasaur && p.Value != reference && Hash(p.Value) == wanted)

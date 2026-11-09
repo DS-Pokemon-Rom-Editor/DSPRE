@@ -25,16 +25,7 @@ namespace DSPRE.Avalonia.Data
         public static IDisposable Writing()
         {
             Gate.Wait();
-            return new Release();
-        }
-
-        private sealed class Release : IDisposable
-        {
-            private int _done;
-            public void Dispose()
-            {
-                if (Interlocked.Exchange(ref _done, 1) == 0) Gate.Release();
-            }
+            return new OnDispose(() => Gate.Release());
         }
     }
 }

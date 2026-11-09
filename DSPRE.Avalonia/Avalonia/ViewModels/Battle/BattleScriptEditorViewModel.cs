@@ -1631,8 +1631,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // The Pokémon shown in the preview (and named on the gauge); pick it from a dropdown. Changing it
         // live-loads that species' front/back battle sprites into the scene.
         private string[] _speciesNames;
-        public string[] SpeciesNames => _speciesNames ??= SafeSpeciesNames();
-        private static string[] SafeSpeciesNames() { try { return GetPokemonNames(); } catch (Exception ex) { AppLogger.WarnOnce("BattleScriptEditorViewModel.SafeSpeciesNames", ex); return Array.Empty<string>(); } }
+        public string[] SpeciesNames => _speciesNames ??= GetPokemonNamesOrEmpty();
         public int GaugeSpeciesIndex
         {
             get => _gaugeSpeciesId;
@@ -1682,7 +1681,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private static List<string> MessageBoxNameList()
         {
             List<string> names = new List<string> { "Off" };
-            for (int i = 0; i < ROMFiles.FieldWindowFrame.FrameCount; i++) names.Add($"Frame {i + 1}");
+            names.AddRange(Data.WindowFrames.Names);
             return names;
         }
 

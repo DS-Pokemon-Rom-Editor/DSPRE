@@ -105,8 +105,8 @@
           <StackPanel Spacing="4" IsVisible="{Binding IsExpansionApplied}">
             <TextBlock Text="Copied settings (read-only)" FontWeight="SemiBold"
                        ToolTip.Tip="What this entry copied from another one."/>
-            <TextBlock Text="{Binding RendererInfoText, StringFormat='Renderer row: {0}'}" FontSize="11" FontFamily="Consolas,Cascadia Mono,monospace" TextWrapping="Wrap"/>
-            <TextBlock Text="{Binding AnimationInfoText, StringFormat='Animation row: {0}'}" FontSize="11" FontFamily="Consolas,Cascadia Mono,monospace" TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding RendererInfoText, StringFormat='Renderer row: {0}'}" FontSize="11" FontFamily="{StaticResource CodeFont}" TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding AnimationInfoText, StringFormat='Animation row: {0}'}" FontSize="11" FontFamily="{StaticResource CodeFont}" TextWrapping="Wrap"/>
           </StackPanel>
 
         </StackPanel>

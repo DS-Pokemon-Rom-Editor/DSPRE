@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -24,7 +23,7 @@ namespace DSPRE
         public static int Merge(string projectCopy, string shared, string repoPath)
         {
             string marker = projectCopy + ".base";
-            string sharedHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(shared)));
+            string sharedHash = FileHash.Sha256(shared);
             if (File.Exists(marker) && File.ReadAllText(marker).Trim() == sharedHash) return 0;
 
             JsonObject project = Parse(File.ReadAllText(projectCopy));
@@ -104,7 +103,7 @@ namespace DSPRE
                 if (Repository.IsValid(repoPath))
                 {
                     using Repository repo = new Repository(repoPath);
-                    string relative = Path.GetRelativePath(repoPath, shared).Replace('\\', '/');
+                    string relative = ProjectPaths.RelativeKey(repoPath, shared);
                     foreach (LogEntry change in repo.Commits.QueryBy(relative))
                         if (change.Commit[change.Path]?.Target is Blob blob && Parse(blob.GetContentText()) is JsonObject version)
                             Add(version);

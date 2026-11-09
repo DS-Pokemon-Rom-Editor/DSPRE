@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.Json;
 using DSPRE.HgEngine;
 using static DSPRE.RomInfo;
 
@@ -28,6 +29,16 @@ namespace DSPRE
             else File.WriteAllText(path, text, encoding);
             ProjectWrites.Raise(path);
         }
+
+        private static readonly JsonSerializerOptions Indented = new JsonSerializerOptions { WriteIndented = true };
+
+        /// <summary>Writes <paramref name="value"/> as JSON, indented unless other options are given.</summary>
+        public static void WriteJson<T>(string path, T value, JsonSerializerOptions options = null) =>
+            WriteText(path, JsonSerializer.Serialize(value, options ?? Indented));
+
+        /// <summary>Reads a JSON file into <typeparamref name="T"/>. Throws as reading and parsing do.</summary>
+        public static T ReadJson<T>(string path, JsonSerializerOptions options = null) =>
+            JsonSerializer.Deserialize<T>(File.ReadAllText(path), options);
 
         public static void WriteLines(string path, IEnumerable<string> lines)
         {
@@ -62,10 +73,7 @@ namespace DSPRE
 
         private static bool IsProjectCode(string path)
         {
-            if (string.IsNullOrEmpty(WorkDir) || string.IsNullOrEmpty(path)) return false;
-            string full = Path.GetFullPath(path);
-            string root = Path.GetFullPath(WorkDir).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
-            return full.StartsWith(root, StringComparison.OrdinalIgnoreCase) && HgEngineWriteGuard.TryIdentify(full, out int _);
+            return ProjectPaths.IsInside(path, WorkDir) && HgEngineWriteGuard.TryIdentify(Path.GetFullPath(path), out int _);
         }
     }
 }

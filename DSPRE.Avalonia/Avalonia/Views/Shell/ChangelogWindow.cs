@@ -29,7 +29,7 @@ namespace DSPRE.Avalonia.Views.Shell
             IsReadOnly = true,
             AcceptsReturn = true,
             TextWrapping = TextWrapping.Wrap,
-            FontFamily = new FontFamily("Consolas,monospace"),
+            FontFamily = DSPRE.Avalonia.Data.UiFonts.Code,
             FontSize = 12,
         };
         private readonly TextBlock _status = new TextBlock { FontSize = 12, VerticalAlignment = VerticalAlignment.Center };

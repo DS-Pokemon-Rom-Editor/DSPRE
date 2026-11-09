@@ -19,6 +19,25 @@ namespace DSPRE
 
         public static string PathOf(DirNames dir, int id) => Path.Combine(GameDirs[dir].unpackedDir, id.ToString("D4"));
 
+        /// <summary>Whether the archive is mapped for this game and its folder already holds members.</summary>
+        public static bool IsUnpacked(DirNames dir) =>
+            GameDirs != null && GameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) p) && HasMembers(p.unpackedDir);
+
+        public static bool HasMembers(string folder)
+        {
+            try { return !string.IsNullOrEmpty(folder) && Directory.Exists(folder) && Directory.EnumerateFiles(folder).Any(); }
+            // A folder being replaced right now counts as empty.
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { return false; }
+        }
+
+        /// <summary>The archives whose packed file is <paramref name="packedPath"/>.</summary>
+        public static IEnumerable<DirNames> DirsOfArchive(string packedPath)
+        {
+            if (GameDirs == null || string.IsNullOrEmpty(packedPath)) yield break;
+            foreach (KeyValuePair<DirNames, (string packedDir, string unpackedDir)> kv in GameDirs)
+                if (!string.IsNullOrEmpty(kv.Value.packedDir) && ProjectPaths.Same(kv.Value.packedDir, packedPath)) yield return kv.Key;
+        }
+
         /// <summary>How many members the unpacked archive holds, which is also the next new member's number.</summary>
         public static int Count(DirNames dir) =>
             Directory.GetFiles(GameDirs[dir].unpackedDir).Count(f => int.TryParse(Path.GetFileName(f), out int _));
@@ -257,7 +276,13 @@ namespace DSPRE
                     if (c.Bytes != null) HgEngineSourceAssets.WriteVerbatim(HgEngineOwnedFiles.ArchiveOf(dir), c.Id, c.Bytes);
                     Written?.Invoke(dir, c.Id, original, c.Bytes);
                 }
-                foreach (Change c in _changes) ProjectWrites.Raise(System.IO.Path.GetFullPath(c.Path));
+                foreach ((Change c, string _, bool _, byte[] original, DateTime _) in staged)
+                {
+                    string full = System.IO.Path.GetFullPath(c.Path);
+                    // Code writes report the bytes that changed, as DSUtils.WriteWholeFile does.
+                    if (c.Bytes != null && HgEngine.HgEngineWriteGuard.TryIdentify(full, out int _)) ProjectWrites.RaiseCodeChanges(full, original, c.Bytes);
+                    else ProjectWrites.Raise(full);
+                }
                 return true;
             }
         }

@@ -22,12 +22,7 @@ namespace DSPRE.Avalonia.Data
         {
             _seen = seen;
             _edit = (bank, line, text);
-            return new Stop();
-        }
-
-        private sealed class Stop : IDisposable
-        {
-            public void Dispose() { _seen = null; _edit = null; }
+            return new OnDispose(() => { _seen = null; _edit = null; });
         }
     }
 }

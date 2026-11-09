@@ -332,14 +332,7 @@ namespace DSPRE.ROMFiles
         {
             byte[] before = _staged;
             _staged = sheet;
-            return new Restore(() => _staged = before);
-        }
-
-        private sealed class Restore : IDisposable
-        {
-            private Action _undo;
-            public Restore(Action undo) => _undo = undo;
-            public void Dispose() { _undo?.Invoke(); _undo = null; }
+            return new OnDispose(() => _staged = before);
         }
 
         /// <summary>The sheet's tiles, 4 bits a pixel, or null.</summary>
@@ -443,7 +436,7 @@ namespace DSPRE.ROMFiles
         {
             byte[] before = _stagedOverlay;
             _stagedOverlay = overlay;
-            return new Restore(() => _stagedOverlay = before);
+            return new OnDispose(() => _stagedOverlay = before);
         }
 
         public static bool IsOverlayStaged => _stagedOverlay != null;

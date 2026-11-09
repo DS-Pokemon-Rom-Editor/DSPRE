@@ -87,11 +87,14 @@ namespace DSPRE
             return BitConverter.ToInt32(ReadBytes(RomInfo.Arm9CompressionMarkOffset, 4), 0) != 0;
         }
 
+        /// <summary>Whether arm9.bin on disk is still compressed, as after a fresh extract.</summary>
+        public static bool IsStillCompressed() => CheckCompressionMark() && !IsFlatButMarked();
+
         /// <summary>Decompresses arm9.bin in place if it is marked compressed. True when it is flat afterwards.</summary>
         public static bool DecompressIfMarked()
         {
             // The mark stays set until Save ROM clears it, so a flat file must not be decompressed or trimmed again.
-            if (!CheckCompressionMark() || IsFlatButMarked()) return true;
+            if (!IsStillCompressed()) return true;
             // An ndstool extraction keeps the 12-byte footer after the code, which blz can't read past.
             if (!RomInfo.IsDsRomProject) EditSize(-12);
             return Decompress(Arm9Path);

@@ -50,7 +50,7 @@
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:LabelEntryRow">
                 <Grid ColumnDefinitions="44,*,150,150" Margin="0,1">
-                  <TextBlock Grid.Column="0" Text="{Binding Index}" VerticalAlignment="Center" FontFamily="Consolas" Foreground="{DynamicResource Editor.Subtle}"/>
+                  <TextBlock Grid.Column="0" Text="{Binding Index}" VerticalAlignment="Center" FontFamily="{StaticResource CodeFont}" Foreground="{DynamicResource Editor.Subtle}"/>
                   <TextBox     Grid.Column="1" Text="{Binding Value}" Margin="0,0,6,0"/>
                   <TextBlock   Grid.Column="2" Text="{Binding DefaultHint}" VerticalAlignment="Center" FontSize="12"
                                Foreground="{DynamicResource Editor.Subtle}" TextTrimming="CharacterEllipsis"/>

@@ -71,7 +71,7 @@ namespace DSPRE.Avalonia.Data
             try
             {
                 if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
-                PaletteColorFile file = JsonSerializer.Deserialize<PaletteColorFile>(File.ReadAllText(path), ReadOptions);
+                PaletteColorFile file = PlainFiles.ReadJson<PaletteColorFile>(path, ReadOptions);
                 if (file?.Favorites != null)
                     for (int i = 0; i < Math.Min(FavoriteSlots, file.Favorites.Length); i++) Favorites[i] = file.Favorites[i];
                 if (file?.LastUsed != null)
@@ -87,7 +87,7 @@ namespace DSPRE.Avalonia.Data
             try
             {
                 PaletteColorFile file = new PaletteColorFile { Favorites = Favorites, LastUsed = LastUsed };
-                PlainFiles.WriteText(path, JsonSerializer.Serialize(file, new JsonSerializerOptions { WriteIndented = true }));
+                PlainFiles.WriteJson(path, file);
             }
             catch (Exception ex) { AppLogger.Error("PaletteColorStore.Save: " + ex.Message); }
         }

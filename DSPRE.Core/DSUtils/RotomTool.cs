@@ -209,7 +209,7 @@ namespace DSPRE
             {
                 if (!File.Exists(source)) continue;
                 string destination = Path.Combine(ProjectRoot, Path.GetFileName(source));
-                if (string.Equals(Path.GetFullPath(source), Path.GetFullPath(destination), StringComparison.OrdinalIgnoreCase)) continue;
+                if (ProjectPaths.Same(source, destination)) continue;
                 string target = Path.GetRelativePath(ProjectRoot, source);
                 FileInfo file = new FileInfo(destination);
                 if (file.LinkTarget == target) continue;
@@ -398,7 +398,7 @@ namespace DSPRE
                         }
                         string full = Path.GetFullPath(Path.Combine(ProjectRoot, rel));
                         int line = start < 0 ? 0 : LineOfByte(full, start);
-                        string shown = Path.GetRelativePath(ProjectRoot, full).Replace('\\', '/');
+                        string shown = ProjectPaths.RelativeKey(ProjectRoot, full);
                         lines.Add(shown + (line > 0 ? ", line " + line : "") + ": " + (message ?? "didn't compile"));
                     }
                 }

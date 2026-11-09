@@ -27,7 +27,7 @@ namespace DSPRE
 
             try
             {
-                if (ARM9.CheckCompressionMark() || !File.Exists(RomInfo.Arm9Path)) return null;
+                if (ARM9.IsStillCompressed() || !File.Exists(RomInfo.Arm9Path)) return null;
                 byte[] arm9 = File.ReadAllBytes(RomInfo.Arm9Path);
                 _cached = Locate(arm9, ARM9.Address, contactCount, Filesystem.GetTextArchivesCount());
             }

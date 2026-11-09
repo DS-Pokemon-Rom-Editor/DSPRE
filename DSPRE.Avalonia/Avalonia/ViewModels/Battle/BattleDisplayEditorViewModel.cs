@@ -203,12 +203,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             ? new SolidColorBrush(global::Avalonia.Media.Color.FromRgb(0x50, 0x50, 0x50))
             : new SolidColorBrush(global::Avalonia.Media.Color.FromRgb(0xF8, 0xF8, 0xF8));
 
-        private static string[] SafeSpeciesNames() { try { return GetPokemonNames(); } catch (Exception ex) { AppLogger.WarnOnce("BattleDisplayEditorViewModel.SafeSpeciesNames", ex); return Array.Empty<string>(); } }
         public string GaugeNameText
         {
             get
             {
-                string[] names = SafeSpeciesNames();
+                string[] names = GetPokemonNamesOrEmpty();
                 return (_currentId >= 0 && _currentId < names.Length) ? names[_currentId] : string.Empty;
             }
         }

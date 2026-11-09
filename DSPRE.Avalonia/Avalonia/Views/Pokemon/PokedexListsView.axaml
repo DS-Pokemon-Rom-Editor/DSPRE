@@ -47,7 +47,7 @@
                 <DataTemplate x:DataType="vm:PokedexListsViewModel+Row">
                   <StackPanel Orientation="Horizontal" Spacing="6">
                     <Image Width="32" Height="32" Source="{Binding Species, Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
-                    <TextBlock Text="{Binding Text}" VerticalAlignment="Center" FontFamily="Consolas,monospace"/>
+                    <TextBlock Text="{Binding Text}" VerticalAlignment="Center" FontFamily="{StaticResource CodeFont}"/>
                   </StackPanel>
                 </DataTemplate>
               </ListBox.ItemTemplate>
@@ -85,7 +85,7 @@
                   <DataTemplate x:DataType="vm:PokedexListsViewModel+Row">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                       <Image Width="32" Height="32" Source="{Binding Species, Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
-                      <TextBlock Text="{Binding Text}" VerticalAlignment="Center" FontFamily="Consolas,monospace"/>
+                      <TextBlock Text="{Binding Text}" VerticalAlignment="Center" FontFamily="{StaticResource CodeFont}"/>
                     </StackPanel>
                   </DataTemplate>
                 </ListBox.ItemTemplate>

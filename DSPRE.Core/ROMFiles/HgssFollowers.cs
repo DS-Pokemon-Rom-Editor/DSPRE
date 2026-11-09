@@ -59,7 +59,7 @@ namespace DSPRE.ROMFiles
             if (HgEngineProject.IsActive || IsHgEngineBaseProject) return "hg-engine keeps follower data in its source.";
             FollowerTableSites tables = RomLocator.FollowerTables;
             if (tables == null || !File.Exists(Arm9Path)) return "The follower tables weren't found.";
-            if (ARM9.CheckCompressionMark()) return "The ARM9 is still compressed.";
+            if (ARM9.IsStillCompressed()) return "The ARM9 is still compressed.";
             // The tables must still read as the retail ones: Bulbasaur 0, Ivysaur 1, Venusaur 2 with a female model, Unown 27 forms.
             if (Lut(tables.Models, 4) is not [0, 0, 1, 2]
                 || Lut(tables.FormCounts + 200 * 2, 1)[0] != 27
@@ -76,6 +76,13 @@ namespace DSPRE.ROMFiles
             ushort[] values = new ushort[count];
             for (int i = 0; i < count; i++) values[i] = BitConverter.ToUInt16(bytes, i * 2);
             return values;
+        }
+
+        /// <summary>The overworld entry of a species' first follower model, or -1 when it has none.</summary>
+        public static int SpriteOf(int species)
+        {
+            List<(int index, string label)> models = ModelsOf(species);
+            return models.Count == 0 ? -1 : FirstSprite + models[0].index;
         }
 
         /// <summary>The models a species walks as: the base one, then its female or form models.</summary>

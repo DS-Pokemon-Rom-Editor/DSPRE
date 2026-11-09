@@ -180,7 +180,7 @@ namespace DSPRE.ROMFiles
             VsIntroSites sites = RomLocator.VsIntroSites;
             if (sites == null) return "This version isn't supported yet.";
             if (!File.Exists(Arm9Path)) return "arm9 is missing from this project.";
-            if (!IsDsRomProject && ARM9.CheckCompressionMark()) return "arm9 is still compressed. Convert this project to ds-rom format first.";
+            if (!IsDsRomProject && ARM9.IsStillCompressed()) return "arm9 is still compressed. Convert this project to ds-rom format first.";
             foreach (int ov in new[] { sites.TaskOverlay, sites.RecordOverlay, sites.ExecutiveOverlay })
                 if (ov >= 0 && !File.Exists(OverlayUtils.GetPath(ov))) return $"Overlay {ov} is missing from this project.";
             return null;

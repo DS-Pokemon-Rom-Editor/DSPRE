@@ -20,6 +20,8 @@
 			<SolidColorBrush x:Key="SystemControlForegroundBaseMediumLowBrush" Color="{DynamicResource AColour.Tone2.Border.Static}"/>
 			<SolidColorBrush x:Key="SystemControlBackgroundAltMediumBrush"     Color="{DynamicResource AColour.Tone4.Background.Static}"/>
 			<x:Double x:Key="ControlContentThemeFontSize">12</x:Double>
+			<!-- Fixed-width text: code, logs, hex and offsets. -->
+			<FontFamily x:Key="CodeFont">Cascadia Mono, Consolas, Menlo, monospace</FontFamily>
 
 			<ResourceDictionary.ThemeDictionaries>
 				<ResourceDictionary x:Key="Light">
