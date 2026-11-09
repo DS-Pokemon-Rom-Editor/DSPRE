@@ -100,7 +100,7 @@ namespace DSPRE.Avalonia.Data
                 width = pw2;
                 height = ph2;
             }
-            else straight = tiled ? Untile(idx, width, height) : idx;
+            else straight = tiled ? TileOrder.ToRows(idx, width, height, 8, width * height) : idx;
 
             // A sixteen colour drawing takes one bank out of a palette that usually holds several, and the
             // archive says which bank this entry wants.
@@ -212,36 +212,6 @@ namespace DSPRE.Avalonia.Data
             }
             if (width <= 0 || height <= 0) return null;
             return (dataOff, dataSize, bpp, width, height, tiled);
-        }
-
-        /// <summary>Eight by eight blocks in a row, into a plain left to right picture.</summary>
-        private static byte[] Untile(byte[] tiled, int width, int height)
-        {
-            byte[] outp = new byte[width * height];
-            int across = Math.Max(1, width / 8);
-            for (int i = 0; i < tiled.Length && i < outp.Length; i++)
-            {
-                int tile = i / 64, inTile = i % 64;
-                int tx = (tile % across) * 8 + inTile % 8;
-                int ty = (tile / across) * 8 + inTile / 8;
-                if (tx < width && ty < height) outp[ty * width + tx] = tiled[i];
-            }
-            return outp;
-        }
-
-        /// <summary>A plain picture back into eight by eight blocks.</summary>
-        private static byte[] Retile(byte[] straight, int width, int height)
-        {
-            byte[] outp = new byte[width * height];
-            int across = Math.Max(1, width / 8);
-            for (int i = 0; i < outp.Length; i++)
-            {
-                int tile = i / 64, inTile = i % 64;
-                int tx = (tile % across) * 8 + inTile % 8;
-                int ty = (tile / across) * 8 + inTile / 8;
-                if (tx < width && ty < height) outp[i] = straight[ty * width + tx];
-            }
-            return outp;
         }
 
         // ── out ────────────────────────────────────────────────────────────────────────────────────
@@ -528,7 +498,7 @@ namespace DSPRE.Avalonia.Data
                     tiled = existing;
                 }
             }
-            tiled ??= isTiled ? Retile(straightIndices, width, height) : straightIndices;
+            tiled ??= isTiled ? TileOrder.ToTiles(straightIndices, width, height, 8, width * height) : straightIndices;
             byte[] outp = (byte[])stored.Clone();
             ushort seed = Scrambled(a, index) ? SpriteScrambling.Seed(stored, dataOff, dataSize, FromEnd(a)) : (ushort)0;
 

@@ -1449,14 +1449,14 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             byte[] slice = new byte[c.ByteLen];
             Array.Copy(_tile.Tiles, c.ByteStart, slice, 0, c.ByteLen);
-            byte[] raster = _tile.Tiled ? TilesToRows(slice, c.Width, c.Height, _tile.BitsPerPixel) : slice;
+            byte[] raster = _tile.Tiled ? TileOrder.ToRows(slice, c.Width, c.Height, _tile.BitsPerPixel, slice.Length) : slice;
             return UnpackIndices(raster, c.Width, c.Height, _tile.BitsPerPixel);
         }
 
         private void EncodeCell(EditCell c, int[] indices)
         {
             byte[] raster = PackIndices(indices, c.Width, c.Height, _tile.BitsPerPixel);
-            byte[] native = _tile.Tiled ? RowsToTiles(raster, c.Width, c.Height, _tile.BitsPerPixel) : raster;
+            byte[] native = _tile.Tiled ? TileOrder.ToTiles(raster, c.Width, c.Height, _tile.BitsPerPixel, raster.Length) : raster;
             Array.Copy(native, 0, _tile.Tiles, c.ByteStart, c.ByteLen);
         }
 
@@ -1531,7 +1531,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 _tile.SetTiles(pixels);
             }
 
-            byte[] rasterBytes = _tile.Tiled ? TilesToRows(_tile.Tiles, _flatWidth, _flatHeight, _tile.BitsPerPixel) : _tile.Tiles;
+            byte[] rasterBytes = _tile.Tiled ? TileOrder.ToRows(_tile.Tiles, _flatWidth, _flatHeight, _tile.BitsPerPixel, _tile.Tiles.Length) : _tile.Tiles;
             _flatIndices = UnpackIndices(rasterBytes, _flatWidth, _flatHeight, _tile.BitsPerPixel);
 
             BuildPaletteSwatches(0);
@@ -2448,7 +2448,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     // EncodeCell as they happen; the flat-sheet fallback packs on save instead.
                     int bpp = _tile.BitsPerPixel;
                     byte[] rasterBytes = PackIndices(_flatIndices, _flatWidth, _flatHeight, bpp);
-                    byte[] nativeBytes = _tile.Tiled ? RowsToTiles(rasterBytes, _flatWidth, _flatHeight, bpp) : rasterBytes;
+                    byte[] nativeBytes = _tile.Tiled ? TileOrder.ToTiles(rasterBytes, _flatWidth, _flatHeight, bpp, rasterBytes.Length) : rasterBytes;
                     if (_scrambleSeed.HasValue)
                         SpriteScrambling.Scramble(nativeBytes, 0, nativeBytes.Length, _scrambleSeed.Value);
                     _tile.SetTiles(nativeBytes);
@@ -2557,40 +2557,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         }
 
         // Where byte b of row y of tile (tx, ty) sits when the picture is stored row by row; one tile row is bpp bytes.
-        private static int RowByteAt(int tx, int ty, int y, int b, int tilesX, int bpp) => ((ty * 8 + y) * tilesX + tx) * bpp + b;
 
-        /// <summary>Bytes stored tile after tile, laid out row after row.</summary>
-        private static byte[] TilesToRows(byte[] tiled, int width, int height, int bpp)
-        {
-            byte[] rows = new byte[tiled.Length];
-            int tilesX = width / 8, pos = 0;
-            for (int ty = 0; ty < height / 8; ty++)
-                for (int tx = 0; tx < tilesX; tx++)
-                    for (int y = 0; y < 8; y++)
-                        for (int b = 0; b < bpp; b++)
-                        {
-                            int at = RowByteAt(tx, ty, y, b, tilesX, bpp);
-                            if (at >= rows.Length || pos >= tiled.Length) continue;
-                            rows[at] = tiled[pos++];
-                        }
-            return rows;
-        }
 
-        /// <summary>The inverse of <see cref="TilesToRows"/>.</summary>
-        private static byte[] RowsToTiles(byte[] rows, int width, int height, int bpp)
-        {
-            byte[] tiled = new byte[rows.Length];
-            int tilesX = width / 8, pos = 0;
-            for (int ty = 0; ty < height / 8; ty++)
-                for (int tx = 0; tx < tilesX; tx++)
-                    for (int y = 0; y < 8; y++)
-                        for (int b = 0; b < bpp; b++)
-                        {
-                            int at = RowByteAt(tx, ty, y, b, tilesX, bpp);
-                            if (at >= tiled.Length || pos >= tiled.Length) continue;
-                            tiled[pos++] = rows[at];
-                        }
-            return tiled;
-        }
     }
 }

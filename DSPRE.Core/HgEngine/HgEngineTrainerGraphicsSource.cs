@@ -19,29 +19,9 @@ namespace DSPRE.HgEngine
             Path.Combine(HgEngineProject.RepoPathUnc, "data", "graphics", back ? "trainer_back_gfx" : "trainer_gfx", id.ToString(back ? "D2" : "D3"));
 
         // The built drawing is the PNG cut into 8x8 tiles in reading order, each tile read row by row.
-        public static byte[] RasterToTiles(byte[] raster, int width, int height)
-        {
-            byte[] tiles = new byte[raster.Length];
-            int at = 0;
-            for (int ty = 0; ty < height / 8; ty++)
-                for (int tx = 0; tx < width / 8; tx++)
-                    for (int y = 0; y < 8; y++)
-                        for (int x = 0; x < 8; x++)
-                            tiles[at++] = raster[(ty * 8 + y) * width + tx * 8 + x];
-            return tiles;
-        }
+        public static byte[] RasterToTiles(byte[] raster, int width, int height) => TileOrder.ToTiles(raster, width, height, 8, raster.Length);
 
-        public static byte[] TilesToRaster(byte[] tiles, int width, int height)
-        {
-            byte[] raster = new byte[width * height];
-            int at = 0;
-            for (int ty = 0; ty < height / 8; ty++)
-                for (int tx = 0; tx < width / 8; tx++)
-                    for (int y = 0; y < 8; y++)
-                        for (int x = 0; x < 8; x++)
-                            raster[(ty * 8 + y) * width + tx * 8 + x] = tiles[at++];
-            return raster;
-        }
+        public static byte[] TilesToRaster(byte[] tiles, int width, int height) => TileOrder.ToRows(tiles, width, height, 8, width * height);
 
         /// <summary>4bpp data to one index per pixel, low nibble first.</summary>
         public static byte[] Unpack4(byte[] data)
