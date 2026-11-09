@@ -35,7 +35,7 @@ namespace DSPRE.Avalonia.Views.World
 
         // The Wild Pokémon editor needs game paths that don't exist at boot, and its view model depends on the game
         // family, so it's built in EnsureSetupAsync.
-        private object _encountersVm;
+        private IWildEditor _encountersVm;
         private bool _encountersEmbedded;
 
         public MapsWorkspaceView()
@@ -122,7 +122,7 @@ namespace DSPRE.Avalonia.Views.World
             Add("Script editor", ScriptsVM);
             Add("Level script editor", LevelScriptsVM);
             Add("Text editor", TextVM);
-            Add("Wild Pokémon editor", _encountersVm as IEditorWithUnsavedChanges);
+            Add("Wild Pokémon editor", _encountersVm);
             return editors;
         }
 
@@ -301,14 +301,9 @@ namespace DSPRE.Avalonia.Views.World
             if (LevelScriptsVM.HasUnsavedChanges && LevelScriptsVM.SelectedScriptIndex != h.LevelScriptID) yield return (LevelScriptsVM, "level script");
             if (TextVM.HasUnsavedChanges && TextVM.SelectedArchiveIndex != h.TextArchiveID) yield return (TextVM, "text archive");
             if (MapVM.HasUnsavedChanges && MapVM.HeaderId != id) yield return (MapVM, "map");
-            int wild = _encountersVm switch
-            {
-                WildEditorDPPtViewModel dppt => dppt.SelectedEncounterIndex,
-                WildEditorHGSSViewModel hgss => hgss.SelectedEncounterIndex,
-                _ => -1,
-            };
-            if (_encountersVm is IEditorWithUnsavedChanges enc && enc.HasUnsavedChanges && h.WildPokemon != (VM?.NoEncountersId ?? ushort.MaxValue) && wild != h.WildPokemon)
-                yield return (enc, "encounter file");
+            int wild = _encountersVm?.SelectedEncounterIndex ?? -1;
+            if (_encountersVm?.HasUnsavedChanges == true && h.WildPokemon != (VM?.NoEncountersId ?? ushort.MaxValue) && wild != h.WildPokemon)
+                yield return (_encountersVm, "encounter file");
         }
 
         /// <summary>Point the embedded Event editor at the current header's event file (live if it's already loaded).</summary>
@@ -371,11 +366,9 @@ namespace DSPRE.Avalonia.Views.World
         {
             if (!AvaloniaEditorLauncher.IsRomLoaded) return;
             // The last ROM's editor still listens for name and slot odds changes until it is detached.
-            switch (_encountersVm)
-            {
-                case WildEditorDPPtViewModel dppt: dppt.Detach(); break;
-                case WildEditorHGSSViewModel hgss: hgss.Detach(); break;
-            }
+            _encountersVm?.Detach();
+            // Cleared first, so a failed rebuild doesn't leave the last ROM's editor in the unsaved-changes check.
+            _encountersVm = null;
             // hg-engine owns encounter data; editing it here would be overwritten on its next build.
             EncountersTab.IsVisible = !RomInfo.IsHGE;
             if (RomInfo.IsHGE)
@@ -389,14 +382,13 @@ namespace DSPRE.Avalonia.Views.World
             try
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.Encounters, DirNames.MonIcons });
-                string path = GameDirs[DirNames.Encounters].unpackedDir;
                 string[] names = GetPokemonNames();
                 int headerCount = GetHeaderCount();
                 int initial = VM != null && VM.CanOpenEncounters ? (int)VM.WildPokemon : -1;
 
                 if (GameFamily == GameFamilies.DP || GameFamily == GameFamilies.Plat)
                 {
-                    WildEditorDPPtViewModel evm = new WildEditorDPPtViewModel(path, names, initial, headerCount);
+                    WildEditorDPPtViewModel evm = WildEditorDPPtViewModel.Open(names, initial, headerCount);
                     _encountersVm = evm;
                     _encountersView = new WildEditorDPPtView(evm);
                     EncountersTab.Content = _encountersView;
@@ -405,7 +397,7 @@ namespace DSPRE.Avalonia.Views.World
                 }
                 else
                 {
-                    WildEditorHGSSViewModel evm = new WildEditorHGSSViewModel(path, names, initial, headerCount);
+                    WildEditorHGSSViewModel evm = WildEditorHGSSViewModel.Open(names, initial, headerCount);
                     _encountersVm = evm;
                     _encountersView = new WildEditorHGSSView(evm);
                     EncountersTab.Content = _encountersView;
@@ -414,24 +406,16 @@ namespace DSPRE.Avalonia.Views.World
                 }
                 _encountersEmbedded = true;
                 LockToHeader(_encountersView);
-                switch (_encountersVm)
-                {
-                    case WildEditorDPPtViewModel dppt:
-                        Follow(dppt, nameof(WildEditorDPPtViewModel.SelectedEncounterIndex), () => dppt.SelectedEncounterIndex,
-                               () => VM != null && VM.CanOpenEncounters ? (int)VM.WildPokemon : dppt.SelectedEncounterIndex,
-                               id => AvaloniaEditorLauncher.OpenWildEditor(id), RetargetEncounters);
-                        break;
-                    case WildEditorHGSSViewModel hgss:
-                        Follow(hgss, nameof(WildEditorHGSSViewModel.SelectedEncounterIndex), () => hgss.SelectedEncounterIndex,
-                               () => VM != null && VM.CanOpenEncounters ? (int)VM.WildPokemon : hgss.SelectedEncounterIndex,
-                               id => AvaloniaEditorLauncher.OpenWildEditor(id), RetargetEncounters);
-                        break;
-                }
+                IWildEditor wild = _encountersVm;
+                Follow(wild, nameof(IWildEditor.SelectedEncounterIndex), () => wild.SelectedEncounterIndex,
+                       () => VM != null && VM.CanOpenEncounters ? (int)VM.WildPokemon : wild.SelectedEncounterIndex,
+                       id => AvaloniaEditorLauncher.OpenWildEditor(id), RetargetEncounters);
                 ShowEncountersFor(VM != null && VM.CanOpenEncounters);
             }
             catch (System.Exception ex)
             {
                 _encountersEmbedded = false;
+                CrashReporter.LogHandled(ex);
                 _ = DialogHelper.ShowErrorAsync($"Couldn't set up the Wild Pokémon editor:\n{ex.Message}", "Wild Pokémon editor");
             }
         }
@@ -444,11 +428,7 @@ namespace DSPRE.Avalonia.Views.World
             ShowEncountersFor(vm != null && vm.CanOpenEncounters);
             if (vm == null || !vm.CanOpenEncounters) return;
             int id = (int)vm.WildPokemon;
-            switch (_encountersVm)
-            {
-                case WildEditorDPPtViewModel dppt: dppt.SelectedEncounterIndex = id; break;
-                case WildEditorHGSSViewModel hgss: hgss.SelectedEncounterIndex = id; break;
-            }
+            if (_encountersVm != null) _encountersVm.SelectedEncounterIndex = id;
         }
 
         /// <summary>Opens the current tab's full editor, offering to save tab edits first since it reads from disk.</summary>
@@ -464,7 +444,7 @@ namespace DSPRE.Avalonia.Views.World
                 "Events" => EventVM,
                 "Matrix" => MatrixVM,
                 "Area Data" => AreaDataVM,
-                "Encounters" => _encountersVm as IEditorWithUnsavedChanges,
+                "Encounters" => _encountersVm,
                 "Scripts" => ScriptsVM,
                 "Level Scripts" => LevelScriptsVM,
                 "Text" => TextVM,
@@ -485,12 +465,7 @@ namespace DSPRE.Avalonia.Views.World
                 case "Matrix": AvaloniaEditorLauncher.OpenMatrixEditor(MatrixVM.SelectedMatrixIndex); break;
                 case "Area Data": AvaloniaEditorLauncher.OpenAreaDataEditor(AreaDataVM.SelectedIndex); break;
                 case "Encounters":
-                    int table = _encountersVm switch
-                    {
-                        WildEditorDPPtViewModel dppt => dppt.SelectedEncounterIndex,
-                        WildEditorHGSSViewModel hgss => hgss.SelectedEncounterIndex,
-                        _ => -1,
-                    };
+                    int table = _encountersVm?.SelectedEncounterIndex ?? -1;
                     if (table >= 0) AvaloniaEditorLauncher.OpenWildEditor(table);
                     break;
                 // Script lists can be ordered by source path, so the header's own file id is the reliable one.

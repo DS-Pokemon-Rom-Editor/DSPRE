@@ -514,24 +514,24 @@ namespace DSPRE.Avalonia
             }
             catch (System.Exception ex)
             {
+                CrashReporter.LogHandled(ex);
                 await DialogHelper.ShowErrorAsync("Couldn't open the Wild Pokémon editor: " + ex.Message, "Wild Pokémon editor");
             }
 
             global::Avalonia.Controls.Window BuildWild()
             {
-                string path = GameDirs[DirNames.Encounters].unpackedDir;
                 string[] names = GetPokemonNames();
                 int headerCount = GetHeaderCount();
                 // A standalone window unsubscribes NamesChanged when it closes; the embedded tab lives as long as the app.
                 if (GameFamily == GameFamilies.DP || GameFamily == GameFamilies.Plat)
                 {
-                    WildEditorDPPtViewModel vm = new WildEditorDPPtViewModel(path, names, initialIndex, headerCount);
+                    WildEditorDPPtViewModel vm = WildEditorDPPtViewModel.Open(names, initialIndex, headerCount);
                     EditorHostWindow window = new EditorHostWindow("Wild Pokémon editor", new WildEditorDPPtView(vm), 1000, 680) { MinWidth = 960, MinHeight = 520 };
                     return window;
                 }
                 else
                 {
-                    WildEditorHGSSViewModel vm = new WildEditorHGSSViewModel(path, names, initialIndex, headerCount);
+                    WildEditorHGSSViewModel vm = WildEditorHGSSViewModel.Open(names, initialIndex, headerCount);
                     EditorHostWindow window = new EditorHostWindow("Wild Pokémon editor", new WildEditorHGSSView(vm), 1000, 680) { MinWidth = 960, MinHeight = 520 };
                     return window;
                 }
