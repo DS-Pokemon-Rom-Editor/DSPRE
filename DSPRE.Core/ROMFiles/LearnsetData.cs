@@ -64,6 +64,18 @@ namespace DSPRE
 
         public LearnsetData(Stream stream) : this(stream, wide: false) { }
 
+        /// <summary>Reads level and move pairs like a wide file: levels cap at 255 and move 0xFFFF ends the list.</summary>
+        public LearnsetData(IEnumerable<(int level, int move)> entries)
+        {
+            IsWide = true;
+            List = new UniqueList<(byte level, ushort move)>();
+            foreach ((int level, int move) in entries)
+            {
+                if ((move & 0xFFFF) == 0xFFFF) return;
+                List.Add(((byte)Math.Min(level, byte.MaxValue), (ushort)move));
+            }
+        }
+
         public LearnsetData(Stream stream, bool wide)
         {
             IsWide = wide;

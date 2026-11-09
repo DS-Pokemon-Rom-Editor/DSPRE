@@ -1687,16 +1687,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (path == null) return;
             try
             {
-                using BinaryReader reader = new BinaryReader(File.OpenRead(path));
-                string trName = reader.ReadString();
-                byte datSize = reader.ReadByte();
-                byte[] trDat = reader.ReadBytes(datSize);
-                byte partySize = reader.ReadByte();
-                byte[] pDat = reader.ReadBytes(partySize);
-
-                _trainer = new TrainerFile(
-                    new TrainerProperties((ushort)_selectedTrainerIndex, new MemoryStream(trDat)),
-                    new MemoryStream(pDat), trName);
+                _trainer = TrainerFile.FromExport(File.ReadAllBytes(path), (ushort)_selectedTrainerIndex);
 
                 _suppress = true;
                 try { PopulateFromTrainer(); } finally { _suppress = false; }
@@ -1851,14 +1842,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 AppLogger.Error($"Level-up moves for species {speciesId} couldn't be read: {error}");
                 return null;
             }
-            MemoryStream stream = new MemoryStream();
-            using (BinaryWriter writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
-            {
-                foreach ((int moveLevel, int move) in list) writer.Write((uint)((moveLevel << 16) | move));
-                writer.Write(0x0000FFFFu);
-            }
-            stream.Position = 0;
-            return new LearnsetData(stream, wide: true).GetLearnsetAtLevel(level);
+            return new LearnsetData(list).GetLearnsetAtLevel(level);
         }
 
         // An unset ability or ball would be written as 0xFFFF.

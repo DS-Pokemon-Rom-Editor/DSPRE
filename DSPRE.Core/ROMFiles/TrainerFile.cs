@@ -490,6 +490,16 @@ namespace DSPRE.ROMFiles
             return newData.ToArray();
         }
 
+        /// <summary>Reads a trainer exported by <see cref="ToByteArray"/> and gives it <paramref name="trainerId"/>.</summary>
+        public static TrainerFile FromExport(byte[] data, ushort trainerId)
+        {
+            using BinaryReader reader = new BinaryReader(new MemoryStream(data));
+            string name = reader.ReadString();
+            byte[] trDat = reader.ReadBytes(reader.ReadByte());
+            byte[] pDat = reader.ReadBytes(reader.ReadByte());
+            return new TrainerFile(new TrainerProperties(trainerId, new MemoryStream(trDat)), new MemoryStream(pDat), name);
+        }
+
         public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true)
         {
             SaveToFileExplorePath("Trainer file", "trf", suggestedFileName, showSuccessMessage);
