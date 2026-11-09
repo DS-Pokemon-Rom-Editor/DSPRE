@@ -684,11 +684,18 @@ namespace DSPRE.Avalonia
         {
             if (Refused("VsSeekerRematchView")) return;
 
-            VsSeekerRematchViewModel vm = null;
-            await OpenBehindCardAsync("Opening Vs. Seeker rematch editor…",
-                "Reading the rematch table and trainer names.",
-                () => vm = new VsSeekerRematchViewModel(initialRowIndex),
-                () => vm == null ? null : new EditorHostWindow("Vs. Seeker rematch editor", new VsSeekerRematchView(vm), 900, 600));
+            try
+            {
+                await OpenBehindCardAsync("Opening Vs. Seeker rematch editor…",
+                    "Reading the rematch table and trainer names.",
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TrainerProperties }),
+                    () => new EditorHostWindow("Vs. Seeker rematch editor", new VsSeekerRematchView(VsSeekerRematchViewModel.Open(initialRowIndex)), 900, 600));
+            }
+            catch (System.Exception ex)
+            {
+                CrashReporter.LogHandled(ex);
+                await DialogHelper.ShowErrorAsync("Couldn't open the Vs. Seeker rematch editor: " + ex.Message, "Vs. Seeker rematch editor");
+            }
         }
 
         public static void OpenHgEngineSettings()
@@ -721,11 +728,18 @@ namespace DSPRE.Avalonia
         {
             if (Refused("PokegearRematchView")) return;
 
-            PokegearRematchViewModel vm = null;
-            await OpenBehindCardAsync("Opening Pokégear rematch editor…",
-                "Reading the rematch table, the phone book and trainer names.",
-                () => vm = new PokegearRematchViewModel(initialRowIndex),
-                () => vm == null ? null : new EditorHostWindow("Pokégear rematch editor", new PokegearRematchView(vm), 950, 640));
+            try
+            {
+                await OpenBehindCardAsync("Opening Pokégear rematch editor…",
+                    "Reading the rematch table, the phone book and trainer names.",
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TrainerProperties }),
+                    () => new EditorHostWindow("Pokégear rematch editor", new PokegearRematchView(PokegearRematchViewModel.Open(initialRowIndex)), 950, 640));
+            }
+            catch (System.Exception ex)
+            {
+                CrashReporter.LogHandled(ex);
+                await DialogHelper.ShowErrorAsync("Couldn't open the Pokégear rematch editor: " + ex.Message, "Pokégear rematch editor");
+            }
         }
 
         public static void OpenFollowerTalk() => _ = OpenFollowerTalkAsync();

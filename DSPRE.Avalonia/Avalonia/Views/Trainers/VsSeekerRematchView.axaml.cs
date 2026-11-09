@@ -18,7 +18,8 @@ namespace DSPRE.Avalonia.Views.Trainers
             DataContext = vm;
         }
 
-        private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveAll();
+        private async void Save_Click(object sender, RoutedEventArgs e)
+            => await DialogHelper.GuardAsync(() => { VM?.SaveAll(); return System.Threading.Tasks.Task.CompletedTask; }, "The rematches weren't saved.", "Vs. Seeker rematch editor", TopLevel.GetTopLevel(this) as Window);
 
         private async void Discard_Click(object sender, RoutedEventArgs e)
         {

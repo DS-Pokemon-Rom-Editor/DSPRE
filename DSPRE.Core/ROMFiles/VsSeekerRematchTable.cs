@@ -3,11 +3,8 @@ using System.Collections.Generic;
 
 namespace DSPRE
 {
-    /// <summary>
-    /// The Vs. Seeker rematch table (Diamond/Pearl/Platinum): 240 rows in overlay 5, sparse
-    /// and keyed by the encounter trainer in slot 0, not by row index. The address and row count
-    /// are read from the lookup code, with the known offset as a checked fallback.
-    /// </summary>
+    /// <summary>The Vs. Seeker rematch table (DP and Pt): 240 rows in overlay 5, keyed by the encounter trainer in slot 0.</summary>
+    // The address and row count come from the lookup code, with the known offset as a checked fallback.
     public static class VsSeekerRematchTable
     {
         public const int RowCount = 240;

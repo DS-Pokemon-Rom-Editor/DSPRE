@@ -34,24 +34,24 @@
       <ScrollViewer Grid.Column="1">
         <controls:CappedWidth Cap="520"><StackPanel x:Name="RematchPanel" Margin="16" Spacing="8" IsEnabled="{Binding IsRowSelected}">
           <TextBlock Text="Encounter trainer" FontWeight="Bold"/>
-          <controls:FusionAutoCompleteBox x:Name="EncounterBox" controls:EditorLink.To="Trainer" ItemsSource="{Binding TrainerNames}" SelectedIndex="{Binding EncounterIndex}" HorizontalAlignment="Stretch"/>
+          <controls:FusionAutoCompleteBox x:Name="EncounterBox" controls:EditorLink.To="Trainer" ItemsSource="{Binding TrainerNames}" SelectedIndex="{Binding BaseTrainerIndex}" HorizontalAlignment="Stretch"/>
           <TextBlock Text="{Binding RowProblems}" IsVisible="{Binding HasRowProblems}" FontSize="11"
                      Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>
 
           <TextBlock Text="{Binding LevelLabels[0]}" Margin="0,8,0,0"/>
-          <ComboBox ItemsSource="{Binding RematchChoices}" SelectedIndex="{Binding RematchA}" HorizontalAlignment="Stretch"/>
+          <ComboBox ItemsSource="{Binding RematchChoices}" SelectedIndex="{Binding Rematch1}" HorizontalAlignment="Stretch"/>
 
           <TextBlock Text="{Binding LevelLabels[1]}" Margin="0,8,0,0"/>
-          <ComboBox ItemsSource="{Binding RematchChoices}" SelectedIndex="{Binding RematchB}" HorizontalAlignment="Stretch"/>
+          <ComboBox ItemsSource="{Binding RematchChoices}" SelectedIndex="{Binding Rematch2}" HorizontalAlignment="Stretch"/>
 
           <TextBlock Text="{Binding LevelLabels[2]}" Margin="0,8,0,0"/>
-          <ComboBox ItemsSource="{Binding RematchChoices}" SelectedIndex="{Binding RematchC}" HorizontalAlignment="Stretch"/>
+          <ComboBox ItemsSource="{Binding RematchChoices}" SelectedIndex="{Binding Rematch3}" HorizontalAlignment="Stretch"/>
 
           <TextBlock Text="{Binding LevelLabels[3]}" Margin="0,8,0,0"/>
-          <ComboBox ItemsSource="{Binding RematchChoices}" SelectedIndex="{Binding RematchD}" HorizontalAlignment="Stretch"/>
+          <ComboBox ItemsSource="{Binding RematchChoices}" SelectedIndex="{Binding Rematch4}" HorizontalAlignment="Stretch"/>
 
           <TextBlock Text="{Binding LevelLabels[4]}" Margin="0,8,0,0"/>
-          <ComboBox ItemsSource="{Binding RematchChoices}" SelectedIndex="{Binding RematchE}" HorizontalAlignment="Stretch"/>
+          <ComboBox ItemsSource="{Binding RematchChoices}" SelectedIndex="{Binding Rematch5}" HorizontalAlignment="Stretch"/>
         </StackPanel></controls:CappedWidth>
       </ScrollViewer>
     </Grid>
