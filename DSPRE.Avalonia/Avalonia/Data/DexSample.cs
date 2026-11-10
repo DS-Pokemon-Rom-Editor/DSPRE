@@ -117,18 +117,9 @@ namespace DSPRE.Avalonia.Data
                 switch (mon.Kind)
                 {
                     case ScreenMonKind.Front:
-                    {
-                        GraphicAssets.Archive sprites = GraphicAssets.All.First(a => a.Dir == DirNames.PokemonBattleSprites);
-                        // Six files a species: back female, back male, front female, front male, colours, shiny.
-                        GraphicAssets.Preview p = GraphicAssets.Render(sprites, species * 6 + 3);
-                        return Frame(p, 80, 80);
-                    }
+                        return Frame(GraphicAssets.BattleSprite(species, back: false).Picture, 80, 80);
                     case ScreenMonKind.Back:
-                    {
-                        GraphicAssets.Archive sprites = GraphicAssets.All.First(a => a.Dir == DirNames.PokemonBattleSprites);
-                        GraphicAssets.Preview p = GraphicAssets.Render(sprites, species * 6 + 1);
-                        return Frame(p, 80, 80);
-                    }
+                        return Frame(GraphicAssets.BattleSprite(species, back: true).Picture, 80, 80);
                     case ScreenMonKind.Icon:
                     {
                         // Party icons follow seven shared files, one per species, two frames tall.

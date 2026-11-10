@@ -1179,6 +1179,18 @@ namespace DSPRE.Avalonia.Data
             return null;
         }
 
+        /// <summary>Female-only species leave the male file empty, so this falls back to the female drawing.</summary>
+        public static (int Index, Preview Picture, bool Female) BattleSprite(int species, bool back)
+        {
+            Archive sprites = All.First(a => a.Dir == DirNames.PokemonBattleSprites);
+            // Six files a species: back female, back male, front female, front male, colours, shiny.
+            int male = species * 6 + (back ? 1 : 3);
+            Preview picture = Render(sprites, male);
+            if (picture?.Rgba != null) return (male, picture, false);
+            Preview female = Render(sprites, male - 1);
+            return female?.Rgba != null ? (male - 1, female, true) : (male, picture, false);
+        }
+
         /// <summary>A picture of one entry of one archive, or why there is not one.</summary>
         /// <param name="source">Where to read the archive; by default the unpacked copy every editor uses.</param>
         /// <param name="paletteIndex">The colours to show it in, when the caller knows the game's pairing.</param>

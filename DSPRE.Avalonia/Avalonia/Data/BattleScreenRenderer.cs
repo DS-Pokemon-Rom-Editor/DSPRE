@@ -258,7 +258,6 @@ namespace DSPRE.Avalonia.Data
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { AppLogger.WarnOnce("BattleScreenRenderer.AddPokemon", ex); }
 
-            GraphicAssets.Archive sprites = GraphicAssets.All.First(a => a.Dir == DirNames.PokemonBattleSprites);
             int shadow = ShadowSquares(rec.ShadowSize);
             if (shadow >= 0)
             {
@@ -270,10 +269,12 @@ namespace DSPRE.Avalonia.Data
                 pieces.Add(SpritePiece("Shadow", "The shadow under the front sprite.", DirNames.OtherPokemonBattleSprites, count - 2, p,
                                        0, shadow * 16, 64, 16, OpponentX + rec.ShadowX - 32, OpponentY + ShadowBelow - 8));
             }
-            pieces.Add(SpritePiece("Front sprite", "The opponent's Pokémon.", DirNames.PokemonBattleSprites, o.Species * 6 + 3,
-                                   GraphicAssets.Render(sprites, o.Species * 6 + 3), 0, 0, 80, 80, OpponentX - 40, OpponentY + rec.FrontM - 40 - rec.FrontY));
-            pieces.Add(SpritePiece("Back sprite", "The player's Pokémon.", DirNames.PokemonBattleSprites, o.Species * 6 + 1,
-                                   GraphicAssets.Render(sprites, o.Species * 6 + 1), 0, 0, 80, 80, PlayerX - 40, PlayerY + rec.BackM - 40));
+            (int frontIndex, GraphicAssets.Preview front, bool frontFemale) = GraphicAssets.BattleSprite(o.Species, back: false);
+            (int backIndex, GraphicAssets.Preview back, bool backFemale) = GraphicAssets.BattleSprite(o.Species, back: true);
+            pieces.Add(SpritePiece("Front sprite", "The opponent's Pokémon.", DirNames.PokemonBattleSprites, frontIndex,
+                                   front, 0, 0, 80, 80, OpponentX - 40, OpponentY + (frontFemale ? rec.FrontF : rec.FrontM) - 40 - rec.FrontY));
+            pieces.Add(SpritePiece("Back sprite", "The player's Pokémon.", DirNames.PokemonBattleSprites, backIndex,
+                                   back, 0, 0, 80, 80, PlayerX - 40, PlayerY + (backFemale ? rec.BackF : rec.BackM) - 40));
         }
 
         // pokemon_sprite.c sShadowTextureCoords: small, medium and large are rows 0, 1 and 2. Size 0 draws none.
