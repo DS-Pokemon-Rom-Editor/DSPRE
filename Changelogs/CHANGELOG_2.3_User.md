@@ -4,6 +4,13 @@
 
 ---
 
+## 2.3.4.2
+- No, that was not a donation button to pay for model tokens, and DSPRE did not grow an AI. The
+  notice now only says that an external tool launched this version.
+- No, 2.3.4.1.1 will never exist.
+
+---
+
 ## 2.3.4.1
 - Added a donation notice when using external tools that wrap our tool and code and request donations
   for one week of work with their AI to do so.
