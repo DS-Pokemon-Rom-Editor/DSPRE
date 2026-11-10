@@ -20,6 +20,8 @@ namespace DSPRE.Avalonia.Views.Text
             Loaded += OnLoadedSetup;
             // Tunnel, so Enter reaches the search before the text box can take it.
             SearchBox.AddHandler(KeyDownEvent, Search_KeyDown, global::Avalonia.Interactivity.RoutingStrategies.Tunnel);
+            // Bubbling, so letters typed into a cell already being edited never get here.
+            LinesGrid.AddHandler(TextInputEvent, LinesGrid_TextInput, RoutingStrategies.Bubble);
             DataContextChanged += (_, _) =>
             {
                 if (_watched != null) _watched.LineRevealed -= ScrollToLine;
@@ -29,6 +31,30 @@ namespace DSPRE.Avalonia.Views.Text
         }
 
         private TextEditorViewModel _watched;
+
+        private const int TextColumn = 1;
+        private string _typedToStart;
+
+        // Settings > Text editor chooses what typing on a selected line does.
+        private void LinesGrid_TextInput(object sender, TextInputEventArgs e)
+        {
+            int mode = SettingsManager.Settings.TextEditorTyping;
+            if (mode == 2 || e.Handled || string.IsNullOrEmpty(e.Text) || char.IsControl(e.Text[0])) return;
+            if (LinesGrid.SelectedItem == null) return;
+            _typedToStart = e.Text;
+            LinesGrid.CurrentColumn = LinesGrid.Columns[TextColumn];
+            if (!LinesGrid.BeginEdit()) { _typedToStart = null; return; }
+            e.Handled = true;
+        }
+
+        private void LinesGrid_PreparingCellForEdit(object sender, DataGridPreparingCellForEditEventArgs e)
+        {
+            string typed = _typedToStart;
+            _typedToStart = null;
+            if (typed == null || e.EditingElement is not TextBox box) return;
+            box.Text = SettingsManager.Settings.TextEditorTyping == 1 ? box.Text + typed : typed;
+            box.CaretIndex = box.Text.Length;
+        }
 
         // The archive's rows may still be filling, so scroll once layout has caught up.
         private void ScrollToLine(object sender, System.EventArgs e)

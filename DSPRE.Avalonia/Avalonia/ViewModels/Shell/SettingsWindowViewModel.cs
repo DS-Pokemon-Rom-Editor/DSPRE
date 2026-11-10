@@ -163,6 +163,16 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             set => Set(ref _noticePlayerIndex, value);
         }
 
+        // Order matches SettingsManager.Settings.TextEditorTyping.
+        public string[] TextTypingChoices { get; } = { "Replaces the line", "Adds to the end", "Does nothing" };
+
+        private int _textTypingIndex;
+        public int TextTypingIndex
+        {
+            get => _textTypingIndex;
+            set { if (value >= 0) Set(ref _textTypingIndex, value); }
+        }
+
         // ── Emulator for Build and Run: index 0 asks each time, the rest follow Emulators.All ──
         public string[] EmulatorChoices { get; } = new[] { "Ask each time" }.Concat(Emulators.All.Select(Emulators.DisplayName)).ToArray();
 
@@ -295,6 +305,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             AutoUpdateDBs    = SettingsManager.Settings.AutomaticallyUpdateDBs;
             ShowWelcomeOnStartup = SettingsManager.Settings.ShowWelcomeOnStartup;
             AskBeforeSwitchingProject = SettingsManager.Settings.AskBeforeSwitchingProject;
+            TextTypingIndex = Math.Clamp(SettingsManager.Settings.TextEditorTyping, 0, TextTypingChoices.Length - 1);
             ShowGuidedTourNextLoad = !SettingsManager.Settings.GuidedTourShown;
             UiScale           = (decimal)SettingsManager.Settings.UiScale;
             // Saved only if the same project is still open, as with the test save.
@@ -350,6 +361,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             SettingsManager.Settings.AutomaticallyUpdateDBs = AutoUpdateDBs;
             SettingsManager.Settings.ShowWelcomeOnStartup   = ShowWelcomeOnStartup;
             SettingsManager.Settings.AskBeforeSwitchingProject = AskBeforeSwitchingProject;
+            SettingsManager.Settings.TextEditorTyping       = TextTypingIndex;
             SettingsManager.Settings.GuidedTourShown        = !ShowGuidedTourNextLoad;
             if (ShowGuidedTourNextLoad) SettingsManager.Settings.EditorToursShown?.Clear();
             SettingsManager.Settings.UiScale                = (double)UiScale;

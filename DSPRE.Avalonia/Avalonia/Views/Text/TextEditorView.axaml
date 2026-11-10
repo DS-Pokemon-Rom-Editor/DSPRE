@@ -147,6 +147,7 @@
                 CanUserSortColumns="False"
                 GridLinesVisibility="All"
                 HeadersVisibility="Column"
+                PreparingCellForEdit="LinesGrid_PreparingCellForEdit"
                 Margin="4">
         <DataGrid.Columns>
           <DataGridTextColumn Header="#" Binding="{Binding Number}" IsReadOnly="True" Width="70"/>

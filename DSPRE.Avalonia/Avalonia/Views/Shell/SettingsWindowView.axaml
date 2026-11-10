@@ -31,6 +31,12 @@
 			          ToolTip.Tip="You can replay them from Tools > Guided tour."/>
 			<Button Content="Open welcome &amp; tutorial" controls:Icon.Key="OpenLink" HorizontalAlignment="Left" Click="ShowWelcome_Click"/>
 
+			<TextBlock Text="Text editor" FontWeight="SemiBold" Margin="0,8,0,0"/>
+			<StackPanel Orientation="Horizontal" Spacing="8">
+			  <TextBlock Text="Typing on a selected line" VerticalAlignment="Center"/>
+			  <ComboBox Width="170" ItemsSource="{Binding TextTypingChoices}" SelectedIndex="{Binding TextTypingIndex}"/>
+			</StackPanel>
+
 			<TextBlock Text="Updates" FontWeight="SemiBold" Margin="0,8,0,0"/>
 			<CheckBox Content="Check app updates automatically" IsChecked="{Binding AutoCheckUpdates}"/>
 			<CheckBox Content="Update databases automatically"  IsChecked="{Binding AutoUpdateDBs}"/>

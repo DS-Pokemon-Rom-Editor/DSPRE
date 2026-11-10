@@ -7,7 +7,7 @@ namespace DSPRE.Avalonia
             Add("TextEditorView", "Text editor",
                 S(null, "Game text", "Every line of text, in numbered archives."),
                 S("toolbar", "Archives", "Pick, add or remove an archive, or import and export one."),
-                S("name:LinesGrid", "Lines", "Double-click a line to edit it. Scripts use its number."),
+                S("name:LinesGrid", "Lines", "Double-click a line or start typing to edit it. Scripts use its number."),
                 S("name:LineButtons", "Adding lines", "Add, remove or move lines."),
                 S("toolbar", "Message box", "Shows the line in the game's box, and Special variables lists the codes."),
                 S("name:ReplacePanel", "Search and replace", "Search this archive or all of them. Double-click a result to go there."),

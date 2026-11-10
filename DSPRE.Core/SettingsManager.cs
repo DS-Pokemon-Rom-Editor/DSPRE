@@ -16,6 +16,8 @@ namespace DSPRE
     {
         public byte MenuLayout { get; set; } = 2;
         public bool TextEditorPreferHex { get; set; } = false;
+        // Typing on a selected Text editor line: 0 replaces the line, 1 adds to the end, 2 does nothing.
+        public int TextEditorTyping { get; set; } = 0;
         public int ScriptEditorFormatPreference { get; set; } = 0;
         // Which of the move-animation editor's three ways of reading a script was last used:
         // 0 guided, 1 script, 2 raw.
