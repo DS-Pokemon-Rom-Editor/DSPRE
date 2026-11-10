@@ -233,8 +233,8 @@ namespace DSPRE
                 Array.Copy(BitConverter.GetBytes(row.Ids[slot]), 0, buffer, slot * 2, 2);
             }
 
-            DSUtils.WriteToFile(location.Path, buffer, (uint)(location.Offset + (long)rowIndex * RowSize));
-            return true;
+            // A refusal leaves error null: the write guard has already said why.
+            return DSUtils.WriteToFile(location.Path, buffer, (uint)(location.Offset + (long)rowIndex * RowSize));
         }
 
         /// <summary>Overlay data ends where the static initialiser list starts.</summary>

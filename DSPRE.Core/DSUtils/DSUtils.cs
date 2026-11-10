@@ -176,16 +176,18 @@ namespace DSPRE
         }
 
         /// <summary>Writes <paramref name="byteCount"/> bytes of <paramref name="toOutput"/> from <paramref name="firstByte"/> (the rest when null) at <paramref name="writeAt"/>.</summary>
-        public static void WriteToFile(string filepath, byte[] toOutput, uint writeAt = 0, int firstByte = 0, int? byteCount = null, FileMode fmode = FileMode.OpenOrCreate)
+        /// <returns>False when the hg-engine write guard refused; the guard has already told the user why.</returns>
+        public static bool WriteToFile(string filepath, byte[] toOutput, uint writeAt = 0, int firstByte = 0, int? byteCount = null, FileMode fmode = FileMode.OpenOrCreate)
         {
             int length = byteCount ?? toOutput.Length - firstByte;
-            if (HgEngineWriteGuard.Refuses(filepath, writeAt, length)) return;
+            if (HgEngineWriteGuard.Refuses(filepath, writeAt, length)) return false;
 
             using (EasyWriter writer = new EasyWriter(filepath, writeAt, fmode))
             {
                 writer.Write(toOutput, firstByte, length);
             }
             ProjectWrites.RaiseCode(filepath, writeAt, length);
+            return true;
         }
         /// <summary>
         /// Replaces a whole arm9, overlay or synthetic overlay file. The hg-engine write guard is asked about the span
