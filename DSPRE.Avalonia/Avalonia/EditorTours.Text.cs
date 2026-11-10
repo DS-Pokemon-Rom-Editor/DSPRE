@@ -17,8 +17,8 @@ namespace DSPRE.Avalonia
                 S(null, "Scripts", "A place's scripts, functions and movements, as text."),
                 S("toolbar", "Script files", "Open, add, import, export or search a script file."),
                 S("name:RotomEditor", "Code", "Point at a command for help. F12 or Ctrl+click goes to its definition."),
-                S("tab:Search", "Search", "Search every script file. Double-click a result to open it."),
-                S("tab:Diagnostics", "Problems", "Errors found while typing or saving."),
+                S("tab:Search", "Search", "This tab searches every script file, and Ctrl+F searches the open one."),
+                S("tab:Diagnostics", "Problems", "Lists unknown commands and wrong arguments."),
                 S(null, "Shortcuts", "Ctrl+S saves and builds. Build errors show under Problems."));
 
             Add("LevelScriptEditorView", "Level script editor",

@@ -50,7 +50,7 @@
         <TabItem Header="Search">
           <DockPanel>
             <StackPanel DockPanel.Dock="Top" Spacing="5">
-              <TextBox Text="{Binding SearchText}" PlaceholderText="Search scripts" KeyDown="ProjectSearch_KeyDown"/>
+              <TextBox Text="{Binding SearchText}" PlaceholderText="Search all scripts" KeyDown="ProjectSearch_KeyDown"/>
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <Button Content="Search" controls:Icon.Key="lens" Click="ProjectSearch_Click" MinWidth="90" IsEnabled="{Binding CanSearchProject}"/>
                 <CheckBox Content="Fuzzy" IsChecked="{Binding SearchFuzzy}" VerticalAlignment="Center"/>
@@ -81,6 +81,7 @@
           <DockPanel>
             <StackPanel DockPanel.Dock="Top" Spacing="5">
               <TextBlock Text="{Binding DiagnosticsStatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+              <controls:HelpTip Text="Lists unknown commands and wrong arguments." HorizontalAlignment="Left"/>
               <Button Content="Clear" controls:Icon.Key="Cross" Click="ClearDiagnostics_Click" MinWidth="90" IsEnabled="{Binding HasDiagnostics}"/>
             </StackPanel>
 
