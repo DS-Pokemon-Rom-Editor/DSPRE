@@ -21,10 +21,10 @@
 
     <TabControl x:Name="Tabs" Margin="4">
       <TabItem Header="Honey Tree" IsVisible="{Binding ShowHoneyTree}">
-        <views:HoneyTreeEncounterView DataContext="{Binding HoneyTreeVM}"/>
+        <views:SpecialEncounterTabView DataContext="{Binding HoneyTreeVM}"/>
       </TabItem>
       <TabItem Header="Great Marsh" IsVisible="{Binding ShowGreatMarsh}">
-        <views:GreatMarshEncounterView DataContext="{Binding GreatMarshVM}"/>
+        <views:SpecialEncounterTabView DataContext="{Binding GreatMarshVM}"/>
       </TabItem>
       <TabItem Header="Trophy Garden" IsVisible="{Binding ShowTrophyGarden}">
         <views:TrophyGardenEncounterView DataContext="{Binding TrophyGardenVM}"/>

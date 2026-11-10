@@ -2,21 +2,18 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
              xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
-             x:Class="DSPRE.Avalonia.Views.Pokemon.HoneyTreeEncounterView"
-             x:DataType="vm:HoneyTreeEncounterViewModel">
+             x:Class="DSPRE.Avalonia.Views.Pokemon.SpecialEncounterTabView"
+             x:DataType="vm:SpecialEncounterTabViewModel">
   <Design.DataContext>
-    <vm:HoneyTreeEncounterViewModel/>
+    <vm:GreatMarshEncounterViewModel/>
   </Design.DataContext>
 
   <Grid>
-    <!-- Not available message -->
     <TextBlock IsVisible="{Binding IsNotAvailable}" Margin="16"
                TextWrapping="Wrap"
                Text="Not in this game"/>
 
-    <!-- Main panel -->
     <DockPanel IsVisible="{Binding IsAvailable}">
-      <!-- Toolbar -->
       <controls:EditorToolbar>
           <Button Content="Save" controls:Icon.Key="saveButton"    Click="Save_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
           <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
@@ -27,10 +24,13 @@
       </controls:EditorToolbar>
 
       <Grid ColumnDefinitions="*,220" Margin="8">
-        <!-- Left: group + slots -->
         <DockPanel Grid.Column="0" Margin="0,0,8,0">
           <StackPanel DockPanel.Dock="Top" Spacing="4">
-            <TextBlock Text="Encounter group" FontWeight="Bold"/>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,4" IsVisible="{Binding HasSlotsNote}">
+              <TextBlock Text="{Binding SlotsNote}" VerticalAlignment="Center"/>
+              <controls:HelpTip Text="{Binding SlotsNoteTip}"/>
+            </StackPanel>
+            <TextBlock Text="{Binding ListHeading}" FontWeight="Bold"/>
             <ComboBox HorizontalAlignment="Stretch"
                       ItemsSource="{Binding GroupNames}"
                       SelectedIndex="{Binding SelectedGroupIndex}"/>
@@ -50,17 +50,16 @@
             </ListBox>
         </DockPanel>
 
-        <!-- Right: species + icon -->
         <StackPanel Grid.Column="1" Spacing="6">
           <TextBlock Text="Species" FontWeight="Bold"/>
-          <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch"
+          <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch" AllowsNone="False"
                     ItemsSource="{Binding SpeciesNames}"
                     SelectedIndex="{Binding SelectedSpeciesIndex}"/>
           <Border Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"
                   Height="80" Width="80" HorizontalAlignment="Left">
             <Image Source="{Binding PokemonIcon}" Stretch="Uniform"/>
           </Border>
-          <TextBlock Text="{Binding EncounterRateText}" Foreground="{DynamicResource Editor.Subtle}"/>
+          <TextBlock Text="{Binding SlotInfoText}" Foreground="{DynamicResource Editor.Subtle}"/>
         </StackPanel>
       </Grid>
     </DockPanel>

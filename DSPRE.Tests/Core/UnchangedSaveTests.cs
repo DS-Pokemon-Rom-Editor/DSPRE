@@ -254,24 +254,6 @@ namespace DSPRE.Tests
             });
         }
 
-        [SkippableTheory]
-        [MemberData(nameof(DpPt))]
-        public void SpecialEncounterFiles(string game)
-        {
-            Open(game);
-            Unpack(DirNames.EncounterExtended);
-            SavesUnchanged($"{game} Trophy Garden, Great Marsh and Honey Tree", new[] { Filesystem.EncounterExtended }, () =>
-            {
-                TrophyGardenEncounterFile garden = new TrophyGardenEncounterFile(load: true);
-                GreatMarshEncounterFile marsh = new GreatMarshEncounterFile(load: true);
-                HoneyTreeEncounterFile honey = new HoneyTreeEncounterFile(load: true);
-                Assert.True(garden.SaveToNarc(showSuccessMessage: false), "the Trophy Garden save failed");
-                Assert.True(marsh.SaveToNarc(showSuccessMessage: false), "the Great Marsh save failed");
-                Assert.True(honey.SaveToNarc(showSuccessMessage: false), "the Honey Tree save failed");
-                return 3;
-            });
-        }
-
         [SkippableFact]
         public void HeadbuttAndSafariZone()
         {

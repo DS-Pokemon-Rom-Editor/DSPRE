@@ -1,162 +1,29 @@
-using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.IO;
 
 namespace DSPRE.ROMFiles
 {
-    // Trophy Garden's "daily changing Pokemon" pool for Diamond, Pearl, and Platinum.
-    // File location: arc/encdata_ex.narc, index 8. 16 slots, 4 bytes each (species + padding),
-    // same container and entry format as GreatMarshEncounterFile.
-    public class TrophyGardenEncounterFile : RomFile
+    /// <summary>Trophy Garden's daily Pokémon pool (DPPt): encdata_ex file 8, 16 slots.</summary>
+    public sealed class TrophyGardenEncounterFile : SpeciesSlotArchive
     {
-        public const int EntrySize = 4;
         public const int SlotCount = 16;
         public const int FileIndex = 8;
 
-        public BindingList<GreatMarshEncounter> Encounters { get; private set; }
+        public BindingList<SpeciesSlot> Encounters => Groups[0].Encounters;
 
-        public TrophyGardenEncounterFile()
-        {
-            Encounters = new BindingList<GreatMarshEncounter>();
-        }
+        public TrophyGardenEncounterFile(byte[] data) : base(SlotCount, new[] { new SpeciesSlotGroup("Pool", "", FileIndex) }, data) { }
 
-        public TrophyGardenEncounterFile(bool load) : this()
-        {
-            if (load)
-            {
-                LoadFromNarc();
-            }
-        }
-
-        private void LoadFromNarc()
-        {
-            string narcDir = Filesystem.EncounterExtended;
-            if (string.IsNullOrEmpty(narcDir) || !Directory.Exists(narcDir))
-            {
-                return;
-            }
-
-            string filePath = Filesystem.GetPath(narcDir, FileIndex);
-            Encounters.Clear();
-
-            if (File.Exists(filePath))
-            {
-                using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
-                using (BinaryReader br = new BinaryReader(fs))
-                {
-                    for (int slot = 0; slot < SlotCount && fs.Position + EntrySize <= fs.Length; slot++)
-                    {
-                        Encounters.Add(new GreatMarshEncounter(br));
-                    }
-                }
-            }
-
-            while (Encounters.Count < SlotCount)
-            {
-                Encounters.Add(new GreatMarshEncounter());
-            }
-        }
+        public static TrophyGardenEncounterFile Load() => new TrophyGardenEncounterFile(ReadMembers(SlotCount, FileIndex));
 
         /// <summary>What would hang in game, or null.</summary>
         public string Problem()
         {
             // The daily pick rerolls until it differs from both active picks, comparing whole 4-byte entries.
             HashSet<uint> distinct = new HashSet<uint>();
-            foreach (GreatMarshEncounter e in Encounters) distinct.Add(e.Species | ((uint)e.Padding << 16));
+            foreach (SpeciesSlot e in Encounters) distinct.Add(e.Species | ((uint)e.Padding << 16));
             return distinct.Count < 3
                 ? "The pool needs at least 3 different species, or the game freezes picking the daily Pokémon."
                 : null;
-        }
-
-        public override byte[] ToByteArray()
-        {
-            using (MemoryStream ms = new MemoryStream())
-            using (BinaryWriter bw = new BinaryWriter(ms))
-            {
-                foreach (GreatMarshEncounter encounter in Encounters)
-                {
-                    encounter.Write(bw);
-                }
-                return ms.ToArray();
-            }
-        }
-
-        public bool SaveToNarc(bool showSuccessMessage = true)
-        {
-            try
-            {
-                string narcDir = Filesystem.EncounterExtended;
-                if (string.IsNullOrEmpty(narcDir) || !Directory.Exists(narcDir))
-                {
-                    AppMessages.Error("Trophy Garden encounter directory not found.", "Special encounters editor");
-                    return false;
-                }
-
-                ArchiveMembers.Put(RomInfo.DirNames.EncounterExtended, FileIndex, ToByteArray());
-
-                if (showSuccessMessage)
-                {
-                    AppMessages.Notice("Trophy Garden encounters saved.");
-                }
-                return true;
-            }
-            catch (Exception ex)
-            {
-                AppMessages.Error($"Couldn't save Trophy Garden encounters: {ex.Message}", "Special encounters editor");
-                return false;
-            }
-        }
-
-        public bool ExportToFile(string path, bool showSuccessMessage = true)
-        {
-            try
-            {
-                ArchiveMembers.Write(path, ToByteArray());
-
-                if (showSuccessMessage)
-                {
-                    AppMessages.Notice("Trophy Garden encounters exported.");
-                }
-                return true;
-            }
-            catch (Exception ex)
-            {
-                AppMessages.Error($"Couldn't export Trophy Garden encounters: {ex.Message}", "Special encounters editor");
-                return false;
-            }
-        }
-
-        public bool ImportFromFile(string path)
-        {
-            try
-            {
-                using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read))
-                using (BinaryReader br = new BinaryReader(fs))
-                {
-                    Encounters.Clear();
-                    for (int slot = 0; slot < SlotCount && fs.Position + EntrySize <= fs.Length; slot++)
-                    {
-                        Encounters.Add(new GreatMarshEncounter(br));
-                    }
-                    while (Encounters.Count < SlotCount)
-                    {
-                        Encounters.Add(new GreatMarshEncounter());
-                    }
-                }
-                return true;
-            }
-            catch (Exception ex)
-            {
-                AppMessages.Error($"Couldn't import Trophy Garden encounters: {ex.Message}", "Special encounters editor");
-                return false;
-            }
-        }
-
-        public static bool IsAvailable()
-        {
-            return RomInfo.GameFamily == RomInfo.GameFamilies.DP ||
-                   RomInfo.GameFamily == RomInfo.GameFamilies.Plat;
         }
     }
 }

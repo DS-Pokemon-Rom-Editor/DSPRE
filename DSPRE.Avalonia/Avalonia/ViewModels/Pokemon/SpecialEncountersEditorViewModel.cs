@@ -139,7 +139,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 GreatMarshVM.PropertyChanged += OnChildChanged;
                 ShowGreatMarsh = true;
 
-                TrophyGardenVM = new TrophyGardenEncounterViewModel();
+                TrophyGardenVM = new TrophyGardenEncounterViewModel(true);
                 TrophyGardenVM.PropertyChanged += OnChildChanged;
                 ShowTrophyGarden = true;
             }

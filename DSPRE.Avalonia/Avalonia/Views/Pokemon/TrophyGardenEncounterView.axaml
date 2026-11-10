@@ -29,7 +29,7 @@
       <TextBlock Text="Not in this game" Margin="16" IsVisible="{Binding !IsAvailable}"/>
 
       <Grid ColumnDefinitions="240,*" IsVisible="{Binding IsAvailable}">
-        <ListBox Grid.Column="0" Margin="4" ItemsSource="{Binding SlotLabels}"
+        <ListBox Grid.Column="0" Margin="4" ItemsSource="{Binding EncounterSlots}"
                  SelectedIndex="{Binding SelectedSlotIndex}">
             <ListBox.ItemTemplate>
               <DataTemplate>
@@ -52,7 +52,7 @@
           </Border>
           <TextBlock Text="{Binding SlotInfoText}"/>
           <TextBlock Text="Species"/>
-          <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding SpeciesIndex}" HorizontalAlignment="Stretch"/>
+          <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding SelectedSpeciesIndex}" HorizontalAlignment="Stretch"/>
         </StackPanel>
       </Grid>
     </Grid>
