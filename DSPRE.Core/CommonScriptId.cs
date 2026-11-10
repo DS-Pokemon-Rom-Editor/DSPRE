@@ -40,7 +40,7 @@ namespace DSPRE
         // range start, loads a script and a message archive, and subtracts that start. Names follow Platinum's.
         private static readonly Bracket[] DpBrackets =
         {
-            new(10300, 65536, 977,  496, "Rival talk"),
+            new(10300, 65536, 977,  496, "Counterpart talk"),
             new(10200, 10300, 373,  332, "Mystery Gift deliveryman"),
             new(10150, 10200, 1042, 562, "TV interviews"),
             new(10100, 10150, 1041, 563, "TV"),
@@ -76,7 +76,7 @@ namespace DSPRE
             new(10490, 65536, 499,  541, "Scratch-off cards"),
             new(10450, 10490, 500,  16,  "Battle Frontier records"),
             new(10400, 10450, 400,  203, "Pokémon Center daily trainers"),
-            new(10300, 10400, 1051, 552, "Rival talk"),
+            new(10300, 10400, 1051, 552, "Counterpart talk"),
             new(10200, 10300, 407,  379, "Mystery Gift deliveryman"),
             new(10150, 10200, 1116, 621, "TV interviews"),
             new(10100, 10150, 1115, 622, "TV"),
