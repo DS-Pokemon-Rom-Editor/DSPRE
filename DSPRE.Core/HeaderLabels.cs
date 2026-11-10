@@ -70,17 +70,23 @@ namespace DSPRE
             try
             {
                 List<string> places = RomInfo.GetLocationNames();
-                int at = header switch
-                {
-                    HeaderDP dp => dp.LocationName,
-                    HeaderPt pt => pt.LocationName,
-                    HeaderHGSS hg => hg.LocationName,
-                    _ => -1,
-                };
+                int at = LocationOf(header);
                 return at >= 0 && places != null && at < places.Count ? places[at] : "";
             }
             catch (Exception ex) { AppLogger.WarnOnce("HeaderLabels.LocationNameOf", ex); return ""; }
         }
+
+        /// <summary>The header's location name number, or -1 for an unknown header type.</summary>
+        public static int LocationOf(MapHeader header) => header switch
+        {
+            HeaderDP dp => dp.LocationName,
+            HeaderPt pt => pt.LocationName,
+            HeaderHGSS hg => hg.LocationName,
+            _ => -1,
+        };
+
+        /// <summary>Location 0 in every game, used by headers that aren't a real place.</summary>
+        public const int MysteryZone = 0;
 
         /// <summary>Whether the dynamic headers patch is applied; the folder alone doesn't say so.</summary>
         public static bool DynamicHeaders =>

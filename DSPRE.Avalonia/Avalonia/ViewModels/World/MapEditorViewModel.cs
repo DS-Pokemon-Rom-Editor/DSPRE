@@ -2374,6 +2374,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 }
 
                 LoadArea(hdr.AreaDataID);
+                SyncTilesetsToArea();
                 GameMatrix matrix = new GameMatrix(hdr.MatrixID);
                 for (int y = 0; y < matrix.Height; y++)
                     for (int x = 0; x < matrix.Width; x++)
@@ -2387,7 +2388,6 @@ namespace DSPRE.Avalonia.ViewModels.World
                         {
                             try { MapHeader hh = MapHeader.GetMapHeader(matrix.Headers[y, x]); if (hh != null) areaId = hh.AreaDataID; } catch { /* keep hdr's area */ }
                         }
-                        else if (AreaForMap(mapIndex) is byte a) areaId = a;
 
                         float altitudeY = matrix.HasHeightsSection ? matrix.Altitudes[y, x] * (NsbmdGeometry.TileSize / 2f) : 0f;
                         MapFile map = new MapFile(mapIndex, GameFamily, discardMoveperms: false);
@@ -2542,15 +2542,20 @@ namespace DSPRE.Avalonia.ViewModels.World
                 int headerCount = GetHeaderCount();
                 int matrixCount = Filesystem.GetMatrixCount();
 
-                // matrix id → area, from the first header that references it (for plain matrices).
+                // matrix id → area, from the first header that references it (for plain matrices). DP and Pt put a Mystery Zone header
+                // with a different area first on the Pal Park and Floaroma Meadow matrices, so a named location replaces it.
                 Dictionary<int, byte> matrixArea = new Dictionary<int, byte>();
+                HashSet<int> fromMysteryZone = new HashSet<int>();
                 for (ushort h = 0; h < headerCount; h++)
                 {
                     try
                     {
                         MapHeader header = MapHeader.GetMapHeader(h);
-                        if (header != null && !matrixArea.ContainsKey(header.MatrixID))
-                            matrixArea[header.MatrixID] = header.AreaDataID;
+                        if (header == null) continue;
+                        bool mystery = HeaderLabels.LocationOf(header) == HeaderLabels.MysteryZone;
+                        if (matrixArea.ContainsKey(header.MatrixID) && (mystery || !fromMysteryZone.Contains(header.MatrixID))) continue;
+                        matrixArea[header.MatrixID] = header.AreaDataID;
+                        if (mystery) fromMysteryZone.Add(header.MatrixID); else fromMysteryZone.Remove(header.MatrixID);
                     }
                     catch { /* skip bad header */ }
                 }
