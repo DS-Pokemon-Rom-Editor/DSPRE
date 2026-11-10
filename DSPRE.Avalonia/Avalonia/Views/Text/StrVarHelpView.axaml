@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Text"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         x:Class="DSPRE.Avalonia.Views.Text.StrVarHelpView"
         x:DataType="vm:StrVarHelpViewModel"
         Title="{Binding Title}"
@@ -119,7 +120,37 @@
       </TabItem>
       <TabItem Header="Colour and size">
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-          <ItemsControl ItemsSource="{Binding Look}" Margin="0,8,0,0"/>
+          <StackPanel Margin="0,8,0,0" Spacing="6">
+            <ItemsControl ItemsSource="{Binding Look}"/>
+            <TextBlock Text="Colours in this game" FontWeight="SemiBold" IsVisible="{Binding HasColourRows}"/>
+            <Grid ColumnDefinitions="140,200,200" IsVisible="{Binding HasColourRows}">
+              <TextBlock Grid.Column="1" Text="Speech and battle box" Foreground="{DynamicResource Editor.Subtle}"/>
+              <TextBlock Grid.Column="2" Text="Menus" Foreground="{DynamicResource Editor.Subtle}"/>
+            </Grid>
+            <ItemsControl ItemsSource="{Binding ColourRows}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:TextColourRow">
+                  <Grid ColumnDefinitions="140,200,200" Margin="0,2">
+                    <SelectableTextBlock Text="{Binding Code}" FontFamily="{StaticResource CodeFont}" VerticalAlignment="Center"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                      <Border Width="22" Height="18" Background="{Binding SpeechInk}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"/>
+                      <Border Width="22" Height="18" Background="{Binding SpeechShadow}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"/>
+                      <TextBlock Text="{Binding SpeechNote}" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Warn}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                      <Border Width="22" Height="18" Background="{Binding MenuInk}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"/>
+                      <Border Width="22" Height="18" Background="{Binding MenuShadow}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"/>
+                    </StackPanel>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding SpeechColoursEmpty}">
+              <controls:EnableInToolbox Patch="speechBoxColours" Need="Green and pink for colours 3 and 4"/>
+              <Button Content="Open in Graphics" controls:Icon.Key="OpenLink" Click="OpenSpeechColours_Click"
+                      ToolTip.Tip="Entries 7 to 10"/>
+            </StackPanel>
+          </StackPanel>
         </ScrollViewer>
       </TabItem>
       <TabItem Header="Placement">

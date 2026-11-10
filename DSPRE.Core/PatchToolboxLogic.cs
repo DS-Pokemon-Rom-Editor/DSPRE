@@ -1173,6 +1173,18 @@ namespace DSPRE
             return true;
         }
 
+        public static bool ApplySpeechBoxColoursPatch()
+        {
+            if (AlreadyApplied(Probe(() => SpeechBoxColoursPatch.IsApplied))) return false;
+            if (SpeechBoxColoursPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
+            if (!ConfirmYesNo("Text in colours 3 and 4 shows green and pink in the speech and battle boxes instead of black." +
+                "\n\nApply this patch?" + CreditNote("speechBoxColours"), "Confirm to proceed"))
+                return false;
+            SpeechBoxColoursPatch.Apply();
+            ShowInfo("Colours 3 and 4 are in Graphics, under Fonts: Speech and battle box colours.", "Patch applied");
+            return true;
+        }
+
         public static bool ApplyFieldMenuColoursPatch()
         {
             if (AlreadyApplied(Probe(() => FieldMenuColoursPatch.IsApplied))) return false;
@@ -1825,6 +1837,7 @@ namespace DSPRE
             ["buttonFrames"] = ("Mixone", "battle button frames"),
             ["fightIcon"] = ("Mixone", "the FIGHT icon"),
             ["fieldMenuColours"] = ("Mixone", "field menu button colours"),
+            ["speechBoxColours"] = ("RefinedPlat", "speech box colours 3 and 4"),
             ["summaryFonts"] = ("Mixone", "summary screen fonts"),
             ["bottomPalettes"] = ("Mixone", "bottom screen palettes"),
             ["bagButtons"] = ("Mixone", "bag item buttons"),
@@ -1959,6 +1972,7 @@ namespace DSPRE
             ["buttonFrames"] = "Battle button frames",
             ["fightIcon"] = "FIGHT icon",
             ["fieldMenuColours"] = "Field menu button colours",
+            ["speechBoxColours"] = "Speech box colours 3 and 4",
             ["summaryFonts"] = "Summary screen fonts",
             ["bottomPalettes"] = "Bottom screen palettes",
             ["bagButtons"] = "Bag item buttons",
@@ -2356,6 +2370,14 @@ namespace DSPRE
                     if (RomInfo.IsHGE) return Unsupported("Not compatible with hg-engine");
                     if (!BattleFightIcon.SupportsCurrentRom) return Unsupported("Platinum, HeartGold and SoulSilver, except Japanese");
                     return BattleFightIcon.IsApplied ? PatchState.Applied : PatchState.Available;
+                }));
+
+            list.Add(Status("speechBoxColours",
+                "Text in colours 3 and 4 shows green and pink in the speech and battle boxes instead of black.",
+                () =>
+                {
+                    if (SpeechBoxColoursPatch.IsApplied) return PatchState.Applied;
+                    return SpeechBoxColoursPatch.WhyNotApplicable() is string why ? Unsupported(why) : PatchState.Available;
                 }));
 
             list.Add(Status("fieldMenuColours",
@@ -2852,6 +2874,7 @@ namespace DSPRE
                 case "buttonFrames": return ApplyButtonFramesPatch();
                 case "fightIcon": return ApplyFightIconPatch();
                 case "fieldMenuColours": return ApplyFieldMenuColoursPatch();
+                case "speechBoxColours": return ApplySpeechBoxColoursPatch();
                 case "summaryFonts": return ApplySummaryFontsPatch();
                 case "bottomPalettes": return ApplyBottomPalettesPatch();
                 case "bagButtons": return ApplyBagButtonsPatch();

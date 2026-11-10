@@ -34,7 +34,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             ["sentenceCase"] = "Items and Pokémon", ["itemSentenceCase"] = "Items and Pokémon", ["trainerNames"] = "Trainers",
             ["sameHeldItemOdds"] = "Items and Pokémon", ["itemStandardize"] = "Items and Pokémon",
             ["punchingMovesExpanded"] = "Moves", ["soundMovesExpanded"] = "Moves", ["regionalDexCount"] = "Items and Pokémon", ["evolutionSlots"] = "Items and Pokémon", ["typeChartExpanded"] = "Moves", ["swarmTableExpanded"] = "Items and Pokémon", ["bpShopExpanded"] = "Items and Pokémon", ["martsExpanded"] = "Items and Pokémon", ["pickupSlots"] = "Items and Pokémon", ["bugContestPrizes"] = "Items and Pokémon", ["shinyOdds"] = "Items and Pokémon",
-            ["fieldMenuColours"] = "Maps and graphics", ["bdhcam"] = "Maps and graphics", ["buildingRotation"] = "Maps and graphics", ["disableTextures"] = "Maps and graphics", ["hpBarText"] = "Maps and graphics", ["buttonFrames"] = "Maps and graphics", ["fightIcon"] = "Maps and graphics", ["partyPanelSize"] = "Maps and graphics", ["bannerPosition"] = "Maps and graphics", ["bannerMotion"] = "Maps and graphics", ["summaryFonts"] = "Maps and graphics", ["bottomPalettes"] = "Maps and graphics", ["bagButtons"] = "Maps and graphics", ["optionsMenu"] = "Maps and graphics", ["screenPositions"] = "Maps and graphics", ["partyFonts"] = "Maps and graphics", ["hpBarFonts"] = "Maps and graphics", ["extraFonts"] = "Maps and graphics",
+            ["fieldMenuColours"] = "Maps and graphics", ["speechBoxColours"] = "Maps and graphics", ["bdhcam"] = "Maps and graphics", ["buildingRotation"] = "Maps and graphics", ["disableTextures"] = "Maps and graphics", ["hpBarText"] = "Maps and graphics", ["buttonFrames"] = "Maps and graphics", ["fightIcon"] = "Maps and graphics", ["partyPanelSize"] = "Maps and graphics", ["bannerPosition"] = "Maps and graphics", ["bannerMotion"] = "Maps and graphics", ["summaryFonts"] = "Maps and graphics", ["bottomPalettes"] = "Maps and graphics", ["bagButtons"] = "Maps and graphics", ["optionsMenu"] = "Maps and graphics", ["screenPositions"] = "Maps and graphics", ["partyFonts"] = "Maps and graphics", ["hpBarFonts"] = "Maps and graphics", ["extraFonts"] = "Maps and graphics",
             ["platPatches"] = "External", ["g4Patcher"] = "External",
         };
 
@@ -48,7 +48,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             ["sentenceCase"] = "names capital case pokemon", ["itemSentenceCase"] = "names capital case items", ["trainerNames"] = "trainer name length text",
             ["sameHeldItemOdds"] = "held item odds wild", ["itemStandardize"] = "item numbers scripts ground items order",
             ["punchingMovesExpanded"] = "punch punching iron fist move list table expand repoint", ["soundMovesExpanded"] = "sound soundproof move list table expand repoint ai", ["regionalDexCount"] = "regional pokedex dex size count complete professor rating", ["evolutionSlots"] = "evolution evolutions evo slots methods more expand", ["typeChartExpanded"] = "type chart matchups effectiveness expand", ["swarmTableExpanded"] = "swarm swarms outbreak table expand rows", ["bpShopExpanded"] = "battle point bp shop counter tm exchange expand", ["martsExpanded"] = "mart marts shop poke mart items custom expand", ["pickupSlots"] = "pickup ability items level range slots rare independent", ["bugContestPrizes"] = "bug catching contest prize prizes reward first place national park stones", ["shinyOdds"] = "shiny odds rate chance legal wild egg roamer",
-            ["fieldMenuColours"] = "bottom screen menu buttons colours palette", ["bdhcam"] = "camera cameras dynamic", ["buildingRotation"] = "building rotation map editor", ["disableTextures"] = "textures dynamic disable", ["hpBarText"] = "hp bar health gauge name level numbers text box background white transparent clear battle", ["buttonFrames"] = "battle button buttons flash press palette colour touch screen bottom command fight art tiles", ["fightIcon"] = "battle pokemon icon fight bottom touch screen move size scale rotate flip",
+            ["fieldMenuColours"] = "bottom screen menu buttons colours palette", ["speechBoxColours"] = "text message speech box battle colour color green pink font palette", ["bdhcam"] = "camera cameras dynamic", ["buildingRotation"] = "building rotation map editor", ["disableTextures"] = "textures dynamic disable", ["hpBarText"] = "hp bar health gauge name level numbers text box background white transparent clear battle", ["buttonFrames"] = "battle button buttons flash press palette colour touch screen bottom command fight art tiles", ["fightIcon"] = "battle pokemon icon fight bottom touch screen move size scale rotate flip",
             ["partyPanelSize"] = "party menu panel size resize width height square layout pokemon slots",
             ["bannerPosition"] = "place name banner location popup sign town route position move",
             ["bannerMotion"] = "place name banner popup animation slide direction bottom ease bounce fade pixelate mosaic",
@@ -168,8 +168,13 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         public void Apply(PatchRowViewModel row)
         {
             if (row == null || !row.CanApply) return;
-            DSPRE.PatchToolboxLogic.ApplyByKey(row.Key);   // shows its own confirm/result prompts
+            HashSet<DSPRE.RomInfo.DirNames> written = new HashSet<DSPRE.RomInfo.DirNames>();
+            void Note(DSPRE.RomInfo.DirNames dir, int id, byte[] before, byte[] after) => written.Add(dir);
+            DSPRE.ArchiveMembers.Written += Note;
+            try { DSPRE.PatchToolboxLogic.ApplyByKey(row.Key); }   // shows its own confirm/result prompts
+            finally { DSPRE.ArchiveMembers.Written -= Note; }
             AppEvents.RaiseRomPatchStateChanged();         // any open editor gating on a patch flag re-checks
+            foreach (DSPRE.RomInfo.DirNames dir in written) AppEvents.RaiseArchiveMemberSaved(dir);
             // The sentence-case patches rewrite names that open editors list.
             if (row.Key == "sentenceCase" || row.Key == "itemSentenceCase") AppEvents.RaiseNamesChanged();
             Refresh();

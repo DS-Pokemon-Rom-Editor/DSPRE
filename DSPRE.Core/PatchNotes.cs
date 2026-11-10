@@ -324,6 +324,14 @@ namespace DSPRE
                 "The Screens editor's Battle screen: Command buttons for the art and the Press tab for each press frame.\n\n" +
                 "Requirements\n" +
                 "Platinum, HeartGold or SoulSilver, except Japanese. Not compatible with hg-engine.",
+            ["speechBoxColours"] =
+                "What it does\n" +
+                "Fills colours 3 and 4 of the speech and battle box text palette with green and pink. " +
+                "The game leaves them empty, so {COLOR, 0, 3} and {COLOR, 0, 4} print black there.\n\n" +
+                "Where to edit\n" +
+                "Graphics, under Fonts: Speech and battle box colours, entries 7 to 10.\n\n" +
+                "Requirements\n" +
+                "Any game whose entries 7 to 10 are still empty. Korean games already use them.",
             ["fieldMenuColours"] =
                 "What it does\n" +
                 "Gives each button on the field menu its own normal and selected colours. " +

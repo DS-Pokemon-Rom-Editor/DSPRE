@@ -10,7 +10,7 @@ using DSPRE.Avalonia.Data;
 namespace DSPRE.Avalonia.ViewModels.Graphics
 {
     /// <summary>Every 2D graphic in the game in one list, with a picture of whatever is picked.</summary>
-    public sealed class GraphicsBrowserViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges, ISupportsUndo
+    public sealed class GraphicsBrowserViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -86,8 +86,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public GraphicsBrowserViewModel(bool loadImmediately = true)
         {
             _pending.Changed += RaiseEdited;
+            // A patch or another editor can rewrite the member shown here.
+            if (!global::Avalonia.Controls.Design.IsDesignMode) _saved = AppEvents.WhenSaved(Look, _ => true);
             if (loadImmediately) Reload();
         }
+
+        private readonly IDisposable _saved;
+        public void Detach() => _saved?.Dispose();
 
         /// <summary>
         /// Opens the window already looking at one file, for an editor handing a graphic over.

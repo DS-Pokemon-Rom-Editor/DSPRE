@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.ComponentModel;
+using global::Avalonia.Controls;
+using global::Avalonia.Media;
 
 namespace DSPRE.Avalonia.ViewModels.Text
 {
@@ -79,8 +82,65 @@ namespace DSPRE.Avalonia.ViewModels.Text
         }
     }
 
-    public sealed class StrVarHelpViewModel
+    /// <summary>One {COLOR} value with the ink and shadow it gets in the speech box and in menus.</summary>
+    public sealed class TextColourRow
     {
+        public string Code { get; init; }
+        public IBrush SpeechInk { get; init; }
+        public IBrush SpeechShadow { get; init; }
+        public string SpeechNote { get; init; }
+        public IBrush MenuInk { get; init; }
+        public IBrush MenuShadow { get; init; }
+    }
+
+    public sealed class StrVarHelpViewModel : INotifyPropertyChanged, IDetachable
+    {
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        /// <summary>Codes 0 to 4 in this game's colours.</summary>
+        public IReadOnlyList<TextColourRow> ColourRows { get; private set; } = Array.Empty<TextColourRow>();
+        public bool HasColourRows => ColourRows.Count > 0;
+
+        /// <summary>Colours 3 and 4 are still empty in the speech box row, so they print black.</summary>
+        public bool SpeechColoursEmpty { get; private set; }
+
+        public int SpeechColoursMember => ROMFiles.SpeechBoxColoursPatch.Member;
+
+        private void ReadColours()
+        {
+            if (Design.IsDesignMode || !AvaloniaEditorLauncher.IsRomLoaded) return;
+            ushort[] speech = null, menus = null;
+            try { speech = Data.GameTextScreens.TalkColours; menus = Data.GameTextScreens.SystemColours; }
+            catch (Exception ex) { AppLogger.WarnOnce("StrVarHelpViewModel.ReadColours", ex); }
+            if (speech == null || menus == null || speech.Length < 16 || menus.Length < 16) return;
+
+            static IBrush Brush(ushort c)
+            {
+                (byte r, byte g, byte b) = ROMFiles.NitroBgCodec.Colour(c);
+                return new SolidColorBrush(Color.FromRgb(r, g, b));
+            }
+            List<TextColourRow> rows = new List<TextColourRow>();
+            for (int n = 0; n <= 4; n++)
+            {
+                (int ink, int shadow) = ROMFiles.TextColours.Entries(n);
+                bool empty = speech[ink] == 0 && speech[shadow] == 0;
+                rows.Add(new TextColourRow
+                {
+                    Code = $"{{COLOR, 0, {n}}}",
+                    SpeechInk = Brush(speech[ink]), SpeechShadow = Brush(speech[shadow]), SpeechNote = empty ? "black" : null,
+                    MenuInk = Brush(menus[ink]), MenuShadow = Brush(menus[shadow]),
+                });
+            }
+            ColourRows = rows;
+            SpeechColoursEmpty = rows[3].SpeechNote != null || rows[4].SpeechNote != null;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ColourRows)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HasColourRows)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SpeechColoursEmpty)));
+        }
+
+        private void OnPatchesChanged(object sender, EventArgs e) => ReadColours();
+        public void Detach() => AppEvents.RomPatchStateChanged -= OnPatchesChanged;
+
         public string Title => "Special variables";
         public string Subtitle => "For Diamond, Pearl, Platinum, HeartGold, and SoulSilver";
         public IReadOnlyList<StrVarHelpSection> Sections { get; }
@@ -91,6 +151,9 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         public StrVarHelpViewModel()
         {
+            ReadColours();
+            if (!Design.IsDesignMode) AppEvents.RomPatchStateChanged += OnPatchesChanged;
+
             // pokeplatinum and pokeheartgold render_text.c: Diamond, Pearl and Platinum handle the same codes. HGSS adds the
             // alignment codes and two box breaks.
             bool hgss = RomInfo.GameFamily == RomInfo.GameFamilies.HGSS;
@@ -106,7 +169,13 @@ namespace DSPRE.Avalonia.ViewModels.Text
             Look = Array.AsReadOnly(new[]
             {
                 new SpecialCode("{COLOR, 0, n}", "Text after it uses colour pair n of the box's palette row (colours 2n+1 and 2n+2). 0 is the normal colour.",
-                                "{COLOR, 0, 1}LINK WITH POKéMON RANGER{COLOR, 0, 0}."),
+                                "{COLOR, 0, 1}LINK WITH POKéMON RANGER{COLOR, 0, 0}.",
+                                "The same number can be a different colour in another box. The table below shows this game's."),
+                new SpecialCode("{COLOR, 0, 255}", "Switches to the colour stored with 100 to 106.",
+                                "a {COLOR, 0, 255}White Fluff{COLOR, 0, 0}",
+                                "The game uses it in names that are put into other messages."),
+                new SpecialCode("{COLOR, 0, 100}", "100 to 106 store colours 0 to 6 for a later 255.",
+                                "{COLOR, 0, 101}{STRVAR_1, 0, 1, 0}{COLOR, 0, 0}!"),
                 new SpecialCode("{SIZE, 0, n}", "200 doubles the letters. 100 sets them back to normal.", "{SIZE, 0, 200}“Gyaaah!!”{SIZE, 0, 100}"),
             });
             Placement = Array.AsReadOnly(new[]

@@ -203,6 +203,8 @@ namespace DSPRE.Avalonia.Data
             if (fileIndex < 0 || fileIndex >= names.Count) return null;
             (string thing, string part) = BattleObjects.Split(names[fileIndex]);
             if (thing == null) return null;
+            // The indicators' palette is also the row the speech and battle boxes write with.
+            if (dir == DirNames.Fonts && thing == "Font.ScreenIndicators" && part == "Colours") return "Speech and battle box colours";
             string friendly = Friendly(dir, thing);
             return part == "File" ? friendly : $"{friendly} ({part.ToLowerInvariant()})";
         }
