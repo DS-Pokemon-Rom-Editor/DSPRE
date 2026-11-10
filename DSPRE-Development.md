@@ -248,8 +248,10 @@ it closes.
 
 ### View model
 
-Each view model implements `INotifyPropertyChanged` itself, with no ReactiveUI, CommunityToolkit or base class. The
-parameterless constructor is for the XAML designer and returns straight away outside it, since there is no ROM to
+Each view model implements `INotifyPropertyChanged` itself, with no ReactiveUI or CommunityToolkit. Editors that do
+the same job for different games or formats may share an abstract base for that job, like `WildEditorViewModel<TFile>`
+for the DPPt and HGSS Wild Pokémon editors. The base keeps its fields private. An editor that loads when it opens
+has a static `Open` that builds and loads it. The parameterless constructor is for the XAML designer and returns straight away outside it, since there is no ROM to
 read there. Grid rows get a small `...Row` or `...VM` class in the same file, which keeps the fields the UI doesn't
 show.
 
@@ -388,7 +390,8 @@ In `MainWindowView.axaml` the menu item binds `IsVisible` to `Shown[MyEditorView
 | One overworld sprite | `OverworldSpriteView`; `OverworldSprites.Get` and `Outlined` |
 | Message and menu borders | `WindowFrames` |
 | DSPRE's own folders, logging | `AppPaths`, `AppLogger` (Core) |
-| Pixels in Core | `RawImage` |
+| Pixels in Core | `RawImage`, `TileOrder` |
+| Number lists | `NumberListText` (Core) |
 | Counts in text ("1 map", "3 maps") | `Plural.Of` (Core) |
 | A tab that loads when first shown | `TabSetup.OnFirstShow` in the tab view's constructor |
 | Thumb `movs`/`cmp`/`adds`/`subs` immediates | `ThumbImm8` (Core) |
@@ -882,13 +885,13 @@ CDirective count = CSourceFile.For(text).FindDefine("SWARM_MAP_COUNT");
 ```
 
 Makefiles go through `HgEngineMakeFile`, and armips (`.s`, `.inc`) through `AsmSourceFile`. The hooks,
-bytereplacement and repoints lists go through `HgEnginePatchList`, and an entry's `Heading` and `Conditions` identify
+bytereplacement and repoints lists go through `HgEngineHookList`, and an entry's `Heading` and `Conditions` identify
 its block. JSON edited in place goes through `JsonText`, which gives character offsets. Its values are read with
 `JsonDocument`.
 
 ```csharp
 AsmDefinition flag = AsmSourceFile.For(text).Definitions.First(d => d.Name == "FLAG_HIDE_X");
-HgEnginePatchEntry count = HgEnginePatchList.Read(HgEnginePatchKind.ByteReplacement).Entries
+HgEngineHookEntry count = HgEngineHookList.Read(HgEngineHookKind.ByteReplacement).Entries
     .First(e => e.Parsed && e.Heading == "PrizeMoney table range");
 ```
 
