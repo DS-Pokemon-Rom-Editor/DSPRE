@@ -125,7 +125,7 @@
                            ToolTip.Tip="Unticked, some screens such as Platinum's summary show it mirrored. HeartGold and SoulSilver never mirror the summary sprite."/>
                 <TextBlock Grid.Row="6" Grid.Column="0" Text="Gender ratio"    Classes="label"/>
                 <StackPanel Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="3" Orientation="Horizontal" Spacing="10">
-                  <NumericUpDown Value="{Binding GenderVec}" Minimum="0" Maximum="254" MinWidth="120"/>
+                  <NumericUpDown Value="{Binding GenderVec}" Minimum="0" Maximum="255" MinWidth="120"/>
                   <TextBlock Text="{Binding GenderLabel}" VerticalAlignment="Center" FontStyle="Italic"/>
                 </StackPanel>
                 <TextBlock Grid.Row="8" Grid.Column="0" Text="Growth curve"    Classes="label"/>
