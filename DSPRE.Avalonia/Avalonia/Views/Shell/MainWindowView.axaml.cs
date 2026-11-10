@@ -1445,8 +1445,8 @@ namespace DSPRE.Avalonia.Views.Shell
             + "Their help, research and expertise in many fields of NDS ROM hacking made the development of this tool possible.",
             "About");
 
-        private void HgEnginePatches_Click(object sender, RoutedEventArgs e)
-            => AvaloniaEditorLauncher.OpenHgEnginePatches();
+        private void HgEngineHooks_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenHgEngineHooks();
 
         private void HgEngineSettings_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenHgEngineSettings();

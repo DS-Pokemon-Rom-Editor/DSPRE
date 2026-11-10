@@ -137,8 +137,8 @@ namespace DSPRE.HgEngine
             if (items == null || !File.Exists(Path(RepointsRelPath))) { error = $"{ItemHeaderRelPath} or {RepointsRelPath} is missing from the checkout."; return false; }
             text = HgEngineFileCache.GetText(Path(SourceRelPath)).Replace("\r\n", "\n");
             // The game orders specialty slots by the address of their repoint inside MART_EXPANSION.
-            HgEnginePatchList repoints = HgEnginePatchList.Read(HgEnginePatchKind.Repoint);
-            List<HgEnginePatchEntry> inside = repoints?.Entries.Where(e => e.Conditions.Count == 1 && e.Conditions[0] == "MART_EXPANSION").ToList();
+            HgEngineHookList repoints = HgEngineHookList.Read(HgEngineHookKind.Repoint);
+            List<HgEngineHookEntry> inside = repoints?.Entries.Where(e => e.Conditions.Count == 1 && e.Conditions[0] == "MART_EXPANSION").ToList();
             if (inside == null || inside.Count == 0) { error = $"{RepointsRelPath} has no MART_EXPANSION block."; return false; }
             order = inside.Where(e => e.Parsed && e.OverlayNumber < 0).OrderBy(e => e.Address).Select(e => e.Symbol).ToList();
             if (order.Count == 0) { error = $"{RepointsRelPath} repoints no marts."; return false; }

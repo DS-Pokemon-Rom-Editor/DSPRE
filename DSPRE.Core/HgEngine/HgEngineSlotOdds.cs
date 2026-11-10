@@ -34,7 +34,7 @@ namespace DSPRE.HgEngine
         /// </summary>
         public static List<(string Symbol, int Line)> MislabelledHooks()
         {
-            HgEnginePatchList hooks = HgEnginePatchList.ReadAll().FirstOrDefault(l => l.Kind == HgEnginePatchKind.Hook);
+            HgEngineHookList hooks = HgEngineHookList.ReadAll().FirstOrDefault(l => l.Kind == HgEngineHookKind.Hook);
             if (hooks == null) return new List<(string, int)>();
             // The list keeps one entry per line of the file, so an entry's place is its line.
             return hooks.Entries.Select((e, i) => (Entry: e, Line: i + 1))

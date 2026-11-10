@@ -224,7 +224,7 @@ namespace DSPRE
             ["HgEngineTablesView"] = new Rule { Title = "Battle tables", Hge = HgEngine.LinkedOnly },
             ["MoveBackgroundEditorView"] = new Rule { Title = "Move backgrounds", Hge = HgEngine.Source },
             ["HgEngineSettingsView"] = new Rule { Title = "hg-engine settings", Hge = HgEngine.LinkedOnly },
-            ["HgEnginePatchesView"] = new Rule { Title = "hg-engine patches", Hge = HgEngine.LinkedOnly },
+            ["HgEngineHooksView"] = new Rule { Title = "hg-engine hooks and byte replacements", Hge = HgEngine.LinkedOnly },
             ["BattleTestsView"] = new Rule { Title = "Battle tests", Hge = HgEngine.LinkedOnly },
             ["HgeRomReviewView"] = new Rule
             {

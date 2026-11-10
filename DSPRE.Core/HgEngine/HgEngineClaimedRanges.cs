@@ -27,7 +27,7 @@ namespace DSPRE.HgEngine
     }
 
     /// <summary>
-    /// The parts of arm9 and the overlays hg-engine's build patches, read from the checkout's own
+    /// The parts of arm9 and the overlays hg-engine's build writes, read from the checkout's own
     /// hooks, armhooks, bytereplacement and repoints lists. A DSPRE write outside these is untouched by
     /// a build; one inside them is overwritten on the next compile.
     ///
@@ -79,16 +79,16 @@ namespace DSPRE.HgEngine
         }
 
         /// <summary>
-        /// Built from the checkout's patch lists, so there is only one parser.
+        /// Built from the checkout's hook lists, so there is only one parser.
         /// </summary>
         internal static Dictionary<int, List<HgEngineClaim>> ReadAll(string root, Func<int, long> overlayRam)
         {
             Dictionary<int, List<HgEngineClaim>> map = new Dictionary<int, List<HgEngineClaim>>();
 
-            foreach (HgEnginePatchList list in HgEnginePatchList.ReadAllAt(root))
+            foreach (HgEngineHookList list in HgEngineHookList.ReadAllAt(root))
             {
                 // A line the checkout's defines rule out is never written; one that depends on a make flag might be.
-                foreach (HgEnginePatchEntry entry in list.Entries.Where(e => e.Parsed && e.Built != false))
+                foreach (HgEngineHookEntry entry in list.Entries.Where(e => e.Parsed && e.Built != false))
                 {
                     long offset = entry.FileOffset(overlayRam);
                     if (offset < 0) continue;
@@ -104,7 +104,7 @@ namespace DSPRE.HgEngine
                         Offset = offset,
                         Length = entry.Length,
                         Source = list.FileName,
-                        Detail = entry.Kind == HgEnginePatchKind.ByteReplacement
+                        Detail = entry.Kind == HgEngineHookKind.ByteReplacement
                             ? Plural.Of(entry.Bytes.Count, "byte") : entry.Symbol,
                     });
                 }

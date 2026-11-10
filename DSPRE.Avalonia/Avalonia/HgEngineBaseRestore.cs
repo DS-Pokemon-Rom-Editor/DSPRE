@@ -85,7 +85,7 @@ namespace DSPRE.Avalonia
         {
             List<string> parts = new List<string>();
             if (report.Skipped.Count > 0)
-                parts.Add("hg-engine now patches these addresses, so DSPRE's edits to them weren't written back:\n" + string.Join("\n", report.Skipped));
+                parts.Add("hg-engine now writes to these addresses, so DSPRE's edits to them were skipped:\n" + string.Join("\n", report.Skipped));
             if (report.Waiting.Count > 0)
                 parts.Add("These files are still compressed. Their edits are offered again after the next build:\n" + string.Join("\n", report.Waiting));
             if (report.Failed.Count > 0)

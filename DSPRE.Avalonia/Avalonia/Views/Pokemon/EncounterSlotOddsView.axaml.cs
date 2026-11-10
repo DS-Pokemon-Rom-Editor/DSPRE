@@ -10,7 +10,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         public EncounterSlotOddsView() { InitializeComponent(); }
 
-        private void OpenHooks_Click(object sender, RoutedEventArgs e) => AvaloniaEditorLauncher.OpenHgEnginePatches(VM?.FirstMislabelledHook);
+        private void OpenHooks_Click(object sender, RoutedEventArgs e) => AvaloniaEditorLauncher.OpenHgEngineHooks(VM?.FirstMislabelledHook);
 
         private async void HookFix_Click(object sender, RoutedEventArgs e)
         {

@@ -40,11 +40,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             StartUndo();
             CheckHooks();
             // A fix saved in the hooks editor clears the warning here.
-            DSPRE.HgEngine.HgEnginePatchList.Saved += OnHooksSaved;
+            DSPRE.HgEngine.HgEngineHookList.Saved += OnHooksSaved;
         }
 
         private void OnHooksSaved() => global::Avalonia.Threading.Dispatcher.UIThread.Post(CheckHooks);
-        public void Detach() => DSPRE.HgEngine.HgEnginePatchList.Saved -= OnHooksSaved;
+        public void Detach() => DSPRE.HgEngine.HgEngineHookList.Saved -= OnHooksSaved;
 
         // A hooks file that puts the slot hooks in arm9 never applies them, so these odds never run. hg-engine pull request 1039 fixes it.
         private string _hookWarning;

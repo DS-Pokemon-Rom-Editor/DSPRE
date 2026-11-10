@@ -69,12 +69,12 @@ namespace DSPRE.Avalonia
                 S("name:AudioActions", "Export and import", "Export a sound, song or instruments, or import a cry or effect."),
                 S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
-            Add("HgEnginePatchesView", "hg-engine patches",
-                S(null, "Code patches", "The patches hg-engine applies on each build."),
+            Add("HgEngineHooksView", "hg-engine hooks and byte replacements",
+                S(null, "Hooks and byte replacements", "What hg-engine writes into the game on each build."),
                 S("toolbar", "Filter", "Which part of the code to list."),
-                S("list", "Patches", "Where each lands, what it does and what it overlaps."),
+                S("list", "Entries", "Where each lands, what it does and what it overlaps."),
                 S("toolbar", "Built only", "Untick to see lines your #ifdefs leave out."),
-                S("name:AddPatchPanel", "Adding a patch", "Pick a list, the place and the change, then Add."),
+                S("name:AddEntryPanel", "Adding an entry", "Pick a list, the place and the change, then Add."),
                 S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("BattleTestsView", "Battle tests",

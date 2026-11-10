@@ -36,7 +36,7 @@ namespace DSPRE.HgEngine
             string binary = overlayNumber < 0 ? "arm9" : $"overlay {overlayNumber}";
             string message =
                 $"hg-engine's build writes over this part of {binary}, so the change would be undone by "
-                + $"the next compile. It patches {claim} there.";
+                + $"the next compile. It writes {claim} there.";
 
             AppLogger.Warn($"Refused write to {binary} at 0x{offset:X}: {claim}");
             OnRefused?.Invoke(message);

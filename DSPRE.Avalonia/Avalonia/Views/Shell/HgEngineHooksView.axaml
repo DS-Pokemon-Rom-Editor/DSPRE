@@ -2,11 +2,11 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Shell"
-        x:Class="DSPRE.Avalonia.Views.Shell.HgEnginePatchesView"
-        x:DataType="vm:HgEnginePatchesViewModel">
+        x:Class="DSPRE.Avalonia.Views.Shell.HgEngineHooksView"
+        x:DataType="vm:HgEngineHooksViewModel">
 
   <Design.DataContext>
-    <vm:HgEnginePatchesViewModel/>
+    <vm:HgEngineHooksViewModel/>
   </Design.DataContext>
 
   <DockPanel>
@@ -22,17 +22,17 @@
         <TextBlock Text="Show" VerticalAlignment="Center" Margin="12,0,0,0"/>
         <ComboBox Width="160" ItemsSource="{Binding Binaries}" SelectedIndex="{Binding BinaryFilter}"/>
         <CheckBox Content="Built only" IsChecked="{Binding BuiltOnly}" Margin="8,0,0,0"
-                  ToolTip.Tip="Hide lines your config's #ifdefs leave out"/>
+                  ToolTip.Tip="Hide lines the config's #ifdefs leave out"/>
         <Button Content="Reload" controls:Icon.Key="reload" Click="Reload_Click"/>
     </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="8,5">
       <controls:HelpTip HorizontalAlignment="Left"
-                        Text="Offset is where each patch lands in the file; #ifdef lines are checked against your config"/>
+                        Text="Offset is where each entry lands in the file; #ifdef lines are checked against the project's config"/>
     </Border>
 
     <!-- Adding one -->
-    <Border x:Name="AddPatchPanel" DockPanel.Dock="Bottom" Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}"
+    <Border x:Name="AddEntryPanel" DockPanel.Dock="Bottom" Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,1,0,0" Padding="8">
       <StackPanel Spacing="6">
         <WrapPanel>
@@ -70,12 +70,12 @@
       </StackPanel>
     </Border>
 
-    <DataGrid x:Name="PatchGrid" ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow}" AutoGenerateColumns="False" IsReadOnly="True"
+    <DataGrid x:Name="EntryGrid" ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow}" AutoGenerateColumns="False" IsReadOnly="True"
               GridLinesVisibility="Horizontal" CanUserResizeColumns="True" CanUserSortColumns="True">
       <DataGrid.Styles>
         <Style Selector="DataGridRow">
-          <Setter Property="Opacity" Value="{Binding RowOpacity, x:DataType=vm:PatchRow}"/>
-          <Setter Property="ToolTip.Tip" Value="{Binding BuiltNote, x:DataType=vm:PatchRow}"/>
+          <Setter Property="Opacity" Value="{Binding RowOpacity, x:DataType=vm:HookRow}"/>
+          <Setter Property="ToolTip.Tip" Value="{Binding BuiltNote, x:DataType=vm:HookRow}"/>
         </Style>
       </DataGrid.Styles>
       <DataGrid.Columns>
@@ -90,7 +90,7 @@
         <DataGridTextColumn Header="Runs into" Binding="{Binding Clash}" Width="200"/>
         <DataGridTemplateColumn Header="Problem" Width="240">
           <DataGridTemplateColumn.CellTemplate>
-            <DataTemplate x:DataType="vm:PatchRow">
+            <DataTemplate x:DataType="vm:HookRow">
               <StackPanel Orientation="Horizontal" Spacing="4" Margin="6,0" VerticalAlignment="Center"
                           IsVisible="{Binding Problem, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding Problem}">
                 <controls:IconImage Key="warning" VerticalAlignment="Center"/>

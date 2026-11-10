@@ -148,7 +148,7 @@ namespace DSPRE.Avalonia
                     Target = () => main.FindControl<Control>("FileMenu"),
                     Title = "The File menu",
                     Body = "Open a ROM or project, save a playable .nds with Save ROM, or build and run it in your " +
-                           "emulator with F5. hg-engine projects have a submenu here to link, compile and review patches."
+                           "emulator with F5. hg-engine projects have a submenu here to link, compile and review hooks."
                 },
                 new Step
                 {

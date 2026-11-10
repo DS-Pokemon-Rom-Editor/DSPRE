@@ -11,14 +11,14 @@ using DSPRE.HgEngine;
 
 namespace DSPRE.Avalonia.ViewModels.Shell
 {
-    /// <summary>One patch shown in the table, with what it does and where it lands.</summary>
-    public class PatchRow
+    /// <summary>One entry shown in the table, with what it does and where it lands.</summary>
+    public class HookRow
     {
-        public HgEnginePatchEntry Entry { get; init; }
+        public HgEngineHookEntry Entry { get; init; }
 
         public string List { get; init; }
         public string Binary => Entry.BinaryName;
-        public string Symbol => Entry.Kind == HgEnginePatchKind.ByteReplacement
+        public string Symbol => Entry.Kind == HgEngineHookKind.ByteReplacement
             ? string.Join(" ", Entry.Bytes.Select(b => b.ToString("X2")))
             : Entry.Symbol;
         public string Address => $"0x{Entry.Address:X8}";
@@ -43,10 +43,10 @@ namespace DSPRE.Avalonia.ViewModels.Shell
     }
 
     /// <summary>
-    /// hg-engine's patch lists, shown by what they do. Added patches stay in memory until Save edits the
+    /// hg-engine's hook lists, shown by what they do. Added entries stay in memory until Save edits the
     /// checkout's list in place, keeping its comments.
     /// </summary>
-    public class HgEnginePatchesViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
+    public class HgEngineHooksViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -54,16 +54,16 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)
         { if (EqualityComparer<T>.Default.Equals(f, v)) return false; f = v; OnPropertyChanged(n); return true; }
 
-        private readonly Func<List<HgEnginePatchList>> _readAll;
-        private List<HgEnginePatchList> _lists = new();
+        private readonly Func<List<HgEngineHookList>> _readAll;
+        private List<HgEngineHookList> _lists = new();
 
         // Entries added or changed since the last save, shown as not saved.
-        private readonly HashSet<HgEnginePatchEntry> _pending = new();
+        private readonly HashSet<HgEngineHookEntry> _pending = new();
 
         // Every list's entries at one moment. Entries keep their identity across steps, so a step stores their fields.
-        private sealed record EntryState(HgEnginePatchEntry Entry, bool Parsed, int OverlayNumber, string Symbol,
+        private sealed record EntryState(HgEngineHookEntry Entry, bool Parsed, int OverlayNumber, string Symbol,
             long Address, int Register, IReadOnlyList<byte> Bytes, string RawLine);
-        private sealed record Snapshot(List<EntryState>[] Lists, HashSet<HgEnginePatchEntry> Pending);
+        private sealed record Snapshot(List<EntryState>[] Lists, HashSet<HgEngineHookEntry> Pending);
 
         // One step per add, change or delete. Save reads the lists again, so it starts the history again too.
         private readonly UndoHistory<Snapshot> _history = new();
@@ -73,7 +73,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         private Snapshot Take() => new Snapshot(
             _lists.Select(l => l.Entries.Select(e => new EntryState(e, e.Parsed, e.OverlayNumber, e.Symbol, e.Address, e.Register, e.Bytes, e.RawLine)).ToList()).ToArray(),
-            new HashSet<HgEnginePatchEntry>(_pending));
+            new HashSet<HgEngineHookEntry>(_pending));
 
         private void Restore(Snapshot state)
         {
@@ -125,9 +125,9 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         }
 
         // The lists whose lines differ from what was read.
-        private List<HgEnginePatchList> ChangedLists()
+        private List<HgEngineHookList> ChangedLists()
         {
-            List<HgEnginePatchList> changed = new();
+            List<HgEngineHookList> changed = new();
             if (_loaded == null) return changed;
             for (int i = 0; i < Math.Min(_lists.Count, _loaded.Lists.Length); i++)
                 if (!_lists[i].Entries.Select(e => e.RawLine).SequenceEqual(_loaded.Lists[i].Select(s => s.RawLine)))
@@ -135,7 +135,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             return changed;
         }
 
-        public ObservableCollection<PatchRow> Rows { get; } = new();
+        public ObservableCollection<HookRow> Rows { get; } = new();
         public ObservableCollection<string> Binaries { get; } = new();
         public ObservableCollection<string> ListNames { get; } = new();
 
@@ -157,7 +157,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public int NewList { get => _newList; set { if (Set(ref _newList, value)) OnPropertyChanged(nameof(NewNeedsBytes)); } }
 
         public bool NewNeedsBytes => NewList >= 0 && NewList < _lists.Count
-            && _lists[NewList].Kind == HgEnginePatchKind.ByteReplacement;
+            && _lists[NewList].Kind == HgEngineHookKind.ByteReplacement;
 
         private string _newBinary = "arm9";
         public string NewBinary { get => _newBinary; set => Set(ref _newBinary, value); }
@@ -174,10 +174,10 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         private string _newBytes = "";
         public string NewBytes { get => _newBytes; set => Set(ref _newBytes, value); }
 
-        public HgEnginePatchesViewModel()
-            : this(HgEngineProject.IsActive ? new Func<List<HgEnginePatchList>>(HgEnginePatchList.ReadAll) : null) { }
+        public HgEngineHooksViewModel()
+            : this(HgEngineProject.IsActive ? new Func<List<HgEngineHookList>>(HgEngineHookList.ReadAll) : null) { }
 
-        internal HgEnginePatchesViewModel(Func<List<HgEnginePatchList>> readAll)
+        internal HgEngineHooksViewModel(Func<List<HgEngineHookList>> readAll)
         {
             _readAll = readAll;
             if (!IsAvailable)
@@ -187,7 +187,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             }
 
             _lists = _readAll();
-            foreach (HgEnginePatchList l in _lists) { ListNames.Add(l.FileName); NewListChoices.Add(l.FileName); }
+            foreach (HgEngineHookList l in _lists) { ListNames.Add(l.FileName); NewListChoices.Add(l.FileName); }
             if (_lists.Count > 0) _newList = 0;
             ForgetSteps();
 
@@ -198,34 +198,34 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         {
             Rows.Clear();
 
-            List<(HgEnginePatchList List, HgEnginePatchEntry Entry)> all = _lists.SelectMany(l => l.Entries.Where(e => e.Parsed).Select(e => (List: l, Entry: e))).ToList();
+            List<(HgEngineHookList List, HgEngineHookEntry Entry)> all = _lists.SelectMany(l => l.Entries.Where(e => e.Parsed).Select(e => (List: l, Entry: e))).ToList();
 
             RebuildBinaryChoices(all.Select(x => x.Entry.OverlayNumber).Distinct().OrderBy(n => n).ToList());
 
             int? wanted = BinaryFilter <= 0 ? null : OverlayForChoice(BinaryFilter);
 
-            foreach ((HgEnginePatchList list, HgEnginePatchEntry entry) in all
+            foreach ((HgEngineHookList list, HgEngineHookEntry entry) in all
                 .Where(x => wanted == null || x.Entry.OverlayNumber == wanted)
                 .Where(x => !BuiltOnly || x.Entry.Built != false)
                 .OrderBy(x => x.Entry.OverlayNumber).ThenBy(x => x.Entry.Address))
             {
                 long offset = entry.FileOffset(OverlayRam);
                 bool pending = _pending.Contains(entry);
-                Rows.Add(new PatchRow
+                Rows.Add(new HookRow
                 {
                     Entry = entry,
                     List = pending ? list.FileName + " (not saved)" : list.FileName,
                     Offset = offset < 0 ? "" : $"0x{offset:X}",
                     Size = entry.Length.ToString(),
                     IsPending = pending,
-                    Problem = HgEnginePatchList.Problem(entry),
+                    Problem = HgEngineHookList.Problem(entry),
                 });
             }
 
             MarkClashes();
             int clashes = Rows.Count(r => r.HasClash);
             int off = all.Count(x => x.Entry.Built == false);
-            StatusText = Plural.Of(Rows.Count, "patch", "patches") +
+            StatusText = Plural.Of(Rows.Count, "entry", "entries") +
                 (off > 0 ? $", {off} off in your config{(BuiltOnly ? " and hidden" : "")}" : "") +
                 (clashes > 0 ? $", {clashes} overlapping another" : "") +
                 (_pending.Count > 0 ? $", {_pending.Count} not saved" : "") + ".";
@@ -246,18 +246,18 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         private static long OverlayRam(int overlayNumber)
         {
             try { return OverlayUtils.OverlayTable.GetRAMAddress(overlayNumber); }
-            catch (Exception ex) { AppLogger.WarnOnce("HgEnginePatchesViewModel.OverlayRam", ex); return 0; }
+            catch (Exception ex) { AppLogger.WarnOnce("HgEngineHooksViewModel.OverlayRam", ex); return 0; }
         }
 
         /// <summary>
-        /// Flags patches starting inside another. Lines the config leaves out don't count. Same-address pairs are
+        /// Flags entries starting inside another. Lines the config leaves out don't count. Same-address pairs are
         /// skipped, since hg-engine stacks them on purpose and repeats lines across #ifdef branches.
         /// </summary>
         private void MarkClashes()
         {
-            foreach (IGrouping<int, PatchRow> group in Rows.Where(r => r.Offset.Length > 0 && r.Entry.Built != false).GroupBy(r => r.Entry.OverlayNumber))
+            foreach (IGrouping<int, HookRow> group in Rows.Where(r => r.Offset.Length > 0 && r.Entry.Built != false).GroupBy(r => r.Entry.OverlayNumber))
             {
-                List<(PatchRow Row, long Start, int Len)> ordered = group
+                List<(HookRow Row, long Start, int Len)> ordered = group
                     .Select(r => (Row: r,
                         Start: Convert.ToInt64(r.Offset.Substring(2), 16),
                         Len: int.TryParse(r.Size, out int l) ? l : 0))
@@ -265,8 +265,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
                 for (int i = 1; i < ordered.Count; i++)
                 {
-                    (PatchRow Row, long Start, int Len) prev = ordered[i - 1];
-                    (PatchRow Row, long Start, int Len) here = ordered[i];
+                    (HookRow Row, long Start, int Len) prev = ordered[i - 1];
+                    (HookRow Row, long Start, int Len) here = ordered[i];
                     if (here.Start == prev.Start) continue;
                     if (here.Start >= prev.Start + prev.Len) continue;
 
@@ -277,9 +277,9 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         }
 
         // ── Editing one ─────────────────────────────────────────────────────
-        private PatchRow _selectedRow;
+        private HookRow _selectedRow;
         /// <summary>The row picked in the table; its values fill the fields so they can be changed.</summary>
-        public PatchRow SelectedRow
+        public HookRow SelectedRow
         {
             get => _selectedRow;
             set
@@ -287,7 +287,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                 if (!Set(ref _selectedRow, value)) return;
                 OnPropertyChanged(nameof(HasSelection));
                 if (value == null) return;
-                HgEnginePatchEntry e = value.Entry;
+                HgEngineHookEntry e = value.Entry;
                 int listIndex = _lists.FindIndex(l => l.Entries.Contains(e));
                 if (listIndex >= 0) NewList = listIndex;
                 NewBinary = e.OverlayNumber < 0 ? "arm9" : e.OverlayNumber.ToString("D4");
@@ -303,7 +303,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public void SelectSymbol(string symbol) => SelectedRow = Rows.FirstOrDefault(r => r.Entry.Symbol == symbol) ?? SelectedRow;
 
         /// <summary>Reads the fields into an entry's values, or says why they can't be used.</summary>
-        private string ReadFields(HgEnginePatchKind kind, out int overlay, out long at, out int register, out List<byte> bytes)
+        private string ReadFields(HgEngineHookKind kind, out int overlay, out long at, out int register, out List<byte> bytes)
         {
             overlay = -1; at = 0; register = -1; bytes = new List<byte>();
             if (!HgEngineClaimedRanges.TryBinary((NewBinary ?? "").Trim(), out overlay))
@@ -311,7 +311,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             string address = (NewAddress ?? "").Trim().Replace("0x", "", StringComparison.OrdinalIgnoreCase);
             if (!long.TryParse(address, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out at))
                 return "The address has to be hex, like 02078384.";
-            if (kind == HgEnginePatchKind.ByteReplacement)
+            if (kind == HgEngineHookKind.ByteReplacement)
             {
                 foreach (string token in (NewBytes ?? "").Split((char[])null, StringSplitOptions.RemoveEmptyEntries))
                 {
@@ -324,41 +324,41 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             else if (string.IsNullOrWhiteSpace(NewSymbol))
                 return "Name the routine or table this points at.";
             // An empty register on a hook keeps the whole-routine form the list already used.
-            if (kind == HgEnginePatchKind.Hook && string.IsNullOrWhiteSpace(NewRegister)) return null;
-            return HgEnginePatchList.TryParseRegister(kind, NewRegister, out register, out string registerError) ? null : registerError;
+            if (kind == HgEngineHookKind.Hook && string.IsNullOrWhiteSpace(NewRegister)) return null;
+            return HgEngineHookList.TryParseRegister(kind, NewRegister, out register, out string registerError) ? null : registerError;
         }
 
-        /// <summary>Changes the selected patch to the values in the fields.</summary>
+        /// <summary>Changes the selected entry to the values in the fields.</summary>
         public string ChangeSelected()
         {
-            HgEnginePatchEntry entry = _selectedRow?.Entry;
-            if (entry == null) return "Pick a patch in the table first.";
-            HgEnginePatchList list = _lists.FirstOrDefault(l => l.Entries.Contains(entry));
-            if (list == null) return "That patch is no longer in its list.";
+            HgEngineHookEntry entry = _selectedRow?.Entry;
+            if (entry == null) return "Pick an entry in the table first.";
+            HgEngineHookList list = _lists.FirstOrDefault(l => l.Entries.Contains(entry));
+            if (list == null) return "That entry is no longer in its list.";
             string why = ReadFields(list.Kind, out int overlay, out long at, out int register, out List<byte> bytes);
             if (why != null) return why;
 
-            HgEnginePatchEntry trial = new HgEnginePatchEntry { Kind = list.Kind, RawLine = entry.RawLine };
+            HgEngineHookEntry trial = new HgEngineHookEntry { Kind = list.Kind, RawLine = entry.RawLine };
             string symbol = NewSymbol?.Trim();
-            HgEnginePatchList.Change(trial, overlay, symbol, at, register, bytes);
-            string problem = HgEnginePatchList.Problem(trial);
+            HgEngineHookList.Change(trial, overlay, symbol, at, register, bytes);
+            string problem = HgEngineHookList.Problem(trial);
             if (problem != null) return problem;
             if (trial.RawLine == entry.RawLine) return null;
 
-            HgEnginePatchList.Change(entry, overlay, symbol, at, register, bytes);
+            HgEngineHookList.Change(entry, overlay, symbol, at, register, bytes);
             _pending.Add(entry);
             Step();
             StatusText = $"Changed in {list.FileName}, not saved yet. {StatusText}";
             return null;
         }
 
-        /// <summary>Takes the selected patch out of its list.</summary>
+        /// <summary>Takes the selected entry out of its list.</summary>
         public string DeleteSelected()
         {
-            HgEnginePatchEntry entry = _selectedRow?.Entry;
-            if (entry == null) return "Pick a patch in the table first.";
-            HgEnginePatchList list = _lists.FirstOrDefault(l => l.Entries.Contains(entry));
-            if (list == null) return "That patch is no longer in its list.";
+            HgEngineHookEntry entry = _selectedRow?.Entry;
+            if (entry == null) return "Pick an entry in the table first.";
+            HgEngineHookList list = _lists.FirstOrDefault(l => l.Entries.Contains(entry));
+            if (list == null) return "That entry is no longer in its list.";
             list.Entries.Remove(entry);
             _pending.Remove(entry);
             Step();
@@ -367,10 +367,10 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             return null;
         }
 
-        public string AddPatch()
+        public string AddEntry()
         {
             if (NewList < 0 || NewList >= _lists.Count) return "Pick a list first.";
-            HgEnginePatchList list = _lists[NewList];
+            HgEngineHookList list = _lists[NewList];
 
             if (!HgEngineClaimedRanges.TryBinary((NewBinary ?? "").Trim(), out int overlay))
                 return "The binary has to be arm9 or an overlay number like 0012.";
@@ -380,7 +380,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                 return "The address has to be hex, like 02078384.";
 
             List<byte> bytes = new List<byte>();
-            if (list.Kind == HgEnginePatchKind.ByteReplacement)
+            if (list.Kind == HgEngineHookKind.ByteReplacement)
             {
                 foreach (string token in (NewBytes ?? "").Split((char[])null, StringSplitOptions.RemoveEmptyEntries))
                 {
@@ -395,11 +395,11 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                 return "Name the routine or table this points at.";
             }
 
-            if (!HgEnginePatchList.TryParseRegister(list.Kind, NewRegister, out int register, out string registerError))
+            if (!HgEngineHookList.TryParseRegister(list.Kind, NewRegister, out int register, out string registerError))
                 return registerError;
 
-            HgEnginePatchEntry added = list.Add(overlay, NewSymbol?.Trim(), at, register, bytes);
-            string problem = HgEnginePatchList.Problem(added);
+            HgEngineHookEntry added = list.Add(overlay, NewSymbol?.Trim(), at, register, bytes);
+            string problem = HgEngineHookList.Problem(added);
             list.Entries.Remove(added);
             if (problem != null) return problem;
 
@@ -410,23 +410,23 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             return null;
         }
 
-        /// <summary>Writes every list with added patches. Returns null on success, otherwise the reason.</summary>
+        /// <summary>Writes every list with added entries. Returns null on success, otherwise the reason.</summary>
         public string Save()
         {
             if (!IsAvailable) return "No hg-engine checkout is linked.";
             if (!HasUnsavedChanges) return null;
 
             // Every list is checked first, so none is left half saved.
-            List<HgEnginePatchList> changed = ChangedLists();
+            List<HgEngineHookList> changed = ChangedLists();
             if (changed.Select(l => l.FirstProblem).FirstOrDefault(p => p != null) is string problem)
             {
                 // Pick the entry it is about, so it can be fixed from the fields.
-                HgEnginePatchEntry bad = changed.SelectMany(l => l.Entries).FirstOrDefault(e => HgEnginePatchList.Problem(e) != null);
+                HgEngineHookEntry bad = changed.SelectMany(l => l.Entries).FirstOrDefault(e => HgEngineHookList.Problem(e) != null);
                 SelectedRow = Rows.FirstOrDefault(r => ReferenceEquals(r.Entry, bad)) ?? SelectedRow;
                 return problem;
             }
 
-            foreach (HgEnginePatchList list in changed)
+            foreach (HgEngineHookList list in changed)
             {
                 if (!list.Save(out string error))
                 {
@@ -457,7 +457,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         public string UnsavedChangesDescription => ChangedLists() is { Count: 1 } one
             ? "hg-engine " + one[0].FileName
-            : $"{ChangedLists().Count} hg-engine patch lists";
+            : $"{ChangedLists().Count} hg-engine hook lists";
 
         public void SaveChanges() => Save();
 

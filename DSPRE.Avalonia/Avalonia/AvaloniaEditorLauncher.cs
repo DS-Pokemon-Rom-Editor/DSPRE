@@ -710,16 +710,16 @@ namespace DSPRE.Avalonia
             new Views.Tools.BattleTestsView(new ViewModels.Tools.BattleTestsViewModel(load: true)).ShowManaged();
         }
 
-        public static void OpenHgEnginePatches() => OpenHgEnginePatches(null);
+        public static void OpenHgEngineHooks() => OpenHgEngineHooks(null);
 
         /// <summary>Opens the patch lists with the first entry for <paramref name="symbol"/> selected, ready to change.</summary>
-        public static void OpenHgEnginePatches(string symbol)
+        public static void OpenHgEngineHooks(string symbol)
         {
-            if (Refused("HgEnginePatchesView")) return;
+            if (Refused("HgEngineHooksView")) return;
 
-            HgEnginePatchesViewModel vm = new HgEnginePatchesViewModel();
+            HgEngineHooksViewModel vm = new HgEngineHooksViewModel();
             if (symbol != null) vm.SelectSymbol(symbol);
-            new EditorHostWindow("hg-engine patches", new Views.Shell.HgEnginePatchesView(vm), 1150, 700).ShowManaged();
+            new EditorHostWindow("hg-engine hooks and byte replacements", new Views.Shell.HgEngineHooksView(vm), 1150, 700).ShowManaged();
         }
 
         public static void OpenPokegearRematchEditor(int initialRowIndex = -1) => _ = OpenPokegearRematchEditorAsync(initialRowIndex);
@@ -1736,7 +1736,7 @@ namespace DSPRE.Avalonia
             new() { Name = "Pokégear rematch editor", Keywords = "rematch trainer phone pokegear call hgss", Shown = () => RomInfo.GameFamily == RomInfo.GameFamilies.HGSS, Run = () => OpenPokegearRematchEditor() },
             new() { Beta = "FollowerTalkEditorView", Name = "Follower talk", Keywords = "follower walking pokemon talk reaction bubble hgss", Run = () => OpenFollowerTalk() },
             new() { Beta = "PokegearPhoneBookView", Name = "Pokégear phone book", Keywords = "phone contact number call gift greeting pokegear hgss", Run = () => OpenPokegearPhoneBook() },
-            new() { Name = "hg-engine patches", Keywords = "hook bytereplacement repoint arm9 overlay patch asm", Run = OpenHgEnginePatches },
+            new() { Name = "hg-engine hooks and byte replacements", Keywords = "hook bytereplacement repoint arm9 overlay patch asm", Run = OpenHgEngineHooks },
             new() { Shown = () => DSPRE.HgEngine.HgEngineDev.Enabled, Name = "Battle tests", Keywords = "hg-engine test scenario auto_test battle_tests", Run = OpenBattleTests },
             new() { Name = "hg-engine settings", Keywords = "config.h config.s define toggle option fairy hidden abilities mega", Run = OpenHgEngineSettings },
             new() { Name = "Trainer flag bulk editor", Keywords = "ai double battle bulk", Run = OpenTrainerFlagBulkEditor },

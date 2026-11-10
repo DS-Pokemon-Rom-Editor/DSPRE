@@ -220,18 +220,18 @@ namespace DSPRE.HgEngine
             if (table == null) { error = $"{MoneyRelPath} has no PrizeMoney table."; return false; }
             int rows = table.Init.Items.Count(i => i.List != null && HgEngineConfigState.Compiles(i.Conditions) != false);
 
-            HgEnginePatchList list = HgEnginePatchList.Read(HgEnginePatchKind.ByteReplacement);
-            List<HgEnginePatchEntry> counts = list?.Entries.Where(e => e.Parsed && e.Heading == "PrizeMoney table range"
-                && e.Conditions.Count > 0 && e.Conditions[^1] == MoneySwitch).ToList() ?? new List<HgEnginePatchEntry>();
+            HgEngineHookList list = HgEngineHookList.Read(HgEngineHookKind.ByteReplacement);
+            List<HgEngineHookEntry> counts = list?.Entries.Where(e => e.Parsed && e.Heading == "PrizeMoney table range"
+                && e.Conditions.Count > 0 && e.Conditions[^1] == MoneySwitch).ToList() ?? new List<HgEngineHookEntry>();
             if (counts.Count == 0) { error = $"{ByteReplacementRelPath} has no PrizeMoney table range under #ifdef {MoneySwitch}."; return false; }
-            foreach (HgEnginePatchEntry entry in counts)
+            foreach (HgEngineHookEntry entry in counts)
             {
                 if (entry.Bytes.Count != 1) { error = $"{ByteReplacementRelPath}'s PrizeMoney table range has a line that isn't one count byte."; return false; }
                 if (entry.Bytes[0] != rows - 1)
                 { error = $"PrizeMoney has {rows - 1} rows but {ByteReplacementRelPath} counts {entry.Bytes[0]}. Fix the count before adding a class."; return false; }
             }
             if (rows > 255) { error = "PrizeMoney can hold at most 255 rows."; return false; }
-            foreach (HgEnginePatchEntry entry in counts) HgEnginePatchList.ChangeBytes(entry, new[] { (byte)rows });
+            foreach (HgEngineHookEntry entry in counts) HgEngineHookList.ChangeBytes(entry, new[] { (byte)rows });
             return list.Save(out error);
         }
 

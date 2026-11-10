@@ -49,7 +49,7 @@
                     ToolTip.Tip="{Binding HgEngineNote}"/>
           <MenuItem Header="hg-engine settings" Click="HgEngineSettings_Click" IsEnabled="{Binding IsHgEngineLinked}"
                     ToolTip.Tip="hg-engine build options"/>
-          <MenuItem Header="hg-engine patches" Click="HgEnginePatches_Click" IsEnabled="{Binding IsHgEngineLinked}"
+          <MenuItem Header="hg-engine hooks and byte replacements" Click="HgEngineHooks_Click" IsEnabled="{Binding IsHgEngineLinked}"
                     ToolTip.Tip="Every hook, byte replacement and repoint the checkout applies to the game's code"/>
           <MenuItem Header="hg-engine ROM review" Click="HgeRomReview_Click" IsVisible="{Binding Shown[HgeRomReviewView]}" IsEnabled="{Binding CanUseHgeRomReview}"
                     ToolTip.Tip="Check a built hg-engine ROM"/>

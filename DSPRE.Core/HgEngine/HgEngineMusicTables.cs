@@ -124,14 +124,14 @@ namespace DSPRE.HgEngine
         {
             error = SpeciesRowProblem(species, combo);
             if (error != null) return false;
-            if (!TryTableCount(SpeciesTable, SpeciesRow, +1, out HgEnginePatchList count, out error)) return false;
+            if (!TryTableCount(SpeciesTable, SpeciesRow, +1, out HgEngineHookList count, out error)) return false;
             return Edit(out error, text => AddSpeciesRow(text, species, combo, Sounds, Species)) && count.Save(out error);
         }
 
         /// <summary>Takes a Pokemon music row out, lowering the table's count byte with it.</summary>
         public static bool TryRemoveSpeciesRow(int row, out string error)
         {
-            if (!TryTableCount(SpeciesTable, SpeciesRow, -1, out HgEnginePatchList count, out error)) return false;
+            if (!TryTableCount(SpeciesTable, SpeciesRow, -1, out HgEngineHookList count, out error)) return false;
             return Edit(out error, text => RemoveSpeciesRow(text, row)) && count.Save(out error);
         }
 
@@ -139,13 +139,13 @@ namespace DSPRE.HgEngine
 
         // Changes the count under "# <table> table range" in bytereplacement by delta. The caller saves the list after
         // the table is written.
-        private static bool TryTableCount(string table, RowShape shape, int delta, out HgEnginePatchList updated, out string error)
+        private static bool TryTableCount(string table, RowShape shape, int delta, out HgEngineHookList updated, out string error)
         {
-            updated = HgEnginePatchList.Read(HgEnginePatchKind.ByteReplacement);
+            updated = HgEngineHookList.Read(HgEngineHookKind.ByteReplacement);
             error = null;
             string source = Read(SourceRelPath, out _);
             if (updated == null || source == null) { error = $"{ByteReplacementRelPath} or {SourceRelPath} is missing from the checkout."; return false; }
-            HgEnginePatchEntry entry = updated.Entries.FirstOrDefault(e => e.Parsed && e.Heading == table + " table range");
+            HgEngineHookEntry entry = updated.Entries.FirstOrDefault(e => e.Parsed && e.Heading == table + " table range");
             if (entry == null || entry.OverlayNumber >= 0 || entry.Bytes.Count != 1)
             { error = $"{ByteReplacementRelPath} has no {table} table range, so a row can't be added or removed."; return false; }
             int count = entry.Bytes[0];
@@ -153,7 +153,7 @@ namespace DSPRE.HgEngine
             if (rows != count) { error = $"{table} has {rows} rows but {ByteReplacementRelPath} counts {count}. Fix the count before adding or removing rows."; return false; }
             int next = count + delta;
             if (next < 1 || next > 255) { error = $"{table} can have 1 to 255 rows."; return false; }
-            HgEnginePatchList.ChangeBytes(entry, new[] { (byte)next });
+            HgEngineHookList.ChangeBytes(entry, new[] { (byte)next });
             return true;
         }
 
@@ -194,7 +194,7 @@ namespace DSPRE.HgEngine
             string source = Read(SourceRelPath, out _);
             bool adding = source != null && !(Rows(source, EncounterTable, EncounterRow) ?? Array.Empty<Row>())
                 .Any(m => Value(m[1].Value, Classes) == trainerClass);
-            HgEnginePatchList count = null;
+            HgEngineHookList count = null;
             if (adding && !TryTableCount(EncounterTable, EncounterRow, +1, out count, out error)) return false;
             return Edit(out error, text => SetEncounterMusic(text, trainerClass, johto, kanto, Sounds, Classes))
                 && (!adding || count.Save(out error));

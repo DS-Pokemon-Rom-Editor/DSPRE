@@ -6,8 +6,8 @@ using System.Linq;
 
 namespace DSPRE.HgEngine
 {
-    /// <summary>Which of hg-engine's patch lists an entry belongs to, and therefore its shape.</summary>
-    public enum HgEnginePatchKind
+    /// <summary>Which of hg-engine's hook lists an entry belongs to, and therefore its shape.</summary>
+    public enum HgEngineHookKind
     {
         /// <summary>hooks: binary, symbol, address, and the register the branch goes through.</summary>
         Hook,
@@ -23,12 +23,12 @@ namespace DSPRE.HgEngine
     }
 
     /// <summary>
-    /// One line of a patch list. A line DSPRE does not understand keeps its text and is written back
+    /// One line of a hook list. A line DSPRE does not understand keeps its text and is written back
     /// exactly as it came, so comments, includes and conditionals survive editing.
     /// </summary>
-    public sealed class HgEnginePatchEntry
+    public sealed class HgEngineHookEntry
     {
-        public HgEnginePatchKind Kind { get; set; }
+        public HgEngineHookKind Kind { get; set; }
 
         /// <summary>The raw text, written back as it is when the line isn't parsed.</summary>
         public string RawLine { get; set; }
@@ -74,19 +74,19 @@ namespace DSPRE.HgEngine
         /// <summary>What this entry does, in the words the list itself uses.</summary>
         public string Describes => Kind switch
         {
-            HgEnginePatchKind.Hook when ReplacesWholeRoutine => $"replaces the routine at 0x{Address:X8} with {Symbol}",
-            HgEnginePatchKind.Hook => $"branches to {Symbol} through r{Register}",
-            HgEnginePatchKind.ArmHook => $"branches to {Symbol} through r{Register}, in ARM",
-            HgEnginePatchKind.Repoint => $"points at {Symbol}",
+            HgEngineHookKind.Hook when ReplacesWholeRoutine => $"replaces the routine at 0x{Address:X8} with {Symbol}",
+            HgEngineHookKind.Hook => $"branches to {Symbol} through r{Register}",
+            HgEngineHookKind.ArmHook => $"branches to {Symbol} through r{Register}, in ARM",
+            HgEngineHookKind.Repoint => $"points at {Symbol}",
             _ => $"writes {Plural.Of(Bytes.Count, "byte")}",
         };
 
         internal string Render() => Kind switch
         {
-            HgEnginePatchKind.ByteReplacement =>
+            HgEngineHookKind.ByteReplacement =>
                 $"{BinaryField} {Address:X8} {string.Join(" ", Bytes.Select(b => b.ToString("X2")))}",
-            HgEnginePatchKind.Repoint => $"{BinaryField} {Symbol} {Address:X8}",
-            HgEnginePatchKind.Hook when Register < 0 => $"{BinaryField} {Symbol} {Address:X8}",
+            HgEngineHookKind.Repoint => $"{BinaryField} {Symbol} {Address:X8}",
+            HgEngineHookKind.Hook when Register < 0 => $"{BinaryField} {Symbol} {Address:X8}",
             _ => $"{BinaryField} {Symbol} {Address:X8} {Register}",
         };
 
@@ -95,9 +95,9 @@ namespace DSPRE.HgEngine
         /// <summary>How many bytes the build writes for this entry, and so claims.</summary>
         public int Length => Kind switch
         {
-            HgEnginePatchKind.ByteReplacement => Bytes.Count,
-            HgEnginePatchKind.Repoint => 4,
-            HgEnginePatchKind.ArmHook => 8 + 4,
+            HgEngineHookKind.ByteReplacement => Bytes.Count,
+            HgEngineHookKind.Repoint => 4,
+            HgEngineHookKind.ArmHook => 8 + 4,
             // A branch takes an extra halfword off a word boundary. A missing register column, or 255, replaces the
             // whole routine: 0x18 of code plus its address.
             _ => ReplacesWholeRoutine ? 0x18 + 4 : ((Address & ~1L) % 4 != 0 ? 6 + 4 : 4 + 4),
@@ -118,41 +118,41 @@ namespace DSPRE.HgEngine
     }
 
     /// <summary>
-    /// One of the checkout's patch lists, read so it can be shown and added to. Only lines matching the
+    /// One of the checkout's hook lists, read so it can be shown and added to. Only lines matching the
     /// list's own shape are parsed; everything else is carried through untouched, so writing a file back
     /// changes nothing but the entries that were edited.
     /// </summary>
-    public sealed class HgEnginePatchList
+    public sealed class HgEngineHookList
     {
-        public HgEnginePatchKind Kind { get; }
+        public HgEngineHookKind Kind { get; }
         public string FileName { get; }
         public string FullPath { get; }
 
         // Kept so a save changes only the edited lines.
         private bool _endsWithNewline = true;
-        public List<HgEnginePatchEntry> Entries { get; } = new();
+        public List<HgEngineHookEntry> Entries { get; } = new();
 
-        private HgEnginePatchList(HgEnginePatchKind kind, string fileName, string fullPath)
+        private HgEngineHookList(HgEngineHookKind kind, string fileName, string fullPath)
         {
             Kind = kind;
             FileName = fileName;
             FullPath = fullPath;
         }
 
-        public static readonly (HgEnginePatchKind Kind, string FileName)[] Known =
+        public static readonly (HgEngineHookKind Kind, string FileName)[] Known =
         {
-            (HgEnginePatchKind.Hook, "hooks"),
-            (HgEnginePatchKind.ArmHook, "armhooks"),
-            (HgEnginePatchKind.ByteReplacement, "bytereplacement"),
-            (HgEnginePatchKind.Repoint, "repoints"),
+            (HgEngineHookKind.Hook, "hooks"),
+            (HgEngineHookKind.ArmHook, "armhooks"),
+            (HgEngineHookKind.ByteReplacement, "bytereplacement"),
+            (HgEngineHookKind.Repoint, "repoints"),
         };
 
         /// <summary>Every list the linked checkout has.</summary>
-        public static List<HgEnginePatchList> ReadAll()
+        public static List<HgEngineHookList> ReadAll()
             => ReadAllAt(HgEngineProject.IsActive ? HgEngineProject.RepoRootWindows : null);
 
         /// <summary>The linked checkout's list of this kind, or null when it has none.</summary>
-        public static HgEnginePatchList Read(HgEnginePatchKind kind)
+        public static HgEngineHookList Read(HgEngineHookKind kind)
         {
             if (!HgEngineProject.IsActive) return null;
             string name = Known.First(k => k.Kind == kind).FileName;
@@ -160,12 +160,12 @@ namespace DSPRE.HgEngine
             return File.Exists(path) ? Read(kind, name, path) : null;
         }
 
-        internal static List<HgEnginePatchList> ReadAllAt(string root)
+        internal static List<HgEngineHookList> ReadAllAt(string root)
         {
-            List<HgEnginePatchList> lists = new List<HgEnginePatchList>();
+            List<HgEngineHookList> lists = new List<HgEngineHookList>();
             if (root == null) return lists;
 
-            foreach ((HgEnginePatchKind kind, string name) in Known)
+            foreach ((HgEngineHookKind kind, string name) in Known)
             {
                 string path = Path.Combine(root, name);
                 if (File.Exists(path)) lists.Add(Read(kind, name, path));
@@ -173,9 +173,9 @@ namespace DSPRE.HgEngine
             return lists;
         }
 
-        internal static HgEnginePatchList Read(HgEnginePatchKind kind, string fileName, string path)
+        internal static HgEngineHookList Read(HgEngineHookKind kind, string fileName, string path)
         {
-            HgEnginePatchList list = new HgEnginePatchList(kind, fileName, path);
+            HgEngineHookList list = new HgEngineHookList(kind, fileName, path);
             try
             {
                 string text = File.ReadAllText(path);
@@ -184,7 +184,7 @@ namespace DSPRE.HgEngine
                     list.Entries.Add(Parse(kind, raw));
                 MarkConditions(list.Entries, Path.GetDirectoryName(path));
             }
-            catch (Exception ex) { AppLogger.Error($"HgEnginePatchList.Read({fileName}): " + ex.Message); }
+            catch (Exception ex) { AppLogger.Error($"HgEngineHookList.Read({fileName}): " + ex.Message); }
             return list;
         }
 
@@ -193,13 +193,13 @@ namespace DSPRE.HgEngine
         /// starting with "#define ", the -D flags make passes count as defined, and only #ifdef, #ifndef, #else and
         /// #endif are understood. Flags the Makefile passes only for some builds leave a line as depending on them.
         /// </summary>
-        private static void MarkConditions(List<HgEnginePatchEntry> entries, string root)
+        private static void MarkConditions(List<HgEngineHookEntry> entries, string root)
         {
             HashSet<string> defined = new HashSet<string>(StringComparer.Ordinal);
             HashSet<string> makeFlags = MakeFlags(root);
             List<(string Name, bool WhenDefined)> open = new List<(string, bool)>();
             string heading = "";
-            foreach (HgEnginePatchEntry entry in entries)
+            foreach (HgEngineHookEntry entry in entries)
             {
                 string raw = entry.RawLine ?? "";
                 string line = raw.Trim();
@@ -259,9 +259,9 @@ namespace DSPRE.HgEngine
             return flags;
         }
 
-        internal static HgEnginePatchEntry Parse(HgEnginePatchKind kind, string raw)
+        internal static HgEngineHookEntry Parse(HgEngineHookKind kind, string raw)
         {
-            HgEnginePatchEntry entry = new HgEnginePatchEntry { Kind = kind, RawLine = raw };
+            HgEngineHookEntry entry = new HgEngineHookEntry { Kind = kind, RawLine = raw };
 
             string line = raw.Trim();
             if (line.Length == 0 || line[0] == '#') return entry;
@@ -272,7 +272,7 @@ namespace DSPRE.HgEngine
 
             entry.OverlayNumber = overlay;
 
-            if (kind == HgEnginePatchKind.ByteReplacement)
+            if (kind == HgEngineHookKind.ByteReplacement)
             {
                 if (f.Length < 3 || !TryHex(f[1], out long at)) return entry;
 
@@ -296,13 +296,13 @@ namespace DSPRE.HgEngine
             // make.py splits hooks into exactly 3 or 4 columns and armhooks into exactly 4, reading the
             // fourth with int(). Anything else is kept as text, so it can't become a different line.
             int register = -1;
-            if (kind == HgEnginePatchKind.Repoint) { if (f.Length != 3) return entry; }
+            if (kind == HgEngineHookKind.Repoint) { if (f.Length != 3) return entry; }
             else if (f.Length > 4) return entry;
             else if (f.Length == 4)
             {
                 if (!int.TryParse(f[3], NumberStyles.Integer, CultureInfo.InvariantCulture, out register) || register < 0) return entry;
             }
-            else if (kind == HgEnginePatchKind.ArmHook) return entry;
+            else if (kind == HgEngineHookKind.ArmHook) return entry;
 
             entry.Symbol = f[1];
             entry.Address = address;
@@ -318,20 +318,20 @@ namespace DSPRE.HgEngine
         /// Reads the register typed for a new hook. make.py branches a hook through r0 to r7, treats 255 as
         /// replacing the whole routine, and loads an ARM hook's address through r0 to r12.
         /// </summary>
-        public static bool TryParseRegister(HgEnginePatchKind kind, string text, out int register, out string error)
+        public static bool TryParseRegister(HgEngineHookKind kind, string text, out int register, out string error)
         {
             register = -1;
             error = null;
-            if (kind is not (HgEnginePatchKind.Hook or HgEnginePatchKind.ArmHook)) return true;
+            if (kind is not (HgEngineHookKind.Hook or HgEngineHookKind.ArmHook)) return true;
 
             string trimmed = (text ?? "").Trim();
             bool isNumber = int.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out int value);
-            bool valid = kind == HgEnginePatchKind.Hook
+            bool valid = kind == HgEngineHookKind.Hook
                 ? isNumber && ((value >= 0 && value <= 7) || value == 0xFF)
                 : isNumber && value >= 0 && value <= 12;
             if (!valid)
             {
-                error = kind == HgEnginePatchKind.Hook
+                error = kind == HgEngineHookKind.Hook
                     ? "The register has to be 0 to 7, or 255 to replace the whole routine."
                     : "The register has to be 0 to 12.";
                 return false;
@@ -341,20 +341,20 @@ namespace DSPRE.HgEngine
         }
 
         /// <summary>Why this entry can't be written as a line make.py reads correctly, or null.</summary>
-        public static string Problem(HgEnginePatchEntry entry)
+        public static string Problem(HgEngineHookEntry entry)
         {
             if (!entry.Parsed) return null;
             string where = $"{entry.BinaryName} 0x{entry.Address:X8}";
             switch (entry.Kind)
             {
-                case HgEnginePatchKind.Hook when entry.Register < -1 || entry.Register > 0xFF:
+                case HgEngineHookKind.Hook when entry.Register < -1 || entry.Register > 0xFF:
                     return $"The hook at {where} has register {entry.Register}; it has to be 0 to 7, or 255.";
-                case HgEnginePatchKind.ArmHook when entry.Register < 0 || entry.Register > 15:
+                case HgEngineHookKind.ArmHook when entry.Register < 0 || entry.Register > 15:
                     return $"The ARM hook at {where} has no usable register.";
-                case HgEnginePatchKind.Hook or HgEnginePatchKind.ArmHook or HgEnginePatchKind.Repoint
+                case HgEngineHookKind.Hook or HgEngineHookKind.ArmHook or HgEngineHookKind.Repoint
                     when string.IsNullOrWhiteSpace(entry.Symbol) || entry.Symbol.Any(char.IsWhiteSpace):
                     return $"The entry at {where} needs a routine or table name with no spaces.";
-                case HgEnginePatchKind.ByteReplacement when entry.Bytes.Count == 0:
+                case HgEngineHookKind.ByteReplacement when entry.Bytes.Count == 0:
                     return $"The replacement at {where} has no bytes.";
                 default:
                     return null;
@@ -362,10 +362,10 @@ namespace DSPRE.HgEngine
         }
 
         /// <summary>Adds an entry to the end, and returns it.</summary>
-        public HgEnginePatchEntry Add(int overlayNumber, string symbol, long address, int register,
+        public HgEngineHookEntry Add(int overlayNumber, string symbol, long address, int register,
             IReadOnlyList<byte> bytes)
         {
-            HgEnginePatchEntry entry = new HgEnginePatchEntry
+            HgEngineHookEntry entry = new HgEngineHookEntry
             {
                 Kind = Kind,
                 Parsed = true,
@@ -381,7 +381,7 @@ namespace DSPRE.HgEngine
         }
 
         /// <summary>Rewrites an entry's fields and its line, keeping the line's indentation.</summary>
-        public static void Change(HgEnginePatchEntry entry, int overlayNumber, string symbol, long address, int register,
+        public static void Change(HgEngineHookEntry entry, int overlayNumber, string symbol, long address, int register,
             IReadOnlyList<byte> bytes)
         {
             string raw = entry.RawLine ?? "";
@@ -396,7 +396,7 @@ namespace DSPRE.HgEngine
         }
 
         /// <summary>Sets a replacement's bytes and rewrites only their columns, so the line keeps its spacing.</summary>
-        public static void ChangeBytes(HgEnginePatchEntry entry, IReadOnlyList<byte> bytes)
+        public static void ChangeBytes(HgEngineHookEntry entry, IReadOnlyList<byte> bytes)
         {
             string raw = entry.RawLine ?? "";
             List<(int Start, int End)> fields = new List<(int, int)>();
@@ -408,7 +408,7 @@ namespace DSPRE.HgEngine
                 if (i > start) fields.Add((start, i));
             }
             entry.Bytes = bytes;
-            if (!entry.Parsed || entry.Kind != HgEnginePatchKind.ByteReplacement || fields.Count - 2 != bytes.Count)
+            if (!entry.Parsed || entry.Kind != HgEngineHookKind.ByteReplacement || fields.Count - 2 != bytes.Count)
             {
                 Change(entry, entry.OverlayNumber, entry.Symbol, entry.Address, entry.Register, bytes);
                 return;

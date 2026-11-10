@@ -165,7 +165,7 @@ namespace DSPRE.HgEngine
         public static string RoutesReadOnlyReason()
         {
             if (!TryLoad(out Parsed p, out string error)) return error;
-            HgEnginePatchList hooks = HgEnginePatchList.ReadAll().FirstOrDefault(l => l.Kind == HgEnginePatchKind.Hook);
+            HgEngineHookList hooks = HgEngineHookList.ReadAll().FirstOrDefault(l => l.Kind == HgEngineHookKind.Hook);
             bool hooked = hooks != null && new[] { "GetRoamMapByLocationIdx", "RoamerLocationUpdateEx" }
                 .All(n => hooks.Entries.Any(e => e.Parsed && e.Symbol == n));
             if (!hooked || p.Adjacency == null)
