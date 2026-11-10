@@ -213,6 +213,7 @@ namespace DSPRE
                 string token = Guid.NewGuid().ToString("N");
                 List<(Change Change, string Stage, bool Existed, byte[] Original, DateTime Time)> staged = new();
                 List<string> createdDirectories = new List<string>();
+                int replaced = 0;
                 try
                 {
                     foreach (Change c in _changes)
@@ -237,12 +238,14 @@ namespace DSPRE
                         string target = System.IO.Path.GetFullPath(c.Path);
                         if (c.Bytes == null) File.Delete(target);
                         else File.Move(stage, target, overwrite: true);
+                        replaced++;
                     }
                 }
                 catch (Exception ex)
                 {
                     error = $"The change failed and was rolled back: {ex.Message}";
-                    foreach ((Change c, string _, bool existed, byte[] original, DateTime time) in staged)
+                    // Only files already replaced need putting back.
+                    foreach ((Change c, string _, bool existed, byte[] original, DateTime time) in staged.Take(replaced))
                     {
                         string target = System.IO.Path.GetFullPath(c.Path);
                         try
