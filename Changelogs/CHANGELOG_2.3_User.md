@@ -4,6 +4,12 @@
 
 ---
 
+## 2.3.4.1
+- Added a donation notice when using external tools that wrap our tool and code and request donations
+  for one week of work with their AI to do so.
+
+---
+
 ## 2.3.4
 - Fixed the Event Editor on Spanish SoulSilver. It looked for the overworld sprite table in the
   wrong place, showed a warning and then crashed, leaving the map and events empty. The table is
