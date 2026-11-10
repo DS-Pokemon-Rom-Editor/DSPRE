@@ -181,7 +181,16 @@ namespace DSPRE.Avalonia.Views.Controls
             bool Write(string text, int penX, int penY) => WriteAt(rgba, w, h, text, penX, penY, letter, shadow);
 
             for (int i = 0; i < items.Count; i++)
-                Write(items[i], tile + indent, tile + rowOffset + i * EntryPixels);
+            {
+                TextColours.State colour = TextColours.State.Start;
+                int pen = tile + indent;
+                foreach ((string run, int pair) in TextColours.Runs(items[i], ref colour))
+                {
+                    (int ink, int dark) = TextColours.Entries(pair);
+                    WriteAt(rgba, w, h, run, pen, tile + rowOffset + i * EntryPixels, Colour(ink, letter), Colour(dark, shadow));
+                    pen += Measure(run);
+                }
+            }
 
             if (cursor < 0) return rgba;
 

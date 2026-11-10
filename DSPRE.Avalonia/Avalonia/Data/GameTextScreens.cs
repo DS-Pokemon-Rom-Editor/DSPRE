@@ -399,7 +399,7 @@ namespace DSPRE.Avalonia.Data
         private static ushort[] FontColours(int member) =>
             DsBgScreen.Row(NitroBgCodec.ReadColours(MoveTextScreens.Members(DirNames.Fonts)?.Invoke(member)), 0);
 
-        private static ushort[] SystemColours => FontColours(GameFamily == GameFamilies.HGSS ? 7 : 6);
+        internal static ushort[] SystemColours => FontColours(GameFamily == GameFamilies.HGSS ? 7 : 6);
         internal static ushort[] TalkColours => FontColours(GameFamily == GameFamilies.HGSS ? 8 : 7);
 
         private static ushort Rgb(int r, int g, int b) => (ushort)(r | g << 5 | b << 10);
@@ -431,25 +431,19 @@ namespace DSPRE.Avalonia.Data
             return global::System.Text.RegularExpressions.Regex.Replace(expanded, @"\{(?!COLOR,)[^}]*\}", "");
         }
 
-        private const string ColourCode = @"\{COLOR, *\d+, *(\d+)\}";
 
-        private static string WithoutColour(string text) => global::System.Text.RegularExpressions.Regex.Replace(text ?? "", ColourCode, "");
-
-        // {COLOR, 0, n} prints what follows in colours 2n + 1 and 2n + 2 of the row, until the next code.
         private static void PrintColoured(byte[] rgba, FieldFont font, string text, int x, int y, ushort[] row)
         {
             string[] lines = (text ?? "").Split('\n');
-            int pair = 0;
+            TextColours.State colour = TextColours.State.Start;
             for (int i = 0; i < lines.Length; i++)
             {
                 int pen = x;
-                string[] parts = global::System.Text.RegularExpressions.Regex.Split(lines[i], ColourCode);
-                // Split keeps each code's number between the pieces of text.
-                for (int k = 0; k < parts.Length; k++)
+                foreach ((string run, int pair) in TextColours.Runs(lines[i], ref colour))
                 {
-                    if (k % 2 == 1) { pair = int.TryParse(parts[k], out int n) ? n : 0; continue; }
-                    DsBgScreen.DrawText(rgba, font, parts[k], pen, y + i * 16, row[(2 * pair + 1) & 15], row[(2 * pair + 2) & 15]);
-                    pen += DsBgScreen.MeasureText(font, parts[k]);
+                    (int ink, int shadow) = TextColours.Entries(pair);
+                    DsBgScreen.DrawText(rgba, font, run, pen, y + i * 16, row[ink], row[shadow]);
+                    pen += DsBgScreen.MeasureText(font, run);
                 }
             }
         }
@@ -819,7 +813,7 @@ namespace DSPRE.Avalonia.Data
             bool warning = hg && alert == 4;
             if (warning) Fill(rgba, sys[15], x * 8, y * 8, w * 8, h * 8);
             else StandardWindow(rgba, x, y, w, h, sys[15]);
-            if (warning) PrintColoured(rgba, SystemFont, text, x * 8 + (w * 8 - WithoutColour(text).Split('\n').Max(l => DsBgScreen.MeasureText(SystemFont, l))) / 2, y * 8 + 4, sys);
+            if (warning) PrintColoured(rgba, SystemFont, text, x * 8 + (w * 8 - TextColours.WithoutCodes(text).Split('\n').Max(l => DsBgScreen.MeasureText(SystemFont, l))) / 2, y * 8 + 4, sys);
             else PrintColoured(rgba, SystemFont, text, x * 8, y * 8, sys);
             if (warning)
                 for (int i = 0; i < 2; i++)

@@ -59,6 +59,13 @@ namespace DSPRE.ROMFiles
             text = DSPRE.TextConverter.GetSimpleTrainerName(text);
             // A message can end by opening a yes/no box, which prints nothing.
             text = System.Text.RegularExpressions.Regex.Replace(text, @"\{YESNO[^}]*\}", "");
+            text = TextColours.Compact(text);
+            // Codes print nothing, so they take no width.
+            if (measure != null)
+            {
+                Func<string, int> measureLetters = measure;
+                measure = t => measureLetters(TextColours.WithoutCodes(t));
+            }
 
             List<(Token token, string value)> parts = Tokenise(text);
 
@@ -70,11 +77,16 @@ namespace DSPRE.ROMFiles
             List<string> onScreen = new List<string>();
             StringBuilder current = new StringBuilder();
             bool tooWide = false, tooMany = false;
+            TextColours.State colour = TextColours.State.Start;
 
             void EndLine()
             {
                 string line = current.ToString();
                 current.Clear();
+                // A line keeps the colour the message had reached, even after the lines before it scroll away.
+                string before = TextColours.Prefix(colour);
+                colour = TextColours.After(colour, line);
+                line = before + line;
                 if (measure != null && measure(line) > width) tooWide = true;
                 if (onScreen.Count >= linesPerBox) tooMany = true;
                 else onScreen.Add(line);
@@ -127,6 +139,13 @@ namespace DSPRE.ROMFiles
             List<FieldMessageFrame> frames = new List<FieldMessageFrame>();
             FieldTextLayout layout = new FieldTextLayout(measure ?? (t => (t ?? "").Length * 6), width, linesPerBox);
             List<string> lines = layout.Lines(text);
+            TextColours.State colour = TextColours.State.Start;
+            for (int i = 0; i < lines.Count; i++)
+            {
+                string before = TextColours.Prefix(colour);
+                colour = TextColours.After(colour, lines[i]);
+                lines[i] = before + lines[i];
+            }
 
             for (int i = 0; i < lines.Count; i += linesPerBox)
             {

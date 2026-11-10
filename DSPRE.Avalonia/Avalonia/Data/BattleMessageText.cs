@@ -19,7 +19,7 @@ namespace DSPRE.Avalonia.Data
             List<FieldMessageFrame> frames = FieldMessageScript.Frames(shown, Views.Controls.FieldMessageBoxView.Measure);
             IReadOnlyList<string> lines = frames.Count > 0 ? frames[Math.Max(0, stop) % frames.Count].Lines : Array.Empty<string>();
             for (int i = 0; i < lines.Count; i++)
-                DsBgScreen.DrawText(screen, font, lines[i], FieldMessageWindow.TextLeft,
+                DsBgScreen.DrawText(screen, font, TextColours.WithoutCodes(lines[i]), FieldMessageWindow.TextLeft,
                                     FieldMessageWindow.TextTop + i * FieldMessageWindow.LineHeight, Letter, Shadow);
             return Math.Max(1, frames.Count);
         }

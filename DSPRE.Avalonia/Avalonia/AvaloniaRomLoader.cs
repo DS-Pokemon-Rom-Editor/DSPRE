@@ -95,6 +95,7 @@ namespace DSPRE.Avalonia
                 // The font and its letter numbering come from the previous ROM.
                 Views.Controls.FieldMessageBoxView.Font = null;
                 Views.Controls.FieldMessageBoxView.Frame = null;
+                Views.Controls.FieldMessageBoxView.ForgetPalette();
                 Views.Controls.FieldMenuWindowView.Font = null;
                 Views.Controls.FieldMenuWindowView.Frame = null;
                 Views.Controls.FieldMenuWindowView.Colours = null;

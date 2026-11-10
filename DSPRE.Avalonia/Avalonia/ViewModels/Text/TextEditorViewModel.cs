@@ -212,7 +212,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 FieldTextArchives.Screen screen = Screen;
                 string text = _selectedLineIndex >= 0 && _selectedLineIndex < Lines.Count ? Lines[_selectedLineIndex]?.Text : null;
                 if (string.IsNullOrEmpty(text) || screen == null) return new[] { "" };
-                List<FieldMessageFrame> frames = FieldMessageScript.Frames(text, MeasureText, screen.TilesWide * FieldMessageWindow.TileSize,
+                List<FieldMessageFrame> frames = FieldMessageScript.Frames(FieldStringVars.Expand(text, Data.GameTextScreens.SampleWord),
+                                                                           MeasureText, screen.TilesWide * FieldMessageWindow.TileSize,
                                                                            screen.TilesHigh / 2, wrapWhenUnmarked: false);
                 return frames.Count > 0 ? frames[0].Lines : new[] { "" };
             }
@@ -295,8 +296,9 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (_showPreview && _selectedLineIndex >= 0 && _selectedLineIndex < Lines.Count)
             {
                 string text = Lines[_selectedLineIndex]?.Text;
+                // The game fills in names and numbers, so the box shows sample words in their place.
                 if (!string.IsNullOrEmpty(text))
-                    _previewFrames.AddRange(FieldMessageScript.Frames(text, MeasureText));
+                    _previewFrames.AddRange(FieldMessageScript.Frames(FieldStringVars.Expand(text, Data.GameTextScreens.SampleWord), MeasureText));
             }
             RaisePreviewChanged();
             _ = RefreshScreenShotsAsync();

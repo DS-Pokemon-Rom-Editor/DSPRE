@@ -60,6 +60,54 @@ namespace DSPRE.Avalonia.Views.Controls
 
         private static bool RomFontReady => Font != null && FieldFontCharacters.Ready;
 
+        private static ushort[] _palette;
+        private static bool _paletteRead;
+
+        /// <summary>The box's text palette row from the ROM, which {COLOR} codes pick from. Null draws the usual ink.</summary>
+        public static ushort[] Palette
+        {
+            get
+            {
+                if (_paletteRead || !AvaloniaEditorLauncher.IsRomLoaded) return _palette;
+                _paletteRead = true;
+                try { _palette = Data.GameTextScreens.TalkColours; }
+                catch (Exception ex) { AppLogger.WarnOnce("FieldMessageBoxView.Palette", ex); }
+                return _palette;
+            }
+        }
+
+        private static event Action PaletteForgotten;
+
+        /// <summary>Reads the palette again and redraws open boxes, after a ROM switch or a font archive write.</summary>
+        public static void ForgetPalette()
+        {
+            _palette = null;
+            _paletteRead = false;
+            PaletteForgotten?.Invoke();
+        }
+
+        private void OnPaletteForgotten() => global::Avalonia.Threading.Dispatcher.UIThread.Post(InvalidateVisual);
+
+        protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+        {
+            base.OnAttachedToVisualTree(e);
+            PaletteForgotten += OnPaletteForgotten;
+        }
+
+        protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+        {
+            PaletteForgotten -= OnPaletteForgotten;
+            base.OnDetachedFromVisualTree(e);
+        }
+
+        private static uint PaletteArgb(int entry, uint fallback)
+        {
+            ushort[] row = Palette;
+            if (row == null || entry >= row.Length) return fallback;
+            (byte r, byte g, byte b) = NitroBgCodec.Colour(row[entry]);
+            return 0xFF000000u | (uint)r << 16 | (uint)g << 8 | b;
+        }
+
         private static FieldWindowFrame _frame;
         private static Bitmap _frameBitmap;
         private static readonly Bitmap[] _cursorBitmaps = new Bitmap[3];
@@ -97,6 +145,7 @@ namespace DSPRE.Avalonia.Views.Controls
         private WriteableBitmap _page;      // the current page's letters, at DS size
         private string _pageText;
         private FieldFont _pageFont;
+        private ushort[] _pagePalette;
 
         public static readonly StyledProperty<bool> FitToFrameProperty =
             AvaloniaProperty.Register<FieldMessageBoxView, bool>(nameof(FitToFrame));
@@ -183,12 +232,13 @@ namespace DSPRE.Avalonia.Views.Controls
 
         private void DrawWithRomFont(DrawingContext ctx, string text, Rect textArea)
         {
-            if (_page == null || _pageText != text || !ReferenceEquals(_pageFont, Font))
+            if (_page == null || _pageText != text || !ReferenceEquals(_pageFont, Font) || !ReferenceEquals(_pagePalette, Palette))
             {
                 _page?.Dispose();
                 _page = RenderPage(text);
                 _pageText = text;
                 _pageFont = Font;
+                _pagePalette = Palette;
             }
             if (_page == null) return;
 
@@ -222,37 +272,49 @@ namespace DSPRE.Avalonia.Views.Controls
                 {
                     int penX = 0;
                     int top = line * FieldMessageWindow.LineHeight;
-                    foreach (int g in FieldFontCharacters.GlyphsOf(lines[line]))
+                    TextColours.State colour = TextColours.State.Start;
+                    foreach ((string run, int pair) in TextColours.Runs(lines[line], ref colour))
                     {
-                        int advance = Font.WidthOf(g);
-                        if (g < 0) { penX += advance > 0 ? advance : 6; continue; }
-
-                        for (int y = 0; y < FieldFont.CellSize; y++)
+                        (int inkEntry, int shadowEntry) = TextColours.Entries(pair);
+                        uint ink = PaletteArgb(inkEntry, 0xFF282828u), shade = PaletteArgb(shadowEntry, 0xFF9098A8u);
+                        foreach (int g in FieldFontCharacters.GlyphsOf(run))
                         {
-                            int py = top + y;
-                            if (py < 0 || py >= h) continue;
-                            uint* p = (uint*)((byte*)buf.Address + py * buf.RowBytes);
-                            for (int x = 0; x < advance; x++)
-                            {
-                                int px = penX + x;
-                                if (px < 0 || px >= w) continue;
-                                byte v = Font.PixelAt(g, x, y);
-                                // 0 is outside the letter and 3 is the paper it sits on; the box has
-                                // already painted that, so only the ink is drawn here.
-                                if (v == FieldFont.Nothing || v == FieldFont.Paper) continue;
-                                p[px] = v == 1 ? 0xFF282828u : 0xFF9098A8u;
-                            }
+                            if (penX >= w) break;
+                            int advance = Font.WidthOf(g);
+                            if (g < 0) { penX += advance > 0 ? advance : 6; continue; }
+                            DrawGlyph(buf, w, h, g, penX, top, advance, ink, shade);
+                            penX += advance;
                         }
-                        penX += advance;
-                        if (penX >= w) break;
                     }
                 }
             }
             return bmp;
         }
 
+        private static unsafe void DrawGlyph(ILockedFramebuffer buf, int w, int h, int glyph, int penX, int top, int advance,
+                                             uint ink, uint shade)
+        {
+            for (int y = 0; y < FieldFont.CellSize; y++)
+            {
+                int py = top + y;
+                if (py < 0 || py >= h) continue;
+                uint* p = (uint*)((byte*)buf.Address + py * buf.RowBytes);
+                for (int x = 0; x < advance; x++)
+                {
+                    int px = penX + x;
+                    if (px < 0 || px >= w) continue;
+                    byte v = Font.PixelAt(glyph, x, y);
+                    // 0 is outside the letter and 3 is the paper it sits on; the box has
+                    // already painted that, so only the ink is drawn here.
+                    if (v == FieldFont.Nothing || v == FieldFont.Paper) continue;
+                    p[px] = v == 1 ? ink : shade;
+                }
+            }
+        }
+
         private static void DrawWithOrdinaryType(DrawingContext ctx, string text, double ox, double oy, double s)
         {
+            text = TextColours.WithoutCodes(text);
             SolidColorBrush ink = new SolidColorBrush(Color.FromRgb(0x28, 0x28, 0x28));
             string[] lines = text.Replace("\r\n", "\n").Split('\n');
             for (int i = 0; i < lines.Length && i < FieldMessageWindow.LinesPerPage; i++)
