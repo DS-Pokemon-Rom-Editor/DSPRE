@@ -206,7 +206,7 @@
                     <NumericUpDown Grid.Column="2" Value="{Binding SpriteY}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
                   </Grid>
 
-                  <!-- Per-gender sprite heights (DP / Platinum, height.narc). Signed. Hidden while viewing a form. -->
+                  <!-- Per-gender sprite heights (DP / Platinum, height.narc). Hidden while viewing a form. -->
                   <StackPanel IsVisible="{Binding ShowBaseHeights}" Spacing="6">
                     <CheckBox Content="Edit both genders together" IsChecked="{Binding UnifiedEdit}"
                               ToolTip.Tip="One set of heights for both genders. Off gives male and female their own."/>
@@ -216,12 +216,12 @@
                       <Grid ColumnDefinitions="160,10,150">
                         <TextBlock Grid.Column="0" Text="Front height" VerticalAlignment="Center"
                                    ToolTip.Tip="How high the front sprite sits, both genders."/>
-                        <NumericUpDown Grid.Column="2" Value="{Binding FrontHeightUnified}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
+                        <NumericUpDown Grid.Column="2" Value="{Binding FrontHeightUnified}" Minimum="{Binding HeightMinimum}" Maximum="{Binding HeightMaximum}" FormatString="0" Increment="1"/>
                       </Grid>
                       <Grid ColumnDefinitions="160,10,150">
                         <TextBlock Grid.Column="0" Text="Back height" VerticalAlignment="Center"
                                    ToolTip.Tip="How high the back sprite sits, both genders."/>
-                        <NumericUpDown Grid.Column="2" Value="{Binding BackHeightUnified}" Minimum="-128" Maximum="127" FormatString="0" Increment="1"/>
+                        <NumericUpDown Grid.Column="2" Value="{Binding BackHeightUnified}" Minimum="{Binding HeightMinimum}" Maximum="{Binding HeightMaximum}" FormatString="0" Increment="1"/>
                       </Grid>
                     </StackPanel>
 
