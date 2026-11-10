@@ -151,6 +151,7 @@ namespace DSPRE.Avalonia.Data
                     LayoutStatesOf = () => BattleHeaderPages.Select(p => p.Name).ToArray(), Shows = (_, _, _) => true,
                     LayoutPictures = state => BattleMenuPictures.PokemonPage(BattleHeaderPages[Math.Clamp(state, 0, BattleHeaderPages.Length - 1)].Page)
                         is byte[] bottom ? (TouchTabPictures.BattleTop(), bottom) : null },
+            new() { Key = "save", Title = "Save screen", Banks = () => Hg ? Us(40) : Array.Empty<int>(), Draw = SaveHg },
             new() { Key = "title", Title = "Title screen", Banks = () => Hg ? Us(719) : Pt ? Us(609) : Array.Empty<int>(),
                     Draw = (bank, line) => line == 0 ? TitleStartLine() : null },
         };
@@ -448,13 +449,13 @@ namespace DSPRE.Avalonia.Data
             }
         }
 
-        private static string Box(int bank, int id, FieldFont font)
+        private static string Box(int bank, int id, FieldFont font, bool keepColours = false)
         {
             string expanded = FieldStringVars.Expand(_line(bank, id) ?? "", SampleWord);
             List<FieldMessageFrame> frames = FieldMessageScript.Frames(expanded, t => DsBgScreen.MeasureText(font, t));
             _stops = Math.Max(_stops, frames.Count);
             string first = frames.Count > 0 ? string.Join("\n", frames[_stop % frames.Count].Lines) : "";
-            return global::System.Text.RegularExpressions.Regex.Replace(first, @"\{[^}]*\}", "");
+            return global::System.Text.RegularExpressions.Regex.Replace(first, keepColours ? @"\{(?!COLOR,)[^}]*\}" : @"\{[^}]*\}", "");
         }
 
         private static string BoxText(int usBank, int id, FieldFont font) => Box(TextBank(usBank), id, font);
@@ -1637,6 +1638,27 @@ namespace DSPRE.Avalonia.Data
                 Print(rgba, touch, Text(24, line), 21 * 8 + 44, 17 * 8 + 4, Rgb(8, 8, 8), Rgb(22, 22, 22), Align.Centre);
             }
             return new Shot("PC box graphics: bottom", rgba);
+        }
+
+        // Lines common script 3 and touch_save_app.c show while saving.
+        private static readonly int[] HgSaveLines = { 13, 14, 15, 16, 18, 20, 21, 81, 82 };
+        private static readonly int[] HgSaveQuestions = { 13, 14, 81, 82 };
+
+        // pokeheartgold touch_save_app.c.
+        private static Shot SaveHg(int bank, int line)
+        {
+            if (Array.IndexOf(HgSaveLines, line) < 0) return null;
+            (DsBgScreen s, Func<int, byte[]> m) = Bg(DirNames.FieldTouchMenu);
+            if (s == null) return null;
+            Palettes(s, NitroBgCodec.ReadColours(m(75)));
+            Layer(s, m, 0, 2, 0, 76, 77);
+            byte[] rgba = s.Render();
+            // The game prints these in the system font colours.
+            ushort[] sys = SystemColours;
+            MessageWindow(rgba, 2, 19, 27, 4, sys[15]);
+            PrintColoured(rgba, TalkFont, Box(bank, line, TalkFont, keepColours: true), 2 * 8, 19 * 8, sys);
+            if (Array.IndexOf(HgSaveQuestions, line) >= 0) TouchYesNoHg(rgba, 26, 10);
+            return new Shot("Save screen graphics: bottom", rgba, () => AvaloniaEditorLauncher.OpenGraphicAt(DirNames.FieldTouchMenu, 77, preferAssembled: true));
         }
 
         // yes_no_prompt.c, the small shape: tiles 1 and colours 0 of system/touch_subwindow, Yes (map 2) and No (map 4) each 6 by 4,
