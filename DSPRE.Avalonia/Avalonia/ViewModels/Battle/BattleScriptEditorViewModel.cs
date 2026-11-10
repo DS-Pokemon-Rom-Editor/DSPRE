@@ -1656,10 +1656,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private static readonly IBrush GaugeAmber = Bar(0xEB, 0xAA, 0x00);
         private static readonly IBrush GaugeRed = Bar(0xFB, 0x41, 0x10);
         public IBrush GaugeHpBrush => _gaugeHpPercent > 50 ? GaugeGreen : _gaugeHpPercent > 20 ? GaugeAmber : GaugeRed;
-        /// <summary>HGSS gauges are cream frames with dark text; DPPt frames are dark with white text.</summary>
-        public IBrush GaugeTextBrush => GameFamily == GameFamilies.HGSS
-            ? new SolidColorBrush(global::Avalonia.Media.Color.FromRgb(0x28, 0x28, 0x28))
-            : new SolidColorBrush(global::Avalonia.Media.Color.FromRgb(0xF8, 0xF8, 0xF8));
+        public IBrush GaugeTextBrush => Data.GaugeTextImages.StandInBrush;
 
         /// <summary>Off, then the twenty frames the player can pick in Options.</summary>
         public List<string> MessageBoxNames { get; } = MessageBoxNameList();

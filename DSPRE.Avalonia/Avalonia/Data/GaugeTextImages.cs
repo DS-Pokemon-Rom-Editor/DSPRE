@@ -1,3 +1,4 @@
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using DSPRE.ROMFiles;
 
@@ -11,6 +12,19 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Whether the real pictures can be drawn, and why not when they cannot.</summary>
         public static bool Available => BattleGaugeTextRenderer.IsAvailable;
         public static string Unavailable => BattleGaugeTextRenderer.Unavailable;
+
+        // The letters use colour 14 of each game's retail gauge palette.
+        private static readonly IBrush DiamondPearlLetters = new SolidColorBrush(Color.FromRgb(0x40, 0x30, 0x28));
+        private static readonly IBrush PlatinumLetters = new SolidColorBrush(Color.FromRgb(0xF8, 0xF8, 0xF8));
+        private static readonly IBrush JohtoLetters = new SolidColorBrush(Color.FromRgb(0x48, 0x48, 0x48));
+
+        /// <summary>Letter colour for the desktop font used when the game's pictures can't be drawn.</summary>
+        public static IBrush StandInBrush => RomInfo.GameFamily switch
+        {
+            RomInfo.GameFamilies.DP => DiamondPearlLetters,
+            RomInfo.GameFamilies.HGSS => JohtoLetters,
+            _ => PlatinumLetters,
+        };
 
         public static Bitmap Name(string name) => Show(BattleGaugeTextRenderer.Name(name));
 

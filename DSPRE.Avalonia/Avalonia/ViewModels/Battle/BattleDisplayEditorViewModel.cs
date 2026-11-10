@@ -198,10 +198,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public double PlayerGaugeImageLeft => Data.BattleGaugeComposer.CentreOf(Data.BattleGaugeComposer.Kind.PlayerSingle).X - 128;
         public double PlayerHealthFillLeft => Data.BattleGaugeComposer.HealthFillLeft(Data.BattleGaugeComposer.Kind.PlayerSingle);
 
-        // HGSS gauges are cream frames with dark text; DPPt frames are dark with white text.
-        public IBrush GaugeTextBrush => GameFamily == GameFamilies.HGSS
-            ? new SolidColorBrush(global::Avalonia.Media.Color.FromRgb(0x50, 0x50, 0x50))
-            : new SolidColorBrush(global::Avalonia.Media.Color.FromRgb(0xF8, 0xF8, 0xF8));
+        public IBrush GaugeTextBrush => Data.GaugeTextImages.StandInBrush;
 
         public string GaugeNameText
         {
