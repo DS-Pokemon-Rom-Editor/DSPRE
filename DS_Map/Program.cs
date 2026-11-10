@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Windows.Forms;
 using Velopack;
@@ -24,6 +25,7 @@ namespace DSPRE
             VelopackApp.Build().Run();
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+            ShowDonationNoticeIfPokeHubIsRunning();
 
 #if DEBUG
             // Enable Ctrl+Click screenshot capture on all forms
@@ -33,6 +35,49 @@ namespace DSPRE
             MainProgram mainProgram = new MainProgram();
             CrashReporter.Initialize(mainProgram);
             Application.Run(mainProgram);
+        }
+
+        static void ShowDonationNoticeIfPokeHubIsRunning()
+        {
+            // PokHub stays open when it starts DSPRE, so a process check covers both cases.
+            string[] names = { "PokeHub", "PokeHub.App", "PokeHub.Mcp" };
+            bool running = false;
+            try
+            {
+                foreach (string name in names)
+                {
+                    Process[] found = Process.GetProcessesByName(name);
+                    try
+                    {
+                        if (found.Length > 0)
+                        {
+                            running = true;
+                            break;
+                        }
+                    }
+                    finally
+                    {
+                        foreach (Process process in found)
+                            process.Dispose();
+                    }
+                }
+            }
+            catch
+            {
+                return;
+            }
+
+            if (!running)
+                return;
+
+            MessageBox.Show(
+                "We do not ask for donations, and we do not support them."
+                + Environment.NewLine + Environment.NewLine
+                + "Do not donate to any program that launches DSPRE or that takes code from DSPRE. "
+                + "Any such program that asks for donations does so against our expressed wishes.",
+                "DSPRE",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
         }
 
         public static void SetupDatabase()
