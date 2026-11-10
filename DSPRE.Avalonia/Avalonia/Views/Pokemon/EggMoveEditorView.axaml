@@ -39,8 +39,7 @@
 		  </Grid>
 		  <ListBox ItemsSource="{Binding SearchResults}"
 				   SelectedIndex="{Binding SelectedSearchIndex}"
-				   MaxHeight="80"
-				   DoubleTapped="SearchResult_DoubleTapped"/>
+				   MaxHeight="80"/>
 		</StackPanel>
 
 		<StackPanel DockPanel.Dock="Bottom" Spacing="4" Margin="0,6,0,0">

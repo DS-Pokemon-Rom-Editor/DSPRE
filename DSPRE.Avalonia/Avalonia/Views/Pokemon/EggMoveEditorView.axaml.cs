@@ -63,8 +63,5 @@ namespace DSPRE.Avalonia.Views.Pokemon
         {
             if (e.Key == Key.Enter) VM.SearchMonCommand();
         }
-
-        private void SearchResult_DoubleTapped(object sender, global::Avalonia.Input.TappedEventArgs e)
-            => VM.JumpToSearchResult();
     }
 }

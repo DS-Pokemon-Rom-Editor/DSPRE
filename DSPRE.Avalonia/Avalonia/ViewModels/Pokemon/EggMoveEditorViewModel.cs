@@ -213,7 +213,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public string SearchText { get => _searchText; set => Set(ref _searchText, value); }
 
         private int _selectedSearchIndex = -1;
-        public int SelectedSearchIndex { get => _selectedSearchIndex; set => Set(ref _selectedSearchIndex, value); }
+        public int SelectedSearchIndex
+        {
+            get => _selectedSearchIndex;
+            set { if (Set(ref _selectedSearchIndex, value)) JumpToSearchResult(); }
+        }
 
         // ----------------------------------------------------------------
         // Constructor
