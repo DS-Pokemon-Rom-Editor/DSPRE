@@ -654,6 +654,7 @@ namespace DSPRE.Resources {
                 [0x00] = "[00] Walkable",
                 [0x01] = "[01] Snow",
                 [0x02] = "[02] Leaves",
+                [0x03] = "[03] Branches (HGSS only)",
                 [0x04] = "[04] Grass",
                 [0x06] = "[06] Stairs & Ice",
                 [0x07] = "[07] Metal",
