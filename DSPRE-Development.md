@@ -188,9 +188,10 @@ repo; the pret decomps can be cited.
 | `DSPRE.Avalonia` | The app: views, view models, the GL renderer, readers only the UI uses. |
 | `DSPRE.Tests` | xunit tests. |
 
-All target net8.0. Classes that write back to the ROM live in `DSPRE.Core/ROMFiles`. Read-only types used for
-drawing or listing live in `DSPRE.Avalonia/Avalonia/Data`. Core shows messages through `AppMessages`; a finished
-save or export there calls `AppMessages.Notice`, which shows as a `SaveNotice`.
+All target net8.0. Classes that write back to the ROM live in `DSPRE.Core/ROMFiles`. Other game data types live in
+Core by subject (`Sound`, `Graphics`, `Screens`). `DSPRE.Avalonia/Avalonia/Data` keeps the ones that need the app's
+UI or renderer. Core shows messages through `AppMessages`; a finished save or export there calls `AppMessages.Notice`,
+which shows as a `SaveNotice`.
 
 ### Folders
 
@@ -268,6 +269,13 @@ public class MyEditorViewModel : INotifyPropertyChanged
     public int Index { get => _index; set { if (_index == value) return; _index = value; Raise(); } }
 }
 ```
+
+A view model doesn't parse bytes. A Core class reads the format and the view model takes its fields. Members come
+through `ArchiveMembers`, `ArchiveFiles`, `ScriptNarc`, `ModelAssets` or `PendingArchiveWrites.ReadMember`, other
+files through `PlainFiles`.
+
+A static in `DSPRE.Avalonia` that holds ROM data keeps the last ROM's when another opens. Keep it on the instance,
+or clear it when the ROM changes.
 
 ### Unsaved changes
 
