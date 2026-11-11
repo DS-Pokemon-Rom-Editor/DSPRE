@@ -11,6 +11,22 @@ namespace DSPRE.ROMFiles
         public int ID;
         public BindingList<LevelScriptTrigger> bufferSet = new BindingList<LevelScriptTrigger>();
 
+        // The game loads the level script into a 0x100-byte buffer and asserts the file is smaller.
+        public const int MaxGameFileSize = 0x100 - 1;
+
+        public int GetBinarySize()
+        {
+            int mapTriggers = 0, varTriggers = 0;
+            foreach (LevelScriptTrigger t in new HashSet<LevelScriptTrigger>(bufferSet))
+            {
+                if (t is VariableValueTrigger) varTriggers++;
+                else mapTriggers++;
+            }
+            int size = mapTriggers * 5 + 2;
+            if (varTriggers > 0) size += 5 + 1 + varTriggers * 6;
+            return size;
+        }
+
         public LevelScriptFile() { }
 
         public LevelScriptFile(int id)

@@ -482,8 +482,26 @@ namespace DSPRE.Editors
                     return;
                 }
 
-                VariableValueTrigger trigger = new VariableValueTrigger(scriptID, variableName, variableValue);
-                _levelScriptFile.bufferSet.Add(trigger);
+                if (!InU16Range(scriptID, "Script ID", textBoxScriptID)
+                    || !InU16Range(variableName, "Variable", textBoxVariableName, min: 1)
+                    || !InU16Range(variableValue, "Value", textBoxVariableValue))
+                {
+                    return;
+                }
+
+                // The game runs the first entry whose var/value matches, so a second one never fires.
+                foreach (LevelScriptTrigger existing in _levelScriptFile.bufferSet)
+                {
+                    if (existing is VariableValueTrigger v && v.variableToWatch == variableName && v.expectedValue == variableValue)
+                    {
+                        MessageBox.Show($"There is already a trigger for Var {variableName} == {variableValue} (Script {v.scriptTriggered}).\n" +
+                            "The game only runs the first matching one, so a second trigger would never run.\nRemove the existing trigger first.",
+                            "Duplicate trigger", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                }
+
+                if (!TryAddTrigger(new VariableValueTrigger(scriptID, variableName, variableValue))) { return; }
             }
             else
             {
@@ -494,22 +512,28 @@ namespace DSPRE.Editors
                     textBoxScriptID.Focus();
                     return;
                 }
+                if (!InU16Range(scriptID, "Script ID", textBoxScriptID)) { return; }
 
-                if (radioButtonMapChange.Checked)
+                int triggerType;
+                if (radioButtonMapChange.Checked) { triggerType = LevelScriptTrigger.MAPCHANGE; }
+                else if (radioButtonScreenReset.Checked) { triggerType = LevelScriptTrigger.SCREENRESET; }
+                else if (radioButtonLoadGame.Checked) { triggerType = LevelScriptTrigger.LOADGAME; }
+                else { return; }
+
+                // The game only looks up the first trigger of each of these types.
+                foreach (LevelScriptTrigger existing in _levelScriptFile.bufferSet)
                 {
-                    MapScreenLoadTrigger mapScreenLoadTrigger = new MapScreenLoadTrigger(LevelScriptTrigger.MAPCHANGE, scriptID);
-                    _levelScriptFile.bufferSet.Add(mapScreenLoadTrigger);
+                    if (existing is MapScreenLoadTrigger m && m.triggerType == triggerType)
+                    {
+                        MessageBox.Show($"This level script already has a trigger of this type ({existing}).\n" +
+                            "The game only runs the first one of each type, so a second one would never run.\n" +
+                            "Remove the existing trigger first, or call the extra script from the existing one.",
+                            "Duplicate trigger type", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
                 }
-                else if (radioButtonScreenReset.Checked)
-                {
-                    MapScreenLoadTrigger mapScreenLoadTrigger = new MapScreenLoadTrigger(LevelScriptTrigger.SCREENRESET, scriptID);
-                    _levelScriptFile.bufferSet.Add(mapScreenLoadTrigger);
-                }
-                else if (radioButtonLoadGame.Checked)
-                {
-                    MapScreenLoadTrigger mapScreenLoadTrigger = new MapScreenLoadTrigger(LevelScriptTrigger.LOADGAME, scriptID);
-                    _levelScriptFile.bufferSet.Add(mapScreenLoadTrigger);
-                }
+
+                if (!TryAddTrigger(new MapScreenLoadTrigger(triggerType, scriptID))) { return; }
             }
 
             textBoxScriptID.Clear();
@@ -517,6 +541,27 @@ namespace DSPRE.Editors
             textBoxVariableValue.Clear();
             ValidateAllInputs(); // Reset colors after clearing
             SetDirty();
+        }
+
+        private bool InU16Range(int value, string what, TextBox box, int min = 0)
+        {
+            if (value >= min && value <= ushort.MaxValue) { return true; }
+            MessageBox.Show($"{what} must be between {min} and {ushort.MaxValue} (0x{ushort.MaxValue:X}).", $"Invalid {what}", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            box.Focus();
+            return false;
+        }
+
+        private bool TryAddTrigger(LevelScriptTrigger trigger)
+        {
+            _levelScriptFile.bufferSet.Add(trigger);
+            if (_levelScriptFile.GetBinarySize() > LevelScriptFile.MaxGameFileSize)
+            {
+                _levelScriptFile.bufferSet.RemoveAt(_levelScriptFile.bufferSet.Count - 1);
+                MessageBox.Show($"This trigger would make the level script larger than {LevelScriptFile.MaxGameFileSize} bytes, " +
+                    "which is the most the game can load.", "Level script too large", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+            return true;
         }
 
         private void buttonRemove_Click(object sender, EventArgs e)
@@ -597,8 +642,7 @@ namespace DSPRE.Editors
         {
             if (_levelScriptFile == null) { return; }
             string path = Filesystem.GetScriptPath(_levelScriptFile.ID);
-            saveFile(path);
-            SetClean();
+            if (saveFile(path)) { SetClean(); }
         }
 
         private void buttonExport_Click(object sender, EventArgs e)
@@ -621,8 +665,18 @@ namespace DSPRE.Editors
             }
         }
 
-        void saveFile(string path)
+        bool saveFile(string path)
         {
+            if (_levelScriptFile == null) { return false; }
+
+            // Imported files can bypass the check in Add.
+            if (_levelScriptFile.GetBinarySize() > LevelScriptFile.MaxGameFileSize
+                && MessageBox.Show($"This level script is larger than {LevelScriptFile.MaxGameFileSize} bytes, which is the most the game can load. " +
+                    "The game will crash on this map.\n\nSave anyway?", "Level script too large", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+            {
+                return false;
+            }
+
             try
             {
                 long bytes_written = _levelScriptFile.write_file(path);
@@ -634,10 +688,12 @@ namespace DSPRE.Editors
                 {
                     MessageBox.Show("File was correctly saved.", "Success!");
                 }
+                return true;
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, ex.GetType().ToString());
+                return false;
             }
         }
 
