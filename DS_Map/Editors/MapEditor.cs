@@ -1529,6 +1529,10 @@ namespace DSPRE.Editors
                     paintPen = new Pen(Color.FromArgb(Transparency, Color.ForestGreen));
                     paintBrush = new SolidBrush(Color.FromArgb(Transparency, Color.ForestGreen));
                     break;
+                case 0x03: // Branches
+                    paintPen = new Pen(Color.FromArgb(Transparency, Color.BurlyWood));
+                    paintBrush = new SolidBrush(Color.FromArgb(Transparency, Color.BurlyWood));
+                    break;
                 case 0x04: // Grass
                     paintPen = new Pen(Color.FromArgb(Transparency, Color.LimeGreen));
                     paintBrush = new SolidBrush(Color.FromArgb(Transparency, Color.LimeGreen));
