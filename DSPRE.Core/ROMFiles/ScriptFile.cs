@@ -70,6 +70,26 @@ namespace DSPRE.ROMFiles
 
         public static readonly char[] SpecialChars = { 'x', 'X', '#', '.', '_' };
 
+        // Three retail Platinum files have no FD13: the table ends at the first script.
+        private static bool TryReadTableWithoutMarker(BinaryReader br, List<int> offsets)
+        {
+            long length = br.BaseStream.Length, lowest = long.MaxValue;
+            List<int> found = new List<int>();
+            br.BaseStream.Position = 0;
+            while (br.BaseStream.Position < lowest)
+            {
+                if (br.BaseStream.Position + 4 > length) return false;
+                long target = br.ReadUInt32() + br.BaseStream.Position;
+                if (target >= length || target < br.BaseStream.Position) return false;
+                found.Add((int)target);
+                lowest = Math.Min(lowest, target);
+            }
+            if (br.BaseStream.Position != lowest) return false;
+            offsets.Clear();
+            offsets.AddRange(found);
+            return true;
+        }
+
         public ScriptFile(Stream fs, bool readFunctions = true, bool readActions = true, int fileID = -1)
         {
             this.FileID = fileID;
@@ -117,12 +137,10 @@ namespace DSPRE.ROMFiles
                     }
                 }
 
-                if (IsLevelScript)
-                {
-                    return;
-                }
-
-                br.ReadUInt16();
+                bool noMarker = IsLevelScript && TryReadTableWithoutMarker(br, scriptOffsets);
+                if (noMarker) IsLevelScript = false;
+                if (IsLevelScript) return;
+                if (!noMarker) br.ReadUInt16();
                 /* Read scripts */
                 for (uint current = 0; current < scriptOffsets.Count; current++)
                 {

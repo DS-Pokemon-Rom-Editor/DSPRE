@@ -260,7 +260,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 StatusText = $"{count} script files.";
                 if (count > 0) SelectedScriptIndex = Math.Min(Math.Max(0, InitialIndex), count - 1);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("LevelScriptEditorViewModel.SetupAsync", ex))
             {
                 StatusText = "Error: " + ex.Message;
                 await DialogHelper.ShowErrorAsync($"Couldn't set up the Level script editor:\n{ex.Message}", "Level script editor");
@@ -349,9 +349,9 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             if (_file == null || _selScript < 0) return;
             if (_file.Problem() is string problem) { _ = DialogHelper.ShowErrorAsync(problem, "Level script editor"); return; }
-            // A file that failed to load as a level script may be an ordinary script; saving would replace it.
+            // Saving would replace an ordinary script, and its bytes alone can pass as a level script.
             ScriptFile onDisk = new ScriptFile(_selScript, readFunctions: false, readActions: false);
-            if (!onDisk.IsLevelScript && !onDisk.HasNoScripts)
+            if (ScriptSources.IsOrdinaryScript(_selScript) || (!onDisk.IsLevelScript && !onDisk.HasNoScripts))
             {
                 _ = DialogHelper.ShowErrorAsync($"File {_selScript} holds ordinary scripts, so it wasn't saved as a level script.", "Level script editor");
                 return;
@@ -364,7 +364,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 StatusText = $"Saved level script {_selScript}.";
                 AppEvents.RaiseLevelScriptSaved(this, _selScript);
             }
-            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't save:\n{ex.Message}", "Level script editor"); }
+            catch (Exception ex) when (AppLogger.Noted("LevelScriptEditorViewModel.Save", ex)) { _ = DialogHelper.ShowErrorAsync($"Couldn't save:\n{ex.Message}", "Level script editor"); }
         }
 
         public async Task ImportAsync()
@@ -383,7 +383,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 Dirty();
                 SaveNotice.Imported($"level script {_selScript}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Level script editor"); }
+            catch (Exception ex) when (AppLogger.Noted("LevelScriptEditorViewModel.ImportAsync", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Level script editor"); }
         }
 
         /// <summary>The level script's file in the file manager, as last saved.</summary>
@@ -400,7 +400,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             string path = await DialogHelper.SaveFileAsync(_owner, "Export level script", new[] { filter }, $"levelscript_{_selScript:D4}.lscr");
             if (path == null) return;
             try { _file.WriteFile(path, _padding); SaveNotice.Exported(path); }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Level script editor"); }
+            catch (Exception ex) when (AppLogger.Noted("LevelScriptEditorViewModel.ExportAsync", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Level script editor"); }
         }
     }
 }
