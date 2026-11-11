@@ -71,6 +71,9 @@ editors that show it.
 Offsets and anything else that differs between games or languages live in `RomLocator` or `RomInfo`, as a switch
 that names every game.
 
+A cache of ROM data is keyed by `ProjectSession.LoadId`, not the project folder: the id changes on every load.
+Static state with no key registers a clear with `ProjectSession.ClearOnLoad`.
+
 ### Methods
 
 Checks that end a method come first, each with its own `return`. The main work follows at the top indentation
@@ -119,6 +122,9 @@ user never hears about it.
 Code that has a fallback, like a name list that can come back empty or a preview that can draw nothing, may
 catch everything, but logs it with `AppLogger.WarnOnce("Class.Method", ex)`. That logs the first failure at that
 spot only, so a fallback that runs every frame doesn't flood the log.
+
+A catch for every exception logs in its filter: `catch (Exception ex) when (AppLogger.Noted("Class.Method", ex))`.
+The catch still runs, and the first failure at that spot is in the log with its stack trace.
 
 An empty `catch { }` hides bugs. When an error really can be ignored, a comment says why.
 
