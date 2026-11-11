@@ -66,6 +66,7 @@ namespace DSPRE.ROMFiles
         public int fileID = -1;
         public bool isLevelScript = new bool();
         public bool parseFailedDueToInvalidCommand = false;
+        public bool headerDamaged = false;
 
         public bool hasNoScripts { get { return fileID == int.MaxValue; } }
 
@@ -125,6 +126,17 @@ namespace DSPRE.ROMFiles
 
                 // Skip the 0xFD13 marker
                 br.ReadUInt16();
+
+                // Valid offsets always point past the header and inside the file. Anything else means
+                // the header was overwritten (e.g. by the pre-2.3.4.3 Level Script Editor bug).
+                long headerEnd = br.BaseStream.Position;
+                if (scriptOffsets.Any(o => o < headerEnd || o >= br.BaseStream.Length))
+                {
+                    headerDamaged = true;
+                    parseFailedDueToInvalidCommand = true;
+                    AppLogger.Error($"Script file {fileID}: header is damaged (script offsets point outside the file).");
+                    return;
+                }
                 /* Read scripts */
                 for (uint current = 0; current < scriptOffsets.Count; current++)
                 {
@@ -265,7 +277,133 @@ namespace DSPRE.ROMFiles
                 this.allActions = tempScript.allActions;
                 this.isLevelScript = tempScript.isLevelScript;
                 this.parseFailedDueToInvalidCommand = tempScript.parseFailedDueToInvalidCommand;
+                this.headerDamaged = tempScript.headerDamaged;
             }
+        }
+
+        /// <summary>
+        /// Header-only version of the check in the Stream constructor, cheap enough to run on every file.
+        /// </summary>
+        // Returns the position just past the 0xFD13 marker, or -1 if the data reads as a level script.
+        private static int FindScriptHeaderEnd(byte[] data, List<long> offsets)
+        {
+            for (int pos = 0; pos + 4 <= data.Length; pos += 4)
+            {
+                uint value = BitConverter.ToUInt32(data, pos);
+                if (value == 0 && offsets.Count == 0) { return -1; }
+                if (BitConverter.ToUInt16(data, pos) == 0xFD13) { return pos + 2; }
+                offsets.Add(value + pos + 4L);
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// Header-only version of the check in the Stream constructor, cheap enough to run on every file.
+        /// </summary>
+        public static bool HasDamagedHeader(byte[] data)
+        {
+            var offsets = new List<long>();
+            int headerEnd = FindScriptHeaderEnd(data, offsets);
+            return headerEnd >= 0 && offsets.Any(o => o < headerEnd || o >= data.Length);
+        }
+
+        // Where the game stops reading a level script (see GetMapLoadScriptId/GetMapSceneScriptId), or -1 if it runs off the end.
+        private static int LevelScriptDataEnd(byte[] d)
+        {
+            int pos = 0, varTable = -1;
+            while (true)
+            {
+                if (pos >= d.Length) { return -1; }
+                if (d[pos] == 0) { pos++; break; }
+                if (pos + 5 > d.Length) { return -1; }
+                if (d[pos] == LevelScriptTrigger.VARIABLEVALUE)
+                {
+                    uint ofs = BitConverter.ToUInt32(d, pos + 1);
+                    if (ofs > d.Length) { return -1; }
+                    varTable = pos + 5 + (int)ofs;
+                }
+                pos += 5;
+            }
+            if (varTable < 0) { return pos; }
+
+            int p = varTable;
+            while (true)
+            {
+                if (p + 2 > d.Length) { return -1; }
+                if (BitConverter.ToUInt16(d, p) == 0) { return Math.Max(pos, p + 2); }
+                p += 6;
+            }
+        }
+
+        // When the overwrite also wiped the 0xFD13 marker (scripts with 1-3 entries), the file reads as a
+        // level script with the rest of the old script left after it.
+        private static bool LooksLikeScriptOverwrittenByLevelScript(byte[] data)
+        {
+            if (FindScriptHeaderEnd(data, new List<long>()) >= 0) { return false; }
+            int end = LevelScriptDataEnd(data);
+            return end < 0 || data.Skip(end).Any(b => b != 0);
+        }
+
+        /// <summary>
+        /// Rebuilds script binaries damaged by the pre-2.3.4.3 Level Script Editor bug from their expanded/scripts/*.script copy.
+        /// The plaintext is only written by DSPRE's script save paths, so it predates damage done to the binary.
+        /// </summary>
+        public static (List<int> healed, List<int> unhealable) HealDamagedScripts(ICollection<int> levelScriptIDs)
+        {
+            var healed = new List<int>();
+            var unhealable = new List<int>();
+            int scriptCount = Filesystem.GetScriptCount();
+
+            for (int i = 0; i < scriptCount; i++)
+            {
+                string binPath = Filesystem.GetScriptPath(i);
+                if (!File.Exists(binPath)) { continue; }
+                byte[] data = File.ReadAllBytes(binPath);
+
+                bool certain = HasDamagedHeader(data);
+                bool suspect = !certain && levelScriptIDs.Count > 0 && !levelScriptIDs.Contains(i) && LooksLikeScriptOverwrittenByLevelScript(data);
+                if (!certain && !suspect) { continue; }
+
+                var fromText = new ScriptFile(new List<ScriptCommandContainer>(), new List<ScriptCommandContainer>(), new List<ScriptActionContainer>(), i);
+                bool haveScriptCopy = File.Exists(GetFilePaths(i).txtPath)
+                    && fromText.TryReadPlainTextFileCore()
+                    && !fromText.isLevelScript;
+
+                // A suspect is only treated as damaged when its plaintext copy shows it used to be a real script.
+                if (suspect && !haveScriptCopy) { continue; }
+
+                if (haveScriptCopy
+                    && fromText.SaveToFileDefaultDir(i, showSuccessMessage: false)
+                    && !HasDamagedHeader(File.ReadAllBytes(binPath)))
+                {
+                    AppLogger.Warn($"Script file {i}: was damaged, rebuilt from {GetFilePaths(i).txtPath}.");
+                    healed.Add(i);
+                }
+                else
+                {
+                    AppLogger.Error($"Script file {i}: header is damaged and there is no usable plaintext copy to rebuild it from.");
+                    unhealable.Add(i);
+                }
+            }
+            return (healed, unhealable);
+        }
+
+        public static void HealDamagedScriptsAndReport(ICollection<int> levelScriptIDs)
+        {
+            var (healed, unhealable) = HealDamagedScripts(levelScriptIDs);
+            if (healed.Count == 0 && unhealable.Count == 0) { return; }
+
+            string msg = "";
+            if (healed.Count > 0)
+            {
+                msg += $"Repaired damaged script files from their plaintext copies: {string.Join(", ", healed)}.\n";
+            }
+            if (unhealable.Count > 0)
+            {
+                msg += $"Could not repair: {string.Join(", ", unhealable)}. Restore them from a backup.\n";
+            }
+            MessageBox.Show(msg.TrimEnd(), "Damaged script files", MessageBoxButtons.OK,
+                unhealable.Count > 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
         }
 
         static FileStream getFileStream(int fileID)

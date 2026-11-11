@@ -4,6 +4,14 @@
 
 ---
 
+## 2.3.4.3
+- Fixed the Level Script Editor saving new triggers into the wrong script file on some empty
+  level scripts, which then crashed the Script Editor. Script files already damaged by this are
+  repaired automatically when possible.
+- The Level Script Editor now refuses triggers the game would never run.
+
+---
+
 ## 2.3.4.2
 - No, that was not a donation button to pay for model tokens, and DSPRE did not grow an AI. The
   notice now only says that an external tool launched this version.

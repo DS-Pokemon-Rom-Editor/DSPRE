@@ -123,6 +123,9 @@ namespace DSPRE.Editors
 
             SetupScriptEditorTextAreas();
 
+            // Must run before the export: a database change wipes expanded/scripts, which holds the copies used to repair.
+            ROMFiles.ScriptFile.HealDamagedScriptsAndReport(parent.levelScriptFileIDs);
+
             // Export scripts on first open with progress dialog, same as text archives
             int scriptCount = Filesystem.GetScriptCount();
             using (var loadingForm = new LoadingForm(scriptCount, "Loading script files..."))
@@ -1141,7 +1144,19 @@ namespace DSPRE.Editors
                 displayScriptFile(ScriptFile.ContainerTypes.Function, currentScriptFile.allFunctions, functionsNavListbox, FunctionTextArea);
                 displayScriptFileActions(ScriptFile.ContainerTypes.Action, currentScriptFile.allActions, actionsNavListbox, ActionTextArea);
 
-                if (currentScriptFile.parseFailedDueToInvalidCommand)
+                if (currentScriptFile.headerDamaged)
+                {
+                    MessageBox.Show(
+                        $"Script file {currentScriptFile.fileID:D4} is damaged and DSPRE has no copy to repair it from.\nRestore it from a backup.",
+                        "Damaged Script File",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+
+                    ScriptTextArea.ReadOnly = true;
+                    FunctionTextArea.ReadOnly = true;
+                    ActionTextArea.ReadOnly = true;
+                }
+                else if (currentScriptFile.parseFailedDueToInvalidCommand)
                 {
                     MessageBox.Show(
                         $"Warning: Script file {currentScriptFile.fileID:D4} could not be fully parsed due to unrecognized script commands.\n\n" +

@@ -205,6 +205,7 @@ namespace DSPRE.Editors
         private void BuildScriptToHeadersMapping(int headerCount)
         {
             _parent.scriptToHeaders.Clear();
+            _parent.levelScriptFileIDs.Clear();
 
             for (ushort i = 0; i < headerCount; i++)
             {
@@ -231,6 +232,7 @@ namespace DSPRE.Editors
                     }
 
                     _parent.scriptToHeaders[scriptFileId].Add(i);
+                    _parent.levelScriptFileIDs.Add(header.levelScriptID);
                 }
                 catch (Exception ex)
                 {
