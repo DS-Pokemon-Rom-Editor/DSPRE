@@ -73,11 +73,11 @@ namespace DSPRE.Screens
             return line >= 0 && line < _lines.Count ? _lines[line] : "";
         }
 
-        // Caches belong to one ROM; called under Gate.
+        // Caches last one load; called under Gate.
         private static void ForThisRom()
         {
-            if (_rom == RomInfo.WorkDir) return;
-            _rom = RomInfo.WorkDir;
+            if (_rom == ProjectSession.LoadId) return;
+            _rom = ProjectSession.LoadId;
             _screen = null;
             _lines = null;
             Fonts.Clear();

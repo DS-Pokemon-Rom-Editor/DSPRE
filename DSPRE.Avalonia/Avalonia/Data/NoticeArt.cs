@@ -61,6 +61,8 @@ namespace DSPRE.Avalonia.Data
         private static readonly IDisposable Watch =
             AppEvents.WhenSaved(() => Dispatcher.UIThread.Post(Reset), DirNames.WindowFrames, DirNames.FieldEffectModels, DirNames.Fonts);
 
+        static NoticeArt() => ProjectSession.ClearOnLoad(() => Dispatcher.UIThread.Post(Reset));
+
         // Notices take the plain look while a project loads, since its folders and tables are changing.
         private static bool Ready => AvaloniaEditorLauncher.IsRomLoaded && !AvaloniaRomLoader.Loading;
 

@@ -46,6 +46,7 @@ namespace DSPRE.Avalonia.Views.Controls
         {
             AffectsRender<FieldMessageBoxView>(TextProperty, HasMoreProperty, FitToFrameProperty,
                                                ArrowOffsetProperty, ScrollPixelsProperty, IsOpenProperty);
+            ProjectSession.ClearOnLoad(() => global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { Frame = null; ForgetPalette(); }));
         }
 
         public FieldMessageBoxView()
@@ -78,7 +79,7 @@ namespace DSPRE.Avalonia.Views.Controls
 
         private static event Action PaletteForgotten;
 
-        /// <summary>Reads the palette again and redraws open boxes, after a ROM switch or a font archive write.</summary>
+        /// <summary>Reads the palette again and redraws open boxes, after a load or a font archive write.</summary>
         public static void ForgetPalette()
         {
             _palette = null;

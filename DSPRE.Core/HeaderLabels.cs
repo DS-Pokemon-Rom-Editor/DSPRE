@@ -16,7 +16,7 @@ namespace DSPRE
         /// </summary>
         public static IReadOnlyList<string> Friendly()
         {
-            string rom = RomInfo.WorkDir;
+            string rom = RomInfo.WorkDir == null ? null : ProjectSession.LoadId;
             if (rom == null || RomInfo.InternalNamesPath == null) return Array.Empty<string>();
             if (_friendly != null && _forRom == rom) return _friendly;
 
@@ -92,7 +92,7 @@ namespace DSPRE
         public static bool DynamicHeaders =>
             ROMFiles.MapHeader.UsesDynamicHeaders;
 
-        /// <summary>Drops the cache, for when a different ROM is opened.</summary>
+        /// <summary>Drops the cache after names or a header are saved.</summary>
         public static void Forget() { _friendly = null; _forRom = null; }
     }
 }

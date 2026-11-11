@@ -156,6 +156,8 @@ namespace DSPRE.ROMFiles
         /// <summary>The loaded ROM's talking font, null until a preview loads it.</summary>
         public static FieldFont Talk { get; set; }
 
+        static FieldFont() => ProjectSession.ClearOnLoad(() => Talk = null);
+
         /// <summary>Reads the talking font out of the loaded ROM, or null when it cannot be found.</summary>
         public static FieldFont LoadTalkFont() => LoadFromArchive(TalkFontEntry);
 
@@ -303,7 +305,9 @@ namespace DSPRE.ROMFiles
             return glyphs;
         }
 
-        /// <summary>Forgets the table, for when a different ROM is opened.</summary>
+        static FieldFontCharacters() => ProjectSession.ClearOnLoad(Reset);
+
+        /// <summary>Forgets the table.</summary>
         public static void Reset() { _glyphByChar = null; _glyphByCode = null; }
 
         private static Dictionary<char, int> Map()

@@ -438,7 +438,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 ImageConverter.ToAvaloniaBitmap(image).Save(path, global::Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
                 return null;
             }
-            catch (Exception ex) { return "That picture couldn't be written: " + ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("FontEditorViewModel.ExportPng", ex)) { return "That picture couldn't be written: " + ex.Message; }
         }
 
         /// <summary>
@@ -481,7 +481,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 RaisePreview();
                 return null;
             }
-            catch (Exception ex) { return "That picture couldn't be read: " + ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("FontEditorViewModel.ImportPng", ex)) { return "That picture couldn't be read: " + ex.Message; }
         }
 
         /// <summary>The font as it stands, for anything that draws with it.</summary>
@@ -638,8 +638,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             return _lettersByGlyph.TryGetValue(glyph, out string s) ? s : "";
         }
 
-        /// <summary>Forgets the letter lookup, for when a different ROM is opened.</summary>
-        public static void Forget() => _lettersByGlyph = null;
+        static FontEditorViewModel() => ProjectSession.ClearOnLoad(() => _lettersByGlyph = null);
 
         private void RaiseGlyph()
         {

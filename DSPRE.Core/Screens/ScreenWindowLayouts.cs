@@ -49,7 +49,7 @@ namespace DSPRE.Screens
         public static ScreenWindowLayout For(string screen)
         {
             if (_using.Layout != null && _using.Screen == screen) return _using.Layout;
-            if (_rom != RomInfo.WorkDir) { _rom = RomInfo.WorkDir; Read.Clear(); }
+            if (_rom != ProjectSession.LoadId) { _rom = ProjectSession.LoadId; Read.Clear(); }
             if (!Read.TryGetValue(screen, out ScreenWindowLayout read)) Read[screen] = read = ScreenWindowLayout.Read(screen);
             return read;
         }
@@ -80,9 +80,9 @@ namespace DSPRE.Screens
             IReadOnlyDictionary<string, int> fonts = _usingFonts;
             if (fonts == null)
             {
-                if (_fontsRom != RomInfo.WorkDir)
+                if (_fontsRom != ProjectSession.LoadId)
                 {
-                    _fontsRom = RomInfo.WorkDir;
+                    _fontsRom = ProjectSession.LoadId;
                     try { _readFonts = ROMFiles.PartyFontPatch.FontsIn(ROMFiles.PartyFontPatch.ReadTable(), For("party")?.Windows ?? new List<ScreenWindowLayout.Window>()); }
                     catch (Exception ex) { AppLogger.WarnOnce("ScreenWindowLayouts.PartyFont", ex); _readFonts = null; }
                 }
@@ -98,7 +98,7 @@ namespace DSPRE.Screens
         public static PartyPanelLayout Panels()
         {
             if (_using.Panels != null) return _using.Panels;
-            if (_panelsRom != RomInfo.WorkDir) { _panelsRom = RomInfo.WorkDir; _readPanels = PartyPanelLayout.Read(); }
+            if (_panelsRom != ProjectSession.LoadId) { _panelsRom = ProjectSession.LoadId; _readPanels = PartyPanelLayout.Read(); }
             return _readPanels;
         }
 

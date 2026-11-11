@@ -62,12 +62,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private static Dictionary<int, List<int>> _headersByPlace;
         private static string _headersFor;
 
-        // Each place's headers, read once per project.
+        // Each place's headers, read once per load.
         private static List<int> HeadersOf(int place)
         {
-            if (_headersByPlace == null || _headersFor != WorkDir)
+            if (_headersByPlace == null || _headersFor != ProjectSession.LoadId)
             {
-                _headersFor = WorkDir;
+                _headersFor = ProjectSession.LoadId;
                 _headersByPlace = new Dictionary<int, List<int>>();
                 bool dynamic = HeaderLabels.DynamicHeaders;
                 for (int h = 0, n = MapHeader.GetHeaderCount(); h < n; h++)
@@ -273,7 +273,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 Status = "Done"; RaiseAll();
             }
             catch (OperationCanceledException) { }
-            catch (Exception e) { Failed(e); }
+            catch (Exception e) when (AppLogger.Noted("FollowerTalkPreviewViewModel.RunMove", e)) { Failed(e); }
         }
 
         private async Task Move(int move, int sound, CancellationToken stop)
@@ -364,7 +364,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 RaiseAll();
             }
             catch (OperationCanceledException) { }
-            catch (Exception e) { Failed(e); }
+            catch (Exception e) when (AppLogger.Noted("FollowerTalkPreviewViewModel.RunReaction", e)) { Failed(e); }
         }
 
         // A preview that can't play says so and leaves the editor usable.

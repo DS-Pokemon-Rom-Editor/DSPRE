@@ -70,6 +70,7 @@ namespace DSPRE.Avalonia.Views.Controls
 
         static HgssTouchScreenView()
         {
+            ProjectSession.ClearOnLoad(() => { Screen = null; Font = null; IconFont = null; });
             AffectsRender<HgssTouchScreenView>(ShowsChoicesProperty, BrightnessProperty, DimmedProperty, ALabelProperty,
                                                ChoicesProperty, YesNoProperty, CursorRowProperty, CursorShownProperty);
         }

@@ -441,11 +441,11 @@ namespace DSPRE.ROMFiles
         {
             if (!Supports || !File.Exists(Filesystem.ExpArmPath)) return (null, 17);
             DateTime block = File.GetLastWriteTimeUtc(Filesystem.ExpArmPath), menu = File.GetLastWriteTimeUtc(MenuPath);
-            if (_shown is { } c && c.Rom == RomInfo.WorkDir && c.Block == block && c.Menu == menu) return (c.Layout, c.Member);
+            if (_shown is { } c && c.Rom == ProjectSession.LoadId && c.Block == block && c.Menu == menu) return (c.Layout, c.Member);
             long at = BlockOffset();
             ScreenLayout layout = Read() is Settings s ? Layout(s) : null;
             int member = at < 0 || !Hg ? 17 : DSUtils.ReadFromFile(Filesystem.ExpArmPath, (uint)(at + MapMemberAt), 1)[0];
-            _shown = (RomInfo.WorkDir, block, menu, layout, member);
+            _shown = (ProjectSession.LoadId, block, menu, layout, member);
             return (layout, member);
         }
 

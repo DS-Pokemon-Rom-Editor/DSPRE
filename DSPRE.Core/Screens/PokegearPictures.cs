@@ -125,8 +125,8 @@ namespace DSPRE.Screens
         // The first six contacts in the phone book: name, then title.
         private static string[] Contacts()
         {
-            if (_contacts != null && _contactsRom == RomInfo.WorkDir) return _contacts;
-            _contactsRom = RomInfo.WorkDir;
+            if (_contacts != null && _contactsRom == ProjectSession.LoadId) return _contacts;
+            _contactsRom = ProjectSession.LoadId;
             PokegearPhoneBook.Book book = PokegearPhoneBook.Load(out _);
             string[] names = PokegearContactArchives.Names(PokegearPhoneBook.GameContactCount);
             List<string> classes = new TextArchive(RomInfo.TrainerClassMessageNumber).Messages, phone = new TextArchive(RomInfo.TextBank(271)).Messages;

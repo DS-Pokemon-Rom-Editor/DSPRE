@@ -142,7 +142,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Where this ROM keeps the sheet, or null; <see cref="WhyNot"/> says why.</summary>
         public static Found Locate()
         {
-            string forRom = RomInfo.WorkDir ?? "";
+            string forRom = ProjectSession.LoadId;
             if (_foundFor == forRom) return _found;
             _foundFor = forRom;
             _found = null;
@@ -159,7 +159,7 @@ namespace DSPRE.ROMFiles
 
             int overlays;
             try { overlays = OverlayUtils.OverlayTable.GetNumberOfOverlays(); }
-            catch (Exception ex) { _why = "The overlay table couldn't be read: " + ex.Message; return null; }
+            catch (Exception ex) when (AppLogger.Noted("BattleGaugePieces.Locate.2", ex)) { _why = "The overlay table couldn't be read: " + ex.Message; return null; }
 
             for (int ov = 0; ov < overlays; ov++)
             {

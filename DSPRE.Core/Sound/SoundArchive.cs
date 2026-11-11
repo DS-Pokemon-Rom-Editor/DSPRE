@@ -30,7 +30,9 @@ namespace DSPRE.Sound
             catch (Exception ex) { AppLogger.Error("Sound archive couldn't be read: " + ex.Message); return null; }
         }
 
-        /// <summary>Forgets what was read, for when a different ROM is opened.</summary>
+        static SoundArchive() => ProjectSession.ClearOnLoad(Reset);
+
+        /// <summary>Forgets what was read.</summary>
         public static void Reset() { _cached = null; _cachedFor = null; _crySequence = null; }
 
         /// <summary>The one short sequence every cry is played from. </summary>
@@ -215,7 +217,7 @@ namespace DSPRE.Sound
 
             byte[] file;
             try { file = File.ReadAllBytes(path); }
-            catch (Exception ex) { problem = "That file couldn't be read: " + ex.Message; return false; }
+            catch (Exception ex) when (AppLogger.Noted("SoundArchive.ImportCry", ex)) { problem = "That file couldn't be read: " + ex.Message; return false; }
 
             short[] pcm = CryFiles.ReadWav(file, out int rate, out problem);
             if (pcm == null) return false;
@@ -237,7 +239,7 @@ namespace DSPRE.Sound
             if (whole == null) { problem = "The sound archive couldn't be rewritten."; return false; }
 
             try { PlainFiles.WriteBytes(sdatPath, whole); }
-            catch (Exception ex) { problem = "The sound archive couldn't be saved: " + ex.Message; return false; }
+            catch (Exception ex) when (AppLogger.Noted("SoundArchive.ImportCry.2", ex)) { problem = "The sound archive couldn't be saved: " + ex.Message; return false; }
 
             Reset();          // read it again next time, so what plays is what is now on disk
             return true;
@@ -324,7 +326,7 @@ namespace DSPRE.Sound
             rate = 0;
             byte[] file;
             try { file = File.ReadAllBytes(path); }
-            catch (Exception ex) { problem = "That file couldn't be read: " + ex.Message; return null; }
+            catch (Exception ex) when (AppLogger.Noted("SoundArchive.ReadImport", ex)) { problem = "That file couldn't be read: " + ex.Message; return null; }
 
             short[] pcm = CryFiles.ReadWav(file, out rate, out problem);
             if (pcm == null) return null;
@@ -401,7 +403,7 @@ namespace DSPRE.Sound
             if (whole == null) return false;
 
             try { PlainFiles.WriteBytes(sdatPath, whole); }
-            catch (Exception ex) { problem = "The sound archive couldn't be saved: " + ex.Message; return false; }
+            catch (Exception ex) when (AppLogger.Noted("SoundArchive.WriteSamples", ex)) { problem = "The sound archive couldn't be saved: " + ex.Message; return false; }
 
             Reset();          // read it again next time, so what plays is what is now on disk
             return true;
@@ -433,7 +435,7 @@ namespace DSPRE.Sound
 
             byte[] file;
             try { file = File.ReadAllBytes(path); }
-            catch (Exception ex) { problem = "That file couldn't be read: " + ex.Message; return null; }
+            catch (Exception ex) when (AppLogger.Noted("SoundArchive.PrepareCheckoutCry", ex)) { problem = "That file couldn't be read: " + ex.Message; return null; }
 
             // Parsed only to refuse a file its build would choke on; what gets written is the WAV itself,
             // since the build converts it with its own tool and settings.
@@ -460,7 +462,7 @@ namespace DSPRE.Sound
                 Directory.CreateDirectory(Path.GetDirectoryName(full));
                 PlainFiles.WriteBytes(full, cry.Wav);
             }
-            catch (Exception ex) { problem = "That cry couldn't be saved to the checkout: " + ex.Message; return false; }
+            catch (Exception ex) when (AppLogger.Noted("SoundArchive.WriteCheckoutCry", ex)) { problem = "That cry couldn't be saved to the checkout: " + ex.Message; return false; }
             return true;
         }
 
@@ -574,7 +576,7 @@ namespace DSPRE.Sound
 
             byte[] file;
             try { file = File.ReadAllBytes(path); }
-            catch (Exception ex) { problem = "That file couldn't be read: " + ex.Message; return false; }
+            catch (Exception ex) when (AppLogger.Noted("SoundArchive.ImportSample.2", ex)) { problem = "That file couldn't be read: " + ex.Message; return false; }
 
             short[] pcm = CryFiles.ReadWav(file, out int rate, out problem);
             if (pcm == null) return false;
@@ -600,7 +602,7 @@ namespace DSPRE.Sound
             if (whole == null) { problem = "The sound archive couldn't be rewritten."; return false; }
 
             try { PlainFiles.WriteBytes(sdatPath, whole); }
-            catch (Exception ex) { problem = "The sound archive couldn't be saved: " + ex.Message; return false; }
+            catch (Exception ex) when (AppLogger.Noted("SoundArchive.ImportSample.3", ex)) { problem = "The sound archive couldn't be saved: " + ex.Message; return false; }
 
             Reset();
             return true;

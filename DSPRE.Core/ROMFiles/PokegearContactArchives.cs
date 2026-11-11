@@ -18,7 +18,7 @@ namespace DSPRE
         /// <summary>Archive IDs by contact, or null when the table can't be found.</summary>
         public static int[] Find(int contactCount)
         {
-            string rom = RomInfo.WorkDir ?? "";
+            string rom = ProjectSession.LoadId;
             if (_forRom == rom && _cached != null && _cached.Length == contactCount) return _cached;
 
             _cached = null;

@@ -17,7 +17,7 @@ namespace DSPRE
         public static Facts? Of(int move)
         {
             if (move <= 0) return null;
-            string rom = RomInfo.WorkDir;
+            string rom = ProjectSession.LoadId;
             if (_cachedFor != rom)
             {
                 Cache.Clear(); _cachedFor = rom;
@@ -41,7 +41,7 @@ namespace DSPRE
         /// <summary>The move a TM or HM item teaches, or 0 for any other item.</summary>
         public static int TaughtByItem(int item)
         {
-            string rom = RomInfo.WorkDir;
+            string rom = ProjectSession.LoadId;
             if (_taughtBy == null || _taughtFor != rom)
             {
                 Dictionary<int, int> map = new Dictionary<int, int>();

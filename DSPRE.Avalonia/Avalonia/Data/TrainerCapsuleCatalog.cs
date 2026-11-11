@@ -30,10 +30,10 @@ namespace DSPRE.Avalonia.Data
 
         public static bool Available => GameFamily != GameFamilies.DP && TrainerCapsules.Available;
 
-        /// <summary>Reads the capsules and seal table once per ROM. Unpacks what it needs.</summary>
+        /// <summary>Reads the capsules and seal table once per load. Unpacks what it needs.</summary>
         public static void Load(bool again = false)
         {
-            string rom = WorkDir ?? "";
+            string rom = ProjectSession.LoadId;
             if (!again && _loadedFor == rom) return;
             _loadedFor = rom;
             _stickers.Clear();
@@ -132,7 +132,7 @@ namespace DSPRE.Avalonia.Data
                         if (!list.Contains(who)) list.Add(who);
                     }
                 }
-                catch { }   // a trainer that can't be read is left out of the seal users
+                catch (Exception caught) when (AppLogger.Noted("TrainerCapsuleCatalog.UsedBy", caught)) { }   // a trainer that can't be read is left out of the seal users
             }
             return used;
         }

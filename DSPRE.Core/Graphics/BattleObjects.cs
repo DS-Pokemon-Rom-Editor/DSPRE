@@ -235,7 +235,7 @@ namespace DSPRE.Graphics
         {
             lock (BanksLock)
             {
-                string rom = RomInfo.WorkDir;
+                string rom = ProjectSession.LoadId;
                 if (_banksFor == rom) return _banks;
                 _banksFor = rom;
                 _banks = null;

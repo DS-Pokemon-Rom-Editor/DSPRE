@@ -198,11 +198,11 @@ namespace DSPRE.Avalonia.Gl
         private static FieldTextureAnimations _fieldAnimations;
         private static string _fieldAnimationsDir;
 
-        /// <summary>The field animation list, reread whenever the loaded game changes.</summary>
+        /// <summary>The field animation list, reread on every load.</summary>
         public static FieldTextureAnimations FieldAnimations(bool reload = false)
         {
             if (!FieldTextureAnimations.Available) return null;
-            string dir = GameDirs[DirNames.FieldTextureAnimations].unpackedDir;
+            string dir = ProjectSession.LoadId;
             if (reload || dir != _fieldAnimationsDir) { _fieldAnimations = FieldTextureAnimations.Load(); _fieldAnimationsDir = dir; }
             return _fieldAnimations;
         }

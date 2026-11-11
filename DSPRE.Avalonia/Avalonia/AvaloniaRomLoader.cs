@@ -91,28 +91,11 @@ namespace DSPRE.Avalonia
                 // Cached by overworld number, which is a different picture in another ROM.
                 // Cleared on the UI thread, where the loading walker reads them.
                 OnUiThread(OverworldSprites.ClearCache);
-                DSPRE.ROMFiles.Overworld3DObjects.Forget();
-                // The font and its letter numbering come from the previous ROM.
-                Views.Controls.FieldMessageBoxView.Font = null;
-                Views.Controls.FieldMessageBoxView.Frame = null;
-                Views.Controls.FieldMessageBoxView.ForgetPalette();
-                Views.Controls.FieldMenuWindowView.Font = null;
-                Views.Controls.FieldMenuWindowView.Frame = null;
-                Views.Controls.FieldMenuWindowView.Colours = null;
-                Views.Controls.PoketchView.Screen = null;
-                Views.Controls.HgssTouchScreenView.Screen = null;
-                Views.Controls.HgssTouchScreenView.Font = null;
-                Views.Controls.HgssTouchScreenView.IconFont = null;
-                SoundArchive.Reset();
-                ROMFiles.FieldFontCharacters.Reset();
-                ViewModels.Graphics.FontEditorViewModel.Forget();
-                // Unsaved label edits were made for the project being closed.
-                LabelStore.DiscardDraft();
 
                 try { _ = new RomInfo(gameCode, folder); }   // populates the static RomInfo.* (gameFamily, workDir, gameDirs, …)
                 catch (Exception ex) { error = "Couldn't initialise ROM data: " + ex.Message; AppLogger.Error(error); return false; }
-                // Cleared again after RomInfo, in case a notice or dialog cached art while the folders were changing.
-                OnUiThread(() => { OverworldSprites.ClearCache(); Data.NoticeArt.Reset(); });
+                // Cleared again after RomInfo, in case a notice read sprites while the folders were changing.
+                OnUiThread(OverworldSprites.ClearCache);
             }
 
             if (GameFamily == GameFamilies.NULL) { error = "Unsupported ROM (Gen IV Pokémon only)."; return false; }

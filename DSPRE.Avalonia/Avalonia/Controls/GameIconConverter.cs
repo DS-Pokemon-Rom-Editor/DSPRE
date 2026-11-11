@@ -43,9 +43,9 @@ namespace DSPRE.Avalonia.Controls
             int id = value switch { int i => i, ushort u => u, short s => s, uint ui => (int)ui, decimal d => (int)d, string t when int.TryParse(t, out int n) => n, _ => -1 };
             if (_kind == Kind.Type) return id >= 0 ? Data.TypeIcons.For(id) : null;
             if (id <= 0) return null;
-            if (_cachedFor != RomInfo.WorkDir)
+            if (_cachedFor != ProjectSession.LoadId)
             {
-                _cache.Clear(); _cachedFor = RomInfo.WorkDir;
+                _cache.Clear(); _cachedFor = ProjectSession.LoadId;
                 try { DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { _kind switch { Kind.Item => RomInfo.DirNames.ItemIcons, Kind.Pokemon => RomInfo.DirNames.MonIcons, _ => RomInfo.DirNames.MoveData } }); }
                 catch (Exception ex) { AppLogger.Warn("Game icon archives: " + ex.Message); }
             }
@@ -67,7 +67,7 @@ namespace DSPRE.Avalonia.Controls
         // The longest ROM Pokémon name that appears in the label as a whole word, so "MIME JR." isn't read as "MR. MIME".
         private int SpeciesNamedIn(string label)
         {
-            if (_cachedFor != RomInfo.WorkDir || _names == null) { _names = RomInfo.GetPokemonNames(); _cachedFor = RomInfo.WorkDir; }
+            if (_cachedFor != ProjectSession.LoadId || _names == null) { _names = RomInfo.GetPokemonNames(); _cachedFor = ProjectSession.LoadId; }
             int best = 0, bestLength = 0;
             for (int i = 1; i < _names.Length; i++)
             {

@@ -57,10 +57,10 @@ namespace DSPRE.Avalonia.Views.Controls
         {
             _camera = camera;
             _focus = focus;
-            if (headerId == _sceneHeader && _builtFor == RomInfo.WorkDir) { Frame(); return; }
+            if (headerId == _sceneHeader && _builtFor == ProjectSession.LoadId) { Frame(); return; }
 
             _sceneHeader = headerId;
-            _builtFor = RomInfo.WorkDir;
+            _builtFor = ProjectSession.LoadId;
             int request = ++_request;
             _ = BuildAsync(headerId, request);
         }
@@ -68,9 +68,9 @@ namespace DSPRE.Avalonia.Views.Controls
         /// <summary>Plays the field weather a header value gives, over the view.</summary>
         public void ShowWeather(int headerWeather)
         {
-            if (headerWeather == _weatherShown && _weatherFor == RomInfo.WorkDir) return;
+            if (headerWeather == _weatherShown && _weatherFor == ProjectSession.LoadId) return;
             _weatherShown = headerWeather;
-            _weatherFor = RomInfo.WorkDir;
+            _weatherFor = ProjectSession.LoadId;
             _weather.Show(headerWeather);
             _fog = FieldWeather.For(RomInfo.GameFamily, headerWeather).FogSettings;
             Frame();
@@ -138,7 +138,7 @@ namespace DSPRE.Avalonia.Views.Controls
             if (scene == null) return (null, "No maps to show.", null);
             // HGSS interior areas take their buildings from the interior set, and so their animations too.
             bool indoor = false;
-            try { indoor = RomInfo.GameFamily == RomInfo.GameFamilies.HGSS && new AreaData(header.AreaDataID).AreaType == AreaData.TYPE_INDOOR; } catch { }   // without the area data the area is treated as outdoors
+            try { indoor = RomInfo.GameFamily == RomInfo.GameFamilies.HGSS && new AreaData(header.AreaDataID).AreaType == AreaData.TYPE_INDOOR; } catch (Exception caught) when (AppLogger.Noted("CameraPreview.BuildScene", caught)) { }   // without the area data the area is treated as outdoors
             SceneBuildingAnimator buildings = null;
             try { buildings = new SceneBuildingAnimator(scene, indoor, FieldTimeOfDay.Now); }
             catch (Exception ex) { AppLogger.Warn("Building animations for the field view: " + ex.Message); }
@@ -197,8 +197,8 @@ namespace DSPRE.Avalonia.Views.Controls
 
         private static NsbmdGlControl.LightSpot SpotShape()
         {
-            if (_spotShapeFor == RomInfo.WorkDir) return _spotShape;
-            _spotShapeFor = RomInfo.WorkDir;
+            if (_spotShapeFor == ProjectSession.LoadId) return _spotShape;
+            _spotShapeFor = ProjectSession.LoadId;
             _spotShape = null;
             try
             {

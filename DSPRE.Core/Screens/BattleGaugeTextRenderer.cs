@@ -37,7 +37,7 @@ namespace DSPRE.Screens
         /// </summary>
         private static System.Drawing.Color[] Palette()
         {
-            string forRom = RomInfo.WorkDir ?? "";
+            string forRom = ProjectSession.LoadId;
             if (_paletteFor == forRom) return _palette;
             _paletteFor = forRom;
             _palette = null;
@@ -65,7 +65,7 @@ namespace DSPRE.Screens
         /// <summary>The gauge's first bank of colours, which its tiles and the pieces copied into them use.</summary>
         public static System.Drawing.Color[] Colours() => Palette();
 
-        /// <summary>Forgets the colours, for when a different ROM is opened.</summary>
+        /// <summary>Forgets the colours.</summary>
         public static void Reset() { _palette = null; _paletteFor = null; _nameFontFor = null; BattleGaugeText.Reset(); }
 
         // An editor's unsaved name font wins over the ROM's on this thread.
@@ -91,7 +91,7 @@ namespace DSPRE.Screens
         private static int NameFont()
         {
             if (_usingNameFont is int chosen) return chosen;
-            string rom = RomInfo.WorkDir ?? "";
+            string rom = ProjectSession.LoadId;
             if (_nameFontFor == rom) return _nameFont;
             _nameFontFor = rom;
             try { _nameFont = HpBarFontPatch.ReadFont(); }

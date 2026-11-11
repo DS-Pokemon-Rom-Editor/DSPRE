@@ -359,7 +359,7 @@ namespace DSPRE.Screens
 
         private static FieldFont Font(int entry)
         {
-            if (_rom != WorkDir) { _rom = WorkDir; Fonts.Clear(); }
+            if (_rom != ProjectSession.LoadId) { _rom = ProjectSession.LoadId; Fonts.Clear(); }
             if (Fonts.TryGetValue(entry, out FieldFont f)) return f;
             try { f = FieldFont.LoadFromArchive(entry); } catch (Exception ex) { AppLogger.WarnOnce("GameTextScreens.Font", ex); f = null; }
             Fonts[entry] = f;
@@ -957,9 +957,9 @@ namespace DSPRE.Screens
         // Maps with no banner use style 0.
         private static int BannerStyle(int name, bool hg)
         {
-            if (_bannerStyles == null || _bannerRom != WorkDir)
+            if (_bannerStyles == null || _bannerRom != ProjectSession.LoadId)
             {
-                _bannerRom = WorkDir;
+                _bannerRom = ProjectSession.LoadId;
                 _bannerStyles = new Dictionary<int, int>();
                 _bannerUses = new Dictionary<int, int>();
                 int count = MapHeader.GetHeaderCount();
@@ -2789,7 +2789,7 @@ namespace DSPRE.Screens
         // The first eight items whose data puts them in the pocket, so the list looks like that pocket in the game.
         private static int[] PocketSample(int pocket)
         {
-            if (_pocketSamplesRom != RomInfo.WorkDir) { _pocketSamples = new Dictionary<int, int[]>(); _pocketSamplesRom = RomInfo.WorkDir; }
+            if (_pocketSamplesRom != ProjectSession.LoadId) { _pocketSamples = new Dictionary<int, int[]>(); _pocketSamplesRom = ProjectSession.LoadId; }
             if (_pocketSamples.TryGetValue(pocket, out int[] known)) return known;
             List<int> found = new List<int>();
             try

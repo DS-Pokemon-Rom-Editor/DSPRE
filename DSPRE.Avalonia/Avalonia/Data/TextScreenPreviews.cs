@@ -257,11 +257,11 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Reads everything again on the next preview, after the font archive was saved.</summary>
         public static void ForgetFonts() { lock (Gate) _rom = null; HgssTouchPictures.Forget(); }
 
-        // Caches belong to one ROM; called under Gate.
+        // Caches last one load; called under Gate.
         private static void ForThisRom()
         {
-            if (_rom == RomInfo.WorkDir) return;
-            _rom = RomInfo.WorkDir;
+            if (_rom == ProjectSession.LoadId) return;
+            _rom = ProjectSession.LoadId;
             Reads.Clear();
             Fonts.Clear();
             _speciesByAbility = null;

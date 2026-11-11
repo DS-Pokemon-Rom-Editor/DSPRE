@@ -14,7 +14,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The icon for a move category (0 physical, 1 special, 2 status), or null.</summary>
         public static Bitmap Category(int category)
         {
-            string rom = RomInfo.WorkDir;
+            string rom = ProjectSession.LoadId;
             if (_cachedFor != rom) { Cache.Clear(); CategoryCache.Clear(); _cachedFor = rom; }
             if (CategoryCache.TryGetValue(category, out Bitmap known)) return known;
             Bitmap icon = ToBitmap(TypeIconPixels.Category(category));
@@ -30,7 +30,7 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public static Bitmap For(int type)
         {
-            string rom = RomInfo.WorkDir;
+            string rom = ProjectSession.LoadId;
             if (_cachedFor != rom) { Cache.Clear(); CategoryCache.Clear(); _cachedFor = rom; }
             if (Cache.TryGetValue(type, out Bitmap known)) return known;
 

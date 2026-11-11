@@ -372,6 +372,8 @@ namespace DSPRE
             return error;
         }
 
+        static LabelStore() => ProjectSession.ClearOnLoad(DiscardDraft);
+
         public static void DiscardDraft() { DraftLabels.Clear(); DraftAttrs.Clear(); DraftResets.Clear(); }
 
         // Undo in Dropdown labels: the whole draft as one value.

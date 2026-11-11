@@ -77,6 +77,7 @@ namespace DSPRE.Avalonia.Views.Controls
 
         static FieldMenuWindowView()
         {
+            ProjectSession.ClearOnLoad(() => { Font = null; Frame = null; Colours = null; });
             AffectsRender<FieldMenuWindowView>(ItemsProperty, WidthItemsProperty, CursorRowProperty, TileLeftProperty, TileTopProperty,
                                                TilesWideProperty, TilesHighProperty, IndentProperty, CursorXProperty, RowOffsetProperty,
                                                ShowCursorProperty, FitToWindowProperty);

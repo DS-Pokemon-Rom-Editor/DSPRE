@@ -212,7 +212,7 @@ namespace DSPRE.Graphics
             if (a.Pokewalker == null)
             {
                 byte[] b = null;
-                try { b = new ScriptNarc(a.Dir).Get(index); } catch { }   // an entry that can't be read is treated as empty
+                try { b = new ScriptNarc(a.Dir).Get(index); } catch (Exception caught) when (AppLogger.Noted("GraphicAssets.AsideOf", caught)) { }   // an entry that can't be read is treated as empty
                 Kind kind = Identify(b);
                 if (kind == Kind.CellAnimation) found = Aside.Timing;
                 else if (ModelAssets.Identify(b) is not (ModelAssets.Kind.NotThreeD or ModelAssets.Kind.Empty)) found = Aside.ThreeD;
@@ -386,7 +386,7 @@ namespace DSPRE.Graphics
             {
                 int n = Math.Min(stride, fileCount - at);
                 string name = null;
-                try { name = a.NameOf?.Invoke(at); } catch { }   // an entry without a name uses the archive's title
+                try { name = a.NameOf?.Invoke(at); } catch (Exception caught) when (AppLogger.Noted("GraphicAssets.PlainUnits", caught)) { }   // an entry without a name uses the archive's title
                 Unit u = new Unit { Archive = a, Name = name ?? a.Title };
                 for (int k = 0; k < n; k++)
                     u.Parts.Add(new UnitPart
@@ -426,7 +426,7 @@ namespace DSPRE.Graphics
             private static void Build()
             {
                 string now = RomInfo.GameDirs != null && RomInfo.GameDirs.ContainsKey(DirNames.ItemIcons)
-                    ? RomInfo.GameDirs[DirNames.ItemIcons].unpackedDir : null;
+                    ? ProjectSession.LoadId : null;
                 if (_builtFor == now && _icons != null) return;
 
                 _icons = new List<Icon>();
@@ -1067,7 +1067,7 @@ namespace DSPRE.Graphics
                 return "This entry isn't a layout, so there is no assembled picture to put back.";
 
             int drawingAt = -1;
-            try { drawingAt = a.DrawingEntry?.Invoke(layoutIndex) ?? -1; } catch { }
+            try { drawingAt = a.DrawingEntry?.Invoke(layoutIndex) ?? -1; } catch (Exception caught) when (AppLogger.Noted("GraphicAssets.PutAssembledBack", caught)) { }
             // Where the game's pairing is not known, the drawing the picture was shown with is the one written.
             if (drawingAt < 0 && a.DrawingArchive == null) drawingAt = FindDrawingIndex(narc, layoutIndex);
             byte[] drawing = drawingAt >= 0 ? narc.Get(drawingAt) : null;
@@ -1145,7 +1145,7 @@ namespace DSPRE.Graphics
                 return "This entry isn't a drawing, so there is no background to put back.";
 
             int arrangementAt = -1;
-            try { arrangementAt = a.ArrangementEntry?.Invoke(drawingIndex) ?? -1; } catch { }   // without the game's pairing there is no arrangement to put back
+            try { arrangementAt = a.ArrangementEntry?.Invoke(drawingIndex) ?? -1; } catch (Exception caught) when (AppLogger.Noted("GraphicAssets.PutBackgroundBack", caught)) { }   // without the game's pairing there is no arrangement to put back
             byte[] scr = arrangementAt >= 0 ? narc.Get(arrangementAt) : null;
             if (scr == null)
                 return "The arrangement this drawing is laid out by isn't known, so it can't be put back.";
@@ -1251,7 +1251,7 @@ namespace DSPRE.Graphics
                     {
                         // What the game itself pairs this layout with, where that is known.
                         int said = -1;
-                        try { said = a.DrawingEntry?.Invoke(index) ?? -1; } catch { }   // without the game's pairing the drawing is found by searching
+                        try { said = a.DrawingEntry?.Invoke(index) ?? -1; } catch (Exception caught) when (AppLogger.Noted("GraphicAssets.Render", caught)) { }   // without the game's pairing the drawing is found by searching
                         if (said >= 0) drawing = narc.Get(said);
                         drawing ??= FindDrawing(narc, index);
                     }

@@ -162,7 +162,7 @@ namespace DSPRE.ROMFiles
             ?? (BattleGaugePieces.IsOverlayStaged ? BattleGaugePieces.ReadSheet() : null)
             ?? read.Overlay.AsSpan(read.TilesAt, Math.Min(0x4E * 32, read.Overlay.Length - read.TilesAt)).ToArray();
 
-        /// <summary>Forgets what was read, for when a different ROM is opened.</summary>
+        /// <summary>Forgets what was read.</summary>
         public static void Reset() { _read = null; _readFor = null; _why = null; }
 
         // ── reading it ────────────────────────────────────────────────────────────────────────────
@@ -190,7 +190,7 @@ namespace DSPRE.ROMFiles
 
         private static Pieces Read()
         {
-            string forRom = RomInfo.WorkDir ?? "";
+            string forRom = ProjectSession.LoadId;
             if (_readFor == forRom) return _read;
             _readFor = forRom;
             _read = null;
@@ -253,7 +253,7 @@ namespace DSPRE.ROMFiles
                 }
                 return tiles;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("BattleGaugeText.ReadNumberFont", ex))
             {
                 _why = "The number font couldn't be read: " + ex.Message;
                 return null;

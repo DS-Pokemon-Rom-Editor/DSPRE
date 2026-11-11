@@ -181,7 +181,7 @@ namespace DSPRE.ROMFiles
 
         private static List<GameCamera> RomRows()
         {
-            string project = RomInfo.WorkDir;
+            string project = ProjectSession.LoadId;
             if (_romRows == null || _romRowsFor != project)
             {
                 _romRows = GameCameraTable.TryRead();

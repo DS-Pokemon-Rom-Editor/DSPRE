@@ -39,8 +39,8 @@ namespace DSPRE.ROMFiles
         {
             lock (Gate)
             {
-                if (_menus != null && _rom == RomInfo.WorkDir) return _menus;
-                _rom = RomInfo.WorkDir;
+                if (_menus != null && _rom == ProjectSession.LoadId) return _menus;
+                _rom = ProjectSession.LoadId;
                 _menus = Scan();
                 return _menus;
             }

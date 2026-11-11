@@ -959,6 +959,20 @@ namespace DSPRE
 
         #region Constructors (1)
 
+        private static void ForgetLastRom()
+        {
+            ProjectSession.Began();
+            // Filled lazily, so the next ROM would keep the last one's overworld tables.
+            OverworldTable = null;
+            OverworldTableKeys = null;
+            Ow3DSpriteDict = null;
+            Overworld3DObjects.Forget();
+            OWtablePath = null;
+            OWTableOffset = 0;
+            OverlayUtils.ForgetOverlayTable();
+            DVCalculator.TrainerClassGender.Invalidate();
+        }
+
         public RomInfo(string id, string romFolderName)
         {
             // Refused before any static state changes, so the ROM already open stays intact.
@@ -968,15 +982,7 @@ namespace DSPRE
                 return;
             }
 
-            // Reset here: they fill lazily, so another ROM would keep the first ROM's overworld tables.
-            OverworldTable = null;
-            OverworldTableKeys = null;
-            Ow3DSpriteDict = null;
-            Overworld3DObjects.Forget();
-            OWtablePath = null;
-            OWTableOffset = 0;
-            OverlayUtils.ForgetOverlayTable();
-            DVCalculator.TrainerClassGender.Invalidate();
+            ForgetLastRom();
 
             string path = Path.GetFullPath(romFolderName);
 

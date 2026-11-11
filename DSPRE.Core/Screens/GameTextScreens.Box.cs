@@ -175,10 +175,10 @@ namespace DSPRE.Screens
             Print(rgba, SystemFont, count, 112 + 20, 0, ink[1], ink[2], Align.Centre);
         }
 
-        // The sample box's body colours, read once per project.
+        // The sample box's body colours, read once per load.
         private static byte[] SampleBodyColours()
         {
-            string folder = RomInfo.WorkDir;
+            string folder = ProjectSession.LoadId;
             if (_sampleBodyColours.Folder == folder && _sampleBodyColours.Colours != null) return _sampleBodyColours.Colours;
             byte[] colours = new byte[BoxSample.Length];
             for (int i = 0; i < BoxSample.Length; i++)

@@ -43,6 +43,7 @@ namespace DSPRE.Avalonia.Views.Controls
 
         static PoketchView()
         {
+            ProjectSession.ClearOnLoad(() => Screen = null);
             AffectsRender<PoketchView>(OwnedProperty, FemaleProperty, ScriptRunningProperty);
         }
 

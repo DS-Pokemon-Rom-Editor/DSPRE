@@ -122,7 +122,7 @@ namespace DSPRE.ROMFiles
         public static Tables Read(out string error)
         {
             error = null;
-            string project = RomInfo.WorkDir ?? "";
+            string project = ProjectSession.LoadId;
             if (_cached != null && _cachedFor == project) return _cached;
 
             if (RomInfo.GameVersion != RomInfo.GameVersions.Platinum)

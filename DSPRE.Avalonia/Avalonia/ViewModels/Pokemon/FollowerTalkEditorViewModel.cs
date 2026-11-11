@@ -890,14 +890,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 public Dictionary<int, string> NamesNow() => FromRom?.Invoke() ?? Names;
             }
 
-            // Built once per project; every slot row reads them.
+            // Built once per load; every slot row reads them.
             private static Dictionary<int, string> _mapNames, _tileNames;
             private static string _namesFor;
 
             private static void ReadNames()
             {
-                if (_namesFor == WorkDir && _mapNames != null) return;
-                _namesFor = WorkDir;
+                if (_namesFor == ProjectSession.LoadId && _mapNames != null) return;
+                _namesFor = ProjectSession.LoadId;
                 _mapNames = new Dictionary<int, string>();
                 IReadOnlyList<string> headers = HeaderLabels.Friendly();
                 for (int h = 0; h < headers.Count; h++) _mapNames[h + 1] = $"{h}: {headers[h]}";
