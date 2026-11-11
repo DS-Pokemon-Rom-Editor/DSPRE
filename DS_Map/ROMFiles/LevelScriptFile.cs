@@ -71,6 +71,19 @@ namespace DSPRE.ROMFiles
                 }
                 br.BaseStream.Position = 0;
 
+                // The game stops reading triggers at the first 0x00 type byte, so a file starting
+                // with 0x00 is an empty level script whatever follows (padding, or dead triggers
+                // like "00 00000000 02 04000000" seen in some HGE files).
+                if (fs.Length == 0 || br.ReadByte() == 0)
+                {
+                    if (!IsAllZero(fs))
+                    {
+                        AppLogger.Warn($"Level script {ID}: file starts with 0x00, so the game treats it as empty. The bytes after it are ignored and will be dropped on save.");
+                    }
+                    return;
+                }
+                br.BaseStream.Position = 0;
+
                 bool hasConditionalStructure = false;
 
                 //conditionalStructureOffset is used to ensure the structure of the file is correct
@@ -105,15 +118,6 @@ namespace DSPRE.ROMFiles
 
                 //the earliest position a trigger can be
                 const int SMALLEST_TRIGGER_SIZE = 5;
-
-                //if triggerType is invalid
-                //and next uint16 == 0
-                //and the file stream length is shorter than the earliest position a trigger can be
-                if (br.BaseStream.Position == 1 && br.ReadUInt16() == 0 && fs.Length < SMALLEST_TRIGGER_SIZE)
-                {
-                    return;
-                    throw new InvalidDataException("This level script does nothing."); // "Interesting..."
-                }
 
                 //br.BaseStream.Position == 3
                 //triggerType is valid,
@@ -150,9 +154,27 @@ namespace DSPRE.ROMFiles
             }
         }
 
+        private static bool IsAllZero(Stream stream)
+        {
+            long start = stream.Position;
+            int b;
+            while ((b = stream.ReadByte()) != -1)
+            {
+                if (b != 0)
+                {
+                    stream.Position = start;
+                    return false;
+                }
+            }
+            stream.Position = start;
+            return true;
+        }
+
         public long write_file(string path, bool word_alignment_padding = false)
         {
-            FileStream fs = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write);
+            // FileMode.Create truncates: OpenOrCreate would leave the old file's tail behind
+            // when the new level script is shorter, corrupting it.
+            FileStream fs = new FileStream(path, FileMode.Create, FileAccess.Write);
             using (BinaryWriter bw = new BinaryWriter(fs))
             {
                 HashSet<MapScreenLoadTrigger> mapScreenLoadTriggers = new HashSet<MapScreenLoadTrigger>();

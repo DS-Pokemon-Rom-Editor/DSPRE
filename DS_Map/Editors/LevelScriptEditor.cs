@@ -131,50 +131,42 @@ namespace DSPRE.Editors
             selectScriptFileComboBox.SelectedIndex = selectedIndex;
         }
 
-        void disableButtons(bool usurp = false)
+        void disableButtons()
         {
-            if (!usurp && isEmptyLevelScript())
-            {
-                enableButtons();
-            }
-            else
-            {
-                buttonOpenSelectedScript.Enabled = true;
-                buttonOpenHeaderScript.Enabled = false;
+            buttonOpenSelectedScript.Enabled = true;
+            buttonOpenHeaderScript.Enabled = false;
 
-                listBoxTriggers.DataSource = null;
+            listBoxTriggers.DataSource = null;
 
-                textBoxScriptID.Clear();
-                textBoxVariableName.Clear();
-                textBoxVariableValue.Clear();
+            textBoxScriptID.Clear();
+            textBoxVariableName.Clear();
+            textBoxVariableValue.Clear();
 
-                radioButtonVariableValue.Checked = false;
-                radioButtonMapChange.Checked = false;
-                radioButtonScreenReset.Checked = false;
-                radioButtonLoadGame.Checked = false;
+            radioButtonVariableValue.Checked = false;
+            radioButtonMapChange.Checked = false;
+            radioButtonScreenReset.Checked = false;
+            radioButtonLoadGame.Checked = false;
 
-                textBoxScriptID.Enabled = false;
+            textBoxScriptID.Enabled = false;
 
-                radioButtonVariableValue.Enabled = false;
-                radioButtonMapChange.Enabled = false;
-                radioButtonScreenReset.Enabled = false;
-                radioButtonLoadGame.Enabled = false;
+            radioButtonVariableValue.Enabled = false;
+            radioButtonMapChange.Enabled = false;
+            radioButtonScreenReset.Enabled = false;
+            radioButtonLoadGame.Enabled = false;
 
-                radioButtonAuto.Enabled = false;
-                radioButtonHex.Enabled = false;
-                radioButtonDecimal.Enabled = false;
+            radioButtonAuto.Enabled = false;
+            radioButtonHex.Enabled = false;
+            radioButtonDecimal.Enabled = false;
 
-                buttonImport.Enabled = false;
-                buttonSave.Enabled = false;
-                buttonExport.Enabled = false;
-                checkBoxPadding.Enabled = false;
+            buttonImport.Enabled = false;
+            buttonSave.Enabled = false;
+            buttonExport.Enabled = false;
+            checkBoxPadding.Enabled = false;
 
-                buttonAdd.Enabled = false;
-                buttonRemove.Enabled = false;
+            buttonAdd.Enabled = false;
+            buttonRemove.Enabled = false;
 
-                buttonOpenSelectedScript.Enabled = true;
-            }
-
+            buttonOpenSelectedScript.Enabled = true;
         }
 
         void enableButtons()
@@ -249,7 +241,11 @@ namespace DSPRE.Editors
 
             buttonLocate.Enabled = true;
 
-            disableButtons(true);
+            disableButtons();
+
+            // Clear before parsing: if parsing fails, a stale file object would make Add/Save
+            // write triggers into whichever file was selected before (or file 0).
+            _levelScriptFile = null;
 
             try
             {
@@ -257,14 +253,12 @@ namespace DSPRE.Editors
 
                 listBoxTriggers.DataSource = _levelScriptFile.bufferSet;
                 if (listBoxTriggers.Items.Count > 0) { listBoxTriggers.SelectedIndex = 0; }
-                // Check for 318767104
                 enableButtons();
                 SetClean();
             }
-            catch (InvalidDataException ex)
-            { //not a level script
-                disableButtons();
-                AppLogger.Info(ex.Message);
+            catch (Exception ex) when (ex is InvalidDataException || ex is EndOfStreamException)
+            { //not a level script, or a malformed one
+                AppLogger.Info($"Level script file {selectScriptFileComboBox.SelectedIndex}: {ex.Message}");
             }
         }
 
@@ -464,10 +458,7 @@ namespace DSPRE.Editors
 
         private void buttonAdd_Click(object sender, EventArgs e)
         {
-            if (_levelScriptFile == null)
-            {
-                _levelScriptFile = new LevelScriptFile();
-            }
+            if (_levelScriptFile == null) { return; }
 
             if (radioButtonVariableValue.Checked)
             {
@@ -530,6 +521,7 @@ namespace DSPRE.Editors
 
         private void buttonRemove_Click(object sender, EventArgs e)
         {
+            if (_levelScriptFile == null || listBoxTriggers.SelectedIndex < 0) { return; }
             _levelScriptFile.bufferSet.RemoveAt(listBoxTriggers.SelectedIndex);
             SetDirty();
         }
@@ -565,12 +557,6 @@ namespace DSPRE.Editors
             EditorPanels.scriptEditor.OpenScriptEditor(this._parent, (int)h.scriptFileID);
         }
 
-        private bool isEmptyLevelScript()
-        {
-            ScriptFile script = new ScriptFile((int)EditorPanels.levelScriptEditor.selectScriptFileComboBox.SelectedIndex, true, true);
-            return script.isLevelScript;
-        }
-
         private void buttonOpenSelectedScript_Click(object sender, EventArgs e)
         {
             EditorPanels.scriptEditor.OpenScriptEditor(this._parent, (int)EditorPanels.levelScriptEditor.selectScriptFileComboBox.SelectedIndex);
@@ -585,6 +571,7 @@ namespace DSPRE.Editors
 
         void buttonImport_Click(object sender, EventArgs e)
         {
+            if (_levelScriptFile == null) { return; }
             OpenFileDialog ofd = new OpenFileDialog();
             if (ofd.ShowDialog() == DialogResult.OK)
             {
@@ -608,6 +595,7 @@ namespace DSPRE.Editors
 
         private void buttonSave_Click(object sender, EventArgs e)
         {
+            if (_levelScriptFile == null) { return; }
             string path = Filesystem.GetScriptPath(_levelScriptFile.ID);
             saveFile(path);
             SetClean();
