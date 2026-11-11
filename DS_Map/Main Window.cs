@@ -111,6 +111,7 @@ namespace DSPRE
         public RomInfo romInfo;
         public Dictionary<ushort /*evFile*/, ushort /*header*/> eventToHeader = new Dictionary<ushort, ushort>();
         public Dictionary<ushort /*scriptFile*/, List<ushort> /*headers*/> scriptToHeaders = new Dictionary<ushort, List<ushort>>();
+        public HashSet<int> levelScriptFileIDs = new HashSet<int>();
 
         /// <summary>
         /// Opens the Script Editor and navigates to a specific script number within a script file.
@@ -1539,6 +1540,7 @@ namespace DSPRE
                 MessageBox.Show("An error occurred while rebuilding script files. Save aborted.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
+            ScriptFile.HealDamagedScriptsAndReport(levelScriptFileIDs);
 
             Helpers.statusLabelMessage("Repacking NARCS...");
             Update();
