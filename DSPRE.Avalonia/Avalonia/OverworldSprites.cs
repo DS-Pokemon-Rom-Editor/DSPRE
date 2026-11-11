@@ -48,7 +48,7 @@ namespace DSPRE.Avalonia
                     n = bank == null ? 0 : Tex0Block.ReadBtx0(bank, out _)?.Textures.Count ?? 0;
                 }
             }
-            catch { }   // a sprite that can't be read reports no frames and is tried again next time
+            catch (Exception caught) when (AppLogger.Noted("OverworldSprites.FrameCount", caught)) { }   // a sprite that can't be read reports no frames and is tried again next time
             if (n > 0) FrameCounts[eventEntryID] = n;
             return n;
         }

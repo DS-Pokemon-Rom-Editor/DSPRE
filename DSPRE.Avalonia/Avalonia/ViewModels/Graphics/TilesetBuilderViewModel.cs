@@ -48,7 +48,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             byte[] file;
             try { file = PlainFiles.ReadBytes(path); }
-            catch (Exception ex) { return "That file couldn't be read: " + ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("TilesetBuilderViewModel.Open", ex)) { return "That file couldn't be read: " + ex.Message; }
 
             if (!AnyPng.TryReadRgba(file, out byte[] rgba, out int w, out int h, out string whynot))
                 return whynot;
@@ -184,7 +184,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 OnPropertyChanged(nameof(SavedAs));
                 return null;
             }
-            catch (Exception ex) { return "Those files couldn't be written: " + ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("TilesetBuilderViewModel.Save", ex)) { return "Those files couldn't be written: " + ex.Message; }
         }
 
         public string SavedAs { get; private set; }

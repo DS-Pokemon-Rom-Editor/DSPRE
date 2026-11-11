@@ -71,7 +71,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             BuildFrames();
             Redraw();
             string named = null;
-            try { named = _archive.NameOf?.Invoke(_index); } catch { }   // an entry without a name keeps the archive's title
+            try { named = _archive.NameOf?.Invoke(_index); } catch (Exception caught) when (AppLogger.Noted("GraphicPainterViewModel.Load", caught)) { }   // an entry without a name keeps the archive's title
             Title = named == null
                 ? $"{_archive.Title} {_index}"
                 : $"{named} ({_archive.Title} {_index})";

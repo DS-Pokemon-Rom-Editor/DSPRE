@@ -90,7 +90,14 @@ namespace DSPRE
         /// fallback that runs every frame doesn't flood the log.</summary>
         public static void WarnOnce(string where, Exception e)
         {
-            if (WarnedAt.TryAdd(where, true)) Warn(where + ": " + e.Message);
+            if (WarnedAt.TryAdd(where, true)) Warn($"{where}: {e.GetType().Name}: {e.Message}{Environment.NewLine}{e.StackTrace}");
+        }
+
+        // For a catch filter: logs like WarnOnce and lets the catch run.
+        public static bool Noted(string where, Exception e)
+        {
+            WarnOnce(where, e);
+            return true;
         }
 
         public static string GetRecentLogs()

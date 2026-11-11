@@ -152,7 +152,7 @@ namespace DSPRE.ROMFiles
                 }
                 return null;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("BattleTowerPokemonSetFile.Save", ex))
             {
                 return ex.Message;
             }

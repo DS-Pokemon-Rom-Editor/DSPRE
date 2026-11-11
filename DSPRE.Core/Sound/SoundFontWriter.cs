@@ -39,7 +39,7 @@ namespace DSPRE.Sound
 
             List<SbnkInstrument> instruments;
             try { instruments = sdat.GetBankInstruments(bankNo); }
-            catch (Exception ex) { return Fail(r, "That bank couldn't be read: " + ex.Message); }
+            catch (Exception ex) when (AppLogger.Noted("SoundFontWriter.Build.2", ex)) { return Fail(r, "That bank couldn't be read: " + ex.Message); }
             if (instruments == null || instruments.Count == 0)
                 return Fail(r, "That bank holds no instruments.");
 
@@ -126,7 +126,7 @@ namespace DSPRE.Sound
                       + "SoundFont ones, so they're close, not identical.");
 
             try { r.Bytes = Write(name, built, pool); }
-            catch (Exception ex) { return Fail(r, "That SoundFont couldn't be put together: " + ex.Message); }
+            catch (Exception ex) when (AppLogger.Noted("SoundFontWriter.Build.3", ex)) { return Fail(r, "That SoundFont couldn't be put together: " + ex.Message); }
             return r;
         }
 

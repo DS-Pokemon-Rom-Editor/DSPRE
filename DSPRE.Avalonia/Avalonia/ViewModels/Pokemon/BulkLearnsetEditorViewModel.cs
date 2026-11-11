@@ -111,7 +111,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     SpeciesFilter.Add(i < SpeciesNames.Count ? $"{i}: {SpeciesNames[i]}" : $"Species {i}");
                 Load();
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("BulkLearnsetEditorViewModel.SetupAsync", ex))
             {
                 StatusText = "Error: " + ex.Message;
                 await DialogHelper.ShowErrorAsync($"Couldn't set up the Bulk learnset editor:\n{ex.Message}", "Bulk learnset editor");
@@ -291,7 +291,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 SaveNotice.Saved(UnsavedChangesDescription);
                 StatusText = "Saved all learnsets.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't save:\n{ex.Message}", "Bulk learnset editor"); }
+            catch (Exception ex) when (AppLogger.Noted("BulkLearnsetEditorViewModel.SaveAll", ex)) { _ = DialogHelper.ShowErrorAsync($"Couldn't save:\n{ex.Message}", "Bulk learnset editor"); }
         }
 
         // Only species whose rows changed are written into learnsets.json.

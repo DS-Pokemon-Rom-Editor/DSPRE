@@ -75,7 +75,7 @@ namespace DSPRE.ROMFiles
                 }
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("TrainerClassDatasetManager.TryInspect", ex))
             {
                 error = ex.Message;
                 return false;
@@ -202,7 +202,7 @@ namespace DSPRE.ROMFiles
                 }
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("TrainerClassDatasetManager.TryFindTrainerUses", ex))
             {
                 error = ex.Message;
                 trainerIds.Clear();
@@ -249,7 +249,7 @@ namespace DSPRE.ROMFiles
                 }
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("TrainerClassDatasetManager.TryFindClassUses", ex))
             {
                 uses.Clear();
                 error = "The uses of class " + classId + " couldn't be checked: " + ex.Message;
@@ -381,13 +381,13 @@ namespace DSPRE.ROMFiles
         private static void TryDelete(string path, List<string> errors)
         {
             try { ArchiveMembers.Delete(path); }
-            catch (Exception ex) { errors.Add(Path.GetFileName(path) + ": " + ex.Message); }
+            catch (Exception ex) when (AppLogger.Noted("TrainerClassDatasetManager.TryDelete", ex)) { errors.Add(Path.GetFileName(path) + ": " + ex.Message); }
         }
 
         private static void TryRestoreDeletedFile(string path, byte[] data, List<string> errors)
         {
             try { if (data != null && !File.Exists(path)) ArchiveMembers.Write(path, data); }
-            catch (Exception ex) { errors.Add(Path.GetFileName(path) + ": " + ex.Message); }
+            catch (Exception ex) when (AppLogger.Noted("TrainerClassDatasetManager.TryRestoreDeletedFile", ex)) { errors.Add(Path.GetFileName(path) + ": " + ex.Message); }
         }
 
         private static string RollbackSummary(List<string> errors) => errors.Count == 0
@@ -421,7 +421,7 @@ namespace DSPRE.ROMFiles
                     }
                     else ArchiveMembers.Delete(_path);
                 }
-                catch (Exception ex) { errors.Add(Path.GetFileName(_path) + ": " + ex.Message); }
+                catch (Exception ex) when (AppLogger.Noted("TrainerClassDatasetManager.Restore", ex)) { errors.Add(Path.GetFileName(_path) + ": " + ex.Message); }
             }
         }
     }

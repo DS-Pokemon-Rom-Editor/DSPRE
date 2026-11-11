@@ -106,7 +106,7 @@ namespace DSPRE.ROMFiles
                 {
                     int header = (int)BitConverter.ToUInt32(b, id * 4);
                     string place = "", label = $"Map {header}";
-                    try { place = HeaderLabels.LocationNameOf(MapHeader.GetMapHeader((ushort)header)); } catch { }   // a header that can't be read is listed by its number
+                    try { place = HeaderLabels.LocationNameOf(MapHeader.GetMapHeader((ushort)header)); } catch (Exception caught) when (AppLogger.Noted("PokedexAreaData.Areas", caught)) { }   // a header that can't be read is listed by its number
                     if (names != null && header < names.Count)
                     {
                         string n = names[header].Replace("\0", "").Trim();

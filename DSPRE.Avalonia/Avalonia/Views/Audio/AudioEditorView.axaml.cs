@@ -265,7 +265,7 @@ namespace DSPRE.Avalonia.Views.Audio
                 PlainFiles.WriteBytes(path, midi);
                 SaveNotice.Exported(path, SpeechBubble.Note);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("AudioEditorView.ExportMidi_Click", ex))
             {
                 AppLogger.Error("Audio MIDI export failed: " + ex.Message);
                 vm.StatusText = "That file couldn't be written.";
@@ -311,7 +311,7 @@ namespace DSPRE.Avalonia.Views.Audio
                 SseqPlayer.WriteWav(path, _pcm, Rate);
                 SaveNotice.Exported(path, SpeechBubble.Note);
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync("It couldn't be saved:\n" + ex.Message, "Audio editor"); }
+            catch (Exception ex) when (AppLogger.Noted("AudioEditorView.Export_Click", ex)) { await DialogHelper.ShowErrorAsync("It couldn't be saved:\n" + ex.Message, "Audio editor"); }
         }
 
         private async void Import_Click(object sender, RoutedEventArgs e)
@@ -352,7 +352,7 @@ namespace DSPRE.Avalonia.Views.Audio
                 }
                 await DialogHelper.ShowInfoAsync(why ?? "That couldn't be imported.", title);
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync("It couldn't be imported:\n" + ex.Message, "Audio editor"); }
+            catch (Exception ex) when (AppLogger.Noted("AudioEditorView.Import_Click", ex)) { await DialogHelper.ShowErrorAsync("It couldn't be imported:\n" + ex.Message, "Audio editor"); }
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e)

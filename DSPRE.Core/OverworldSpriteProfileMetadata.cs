@@ -81,7 +81,7 @@ namespace DSPRE
                 DSUtils.WriteWholeFile(_path, current);
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("OverworldSpriteProfileMetadata.TryReplace", ex))
             {
                 error = ex.Message;
                 return false;
@@ -131,7 +131,7 @@ namespace DSPRE
                 error = "Overworld graphics profiles aren't supported for this game.";
                 return false;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("OverworldSpriteProfileMetadata.TryCreatePatch", ex))
             {
                 error = ex.Message;
                 return false;

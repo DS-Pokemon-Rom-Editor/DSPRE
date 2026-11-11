@@ -1326,7 +1326,7 @@ namespace DSPRE.Models
                 PlainFiles.WriteText(path, obj.ToString());
                 PlainFiles.WriteText(mtlPath, mtl.ToString());
             }
-            catch (Exception ex) { return ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("MapTileset.SaveObj", ex)) { return ex.Message; }
 
             return null;
         }

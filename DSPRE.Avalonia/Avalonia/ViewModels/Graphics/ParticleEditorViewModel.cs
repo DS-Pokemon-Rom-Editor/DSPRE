@@ -205,7 +205,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 StatusText = $"{row.Label} changed.";
                 Replay();
             }
-            catch (Exception ex) { StatusText = ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("ParticleEditorViewModel.Write", ex)) { StatusText = ex.Message; }
             row.Refresh();
         }
 
@@ -281,7 +281,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             ok = false;
             byte[] file;
             try { file = PlainFiles.ReadBytes(path); }
-            catch (Exception ex) { return StatusText = "That file couldn't be read: " + ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("ParticleEditorViewModel.ReplaceTexture", ex)) { return StatusText = "That file couldn't be read: " + ex.Message; }
             if (!AnyPng.TryReadRgba(file, out byte[] rgba, out int w, out int h, out string whynot))
                 return StatusText = whynot ?? "That file isn't a readable PNG.";
 
@@ -307,7 +307,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 bmp.Save(path, global::Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
                 return null;
             }
-            catch (Exception ex) { return StatusText = "Couldn't save: " + ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("ParticleEditorViewModel.ExportTexture", ex)) { return StatusText = "Couldn't save: " + ex.Message; }
         }
 
         // ── saving ─────────────────────────────────────────────────────────────────────────────
@@ -324,7 +324,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 StatusText = "Saved.";
                 _changed?.Invoke(_entry);
             }
-            catch (Exception ex) { StatusText = "Couldn't save: " + ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("ParticleEditorViewModel.SaveChanges", ex)) { StatusText = "Couldn't save: " + ex.Message; }
         }
 
         public void DiscardChanges()

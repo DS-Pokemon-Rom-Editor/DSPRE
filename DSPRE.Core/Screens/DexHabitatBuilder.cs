@@ -145,7 +145,7 @@ namespace DSPRE.Screens
             foreach (int zone in zones)
             {
                 string name = null;
-                try { name = HeaderLabels.LocationNameOf(MapHeader.GetMapHeader((ushort)zone)); } catch { }   // a zone that can't be read is listed by its number
+                try { name = HeaderLabels.LocationNameOf(MapHeader.GetMapHeader((ushort)zone)); } catch (Exception caught) when (AppLogger.Noted("DexHabitatBuilder.BuildHgss", caught)) { }   // a zone that can't be read is listed by its number
                 data.Places.Add(string.IsNullOrWhiteSpace(name) ? "Map " + zone : name);
             }
             return data;

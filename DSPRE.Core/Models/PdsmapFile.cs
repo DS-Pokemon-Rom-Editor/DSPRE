@@ -50,7 +50,7 @@ namespace DSPRE.Models
             whynot = null;
             string[] lines;
             try { lines = File.ReadAllLines(path); }
-            catch (Exception ex) { whynot = "Couldn't read file: " + ex.Message; return null; }
+            catch (Exception ex) when (AppLogger.Noted("PdsmapFile.Read", ex)) { whynot = "Couldn't read file: " + ex.Message; return null; }
 
             Project project = new Project();
             string folder = Path.GetDirectoryName(path) ?? ".";

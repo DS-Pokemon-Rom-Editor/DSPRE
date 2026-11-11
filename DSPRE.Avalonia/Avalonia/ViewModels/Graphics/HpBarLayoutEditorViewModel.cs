@@ -364,7 +364,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         });
                     }
                 }
-                catch (Exception ex) { StatusText = "The preview couldn't be drawn: " + ex.Message; }
+                catch (Exception ex) when (AppLogger.Noted("HpBarLayoutEditorViewModel.Redraw", ex)) { StatusText = "The preview couldn't be drawn: " + ex.Message; }
                 finally { BattleGaugeTextRenderer.Reset(); }
             }
         }

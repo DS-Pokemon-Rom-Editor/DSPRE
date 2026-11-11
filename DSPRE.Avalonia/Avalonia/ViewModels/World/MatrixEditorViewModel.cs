@@ -212,7 +212,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     for (int h = 0; h < GetHeaderCount(); h++)
                         if (MapHeader.GetMapHeader((ushort)h)?.MatrixID == _selectedIndex) { _headerOfWholeMatrix = h; break; }
                 }
-                catch { }   // a header that can't be read is skipped
+                catch (Exception caught) when (AppLogger.Noted("MatrixEditorViewModel.RebuildLegend", caught)) { }   // a header that can't be read is skipped
             }
             HashSet<Color> seen = new HashSet<global::Avalonia.Media.Color>();
             for (int r = 0; r < Height; r++)
@@ -397,7 +397,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 StatusText = $"{count} matrices.";
                 if (count > 0) SelectedMatrixIndex = Math.Min(Math.Max(0, InitialIndex), count - 1);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("MatrixEditorViewModel.SetupAsync", ex))
             {
                 StatusText = "Error: " + ex.Message;
                 await DialogHelper.ShowErrorAsync($"Couldn't set up the Matrix editor:\n{ex.Message}", "Matrix editor");
@@ -415,7 +415,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 StatusText = "";
                 RaiseLoaded();
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("MatrixEditorViewModel.LoadMatrix", ex))
             {
                 _ = DialogHelper.ShowErrorAsync($"Couldn't load matrix {index}:\n{ex.Message}", "Matrix editor");
             }
@@ -547,7 +547,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 SaveNotice.Imported($"matrix {_selectedIndex}", path);
                 RaiseLoaded();
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Matrix editor"); }
+            catch (Exception ex) when (AppLogger.Noted("MatrixEditorViewModel.ImportAsync", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Matrix editor"); }
         }
 
         public async Task ExportAsync()
@@ -557,7 +557,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             string path = await DialogHelper.SaveFileAsync(_owner, "Export matrix", new[] { filter }, $"matrix_{_selectedIndex:D4}.mtx");
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _matrix.ToByteArray()); SaveNotice.Exported(path); }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Matrix editor"); }
+            catch (Exception ex) when (AppLogger.Noted("MatrixEditorViewModel.ExportAsync", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Matrix editor"); }
         }
     }
 }

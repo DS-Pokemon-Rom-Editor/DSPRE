@@ -280,7 +280,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 if (!HasArea) return "";
                 int users = 0;
-                try { for (int h = 0; h < GetHeaderCount(); h++) if (MapHeader.GetMapHeader((ushort)h)?.AreaDataID == _areaId) users++; } catch { }   // a header that can't be read isn't counted
+                try { for (int h = 0; h < GetHeaderCount(); h++) if (MapHeader.GetMapHeader((ushort)h)?.AreaDataID == _areaId) users++; } catch (Exception caught) when (AppLogger.Noted("MapEditorViewModel.AreaLabel", caught)) { }   // a header that can't be read isn't counted
                 return users > 1 ? $"Area {_areaId} · used by {users} headers" : $"Area {_areaId}";
             }
         }
@@ -1441,7 +1441,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                         if (!byMatrix.TryGetValue(header.MatrixID, out List<ushort> list)) byMatrix[header.MatrixID] = list = new List<ushort>();
                         list.Add(h);
                     }
-                    catch { }   // a header that can't be read is skipped
+                    catch (Exception caught) when (AppLogger.Noted("MapEditorViewModel.HeadersUsingMap.2", caught)) { }   // a header that can't be read is skipped
                 }
                 for (int mid = 0; mid < Filesystem.GetMatrixCount(); mid++)
                 {
@@ -1474,7 +1474,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     MapHeader header = MapHeader.GetMapHeader(h);
                     if (header != null && !areas.Contains(header.AreaDataID)) areas.Add(header.AreaDataID);
                 }
-                catch { }   // a header that can't be read is skipped
+                catch (Exception caught) when (AppLogger.Noted("MapEditorViewModel.AreasUsingMap", caught)) { }   // a header that can't be read is skipped
             }
             return areas;
         }
@@ -1965,7 +1965,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             foreach (IGrouping<int, EventClash> group in clashes.Where(c => c.Move && c.File >= 0).GroupBy(c => c.File))
             {
                 EventFile events;
-                try { events = EventsOf(group.Key); } catch (Exception ex) { foreach (EventClash c in group) c.Result = "not moved: " + ex.Message; continue; }
+                try { events = EventsOf(group.Key); } catch (Exception ex) when (AppLogger.Noted("MapEditorViewModel.MoveEvents", ex)) { foreach (EventClash c in group) c.Result = "not moved: " + ex.Message; continue; }
                 foreach (EventClash c in group)
                 {
                     List<Event> list = c.Kind switch
@@ -2197,7 +2197,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
                 ApplyHeaderId(newHeaderId);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("MapEditorViewModel.ConfirmHeaderNavigationAsync", ex))
             {
                 AppLogger.Error("Map header navigation failed: " + ex);
                 await DialogHelper.ShowErrorAsync($"Couldn't switch headers:\n{ex.Message}", "Map editor");
@@ -2285,7 +2285,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 StatusText = $"{count} maps.";
                 if (count > 0) SelectedMapIndex = InitialMapIndex >= 0 && InitialMapIndex < count ? InitialMapIndex : 0;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("MapEditorViewModel.SetupAsync", ex))
             {
                 StatusText = "Error: " + ex.Message;
                 await DialogHelper.ShowErrorAsync($"Couldn't set up the Map editor:\n{ex.Message}", "Map editor");
@@ -2319,7 +2319,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     MapLoaded?.Invoke(this, EventArgs.Empty);
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("MapEditorViewModel.LoadMap", ex))
             {
                 _ = DialogHelper.ShowErrorAsync($"Couldn't load map {index}:\n{ex.Message}", "Map editor");
             }
@@ -2830,7 +2830,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 PlainFiles.WriteBytes(path, _map.ToByteArray());
                 SaveNotice.Exported(path);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("MapEditorViewModel.ExportAsync", ex))
             {
                 await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Map editor");
             }
@@ -2848,7 +2848,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = $"Added map file {newId}.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't add map file:\n{ex.Message}", "Map editor"); }
+            catch (Exception ex) when (AppLogger.Noted("MapEditorViewModel.AddMapFile", ex)) { _ = DialogHelper.ShowErrorAsync($"Couldn't add map file:\n{ex.Message}", "Map editor"); }
         }
 
         public async Task RemoveLastMapFileAsync()
@@ -2866,7 +2866,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = $"Removed map file {last}.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't remove map file:\n{ex.Message}", "Map editor"); }
+            catch (Exception ex) when (AppLogger.Noted("MapEditorViewModel.RemoveLastMapFileAsync", ex)) { _ = DialogHelper.ShowErrorAsync($"Couldn't remove map file:\n{ex.Message}", "Map editor"); }
         }
 
         private byte[] MapTextureData()
@@ -2884,7 +2884,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             string path = await DialogHelper.SaveFileAsync(_owner, "Export map model", new[] { filter }, ModelName() + ".nsbmd");
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _map.MapModelData); SaveNotice.Exported(path); }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Map editor"); }
+            catch (Exception ex) when (AppLogger.Noted("MapEditorViewModel.ExportNsbmdAsync", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Map editor"); }
         }
         /// <summary>The model with the textures of the map texture pack in use put inside it, for tools that read them there.</summary>
         public async Task ExportTexturedNsbmdAsync()
@@ -2947,7 +2947,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (path == null) return;
             // Kept plates belong to the terrain being replaced.
             try { _map.ImportTerrain(DSUtils.ReadFromFile(path)); _map.KeptPlates.Clear(); MarkDirty(); SaveNotice.Imported($"the terrain of map {_selectedMapIndex}", path); }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Map editor"); }
+            catch (Exception ex) when (AppLogger.Noted("MapEditorViewModel.ImportTerrainAsync", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Map editor"); }
         }
         public async Task ExportTerrainAsync()
         {
@@ -2955,7 +2955,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             string path = await DialogHelper.SaveFileAsync(_owner, "Export terrain", new[] { new FilePickerFileType("Terrain (.bdhc)") { Patterns = new[] { "*.bdhc" } } }, ModelName() + ".bdhc");
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _map.Bdhc); SaveNotice.Exported(path); }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Map editor"); }
+            catch (Exception ex) when (AppLogger.Noted("MapEditorViewModel.ExportTerrainAsync", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Map editor"); }
         }
 
         // ── Sound plates (BGS) ──────────────────────────────────────────────────────────
@@ -2965,7 +2965,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             string path = await DialogHelper.OpenFileAsync(_owner, "Import sound plates", new[] { new FilePickerFileType("Sound plates (.bgs)") { Patterns = new[] { "*.bgs", "*.bin", "*.*" } } });
             if (path == null) return;
             try { _map.ImportSoundPlates(DSUtils.ReadFromFile(path)); MarkDirty(); SaveNotice.Imported($"the sound plates of map {_selectedMapIndex}", path); }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Map editor"); }
+            catch (Exception ex) when (AppLogger.Noted("MapEditorViewModel.ImportSoundAsync", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Map editor"); }
         }
         public async Task ExportSoundAsync()
         {
@@ -2973,7 +2973,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             string path = await DialogHelper.SaveFileAsync(_owner, "Export sound plates", new[] { new FilePickerFileType("Sound plates (.bgs)") { Patterns = new[] { "*.bgs" } } }, ModelName() + ".bgs");
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _map.Bgs); SaveNotice.Exported(path); }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Map editor"); }
+            catch (Exception ex) when (AppLogger.Noted("MapEditorViewModel.ExportSoundAsync", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Map editor"); }
         }
         public void BlankSound() { if (_map != null) { _map.Bgs = MapFile.BlankBGS; MarkDirty(); StatusText = "Blanked the sound plates."; } }
 
@@ -2992,7 +2992,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 MapLoaded?.Invoke(this, EventArgs.Empty);
                 SaveNotice.Imported($"the permissions of map {_selectedMapIndex}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Map editor"); }
+            catch (Exception ex) when (AppLogger.Noted("MapEditorViewModel.ImportPermissionsAsync", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Map editor"); }
         }
         public async Task ExportPermissionsAsync()
         {
@@ -3000,7 +3000,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             string path = await DialogHelper.SaveFileAsync(_owner, "Export permissions", new[] { new FilePickerFileType("Permissions") { Patterns = new[] { "*.mp" } } }, ModelName() + ".mp");
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _map.CollisionsToByteArray()); SaveNotice.Exported(path); }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Map editor"); }
+            catch (Exception ex) when (AppLogger.Noted("MapEditorViewModel.ExportPermissionsAsync", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Map editor"); }
         }
 
         // ── Buildings I/O + duplicate ────────────────────────────────────────────────────
@@ -3015,7 +3015,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 RefreshBuildings(); RebuildPreview(); MarkDirty();
                 SaveNotice.Imported($"the buildings of map {_selectedMapIndex}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Map editor"); }
+            catch (Exception ex) when (AppLogger.Noted("MapEditorViewModel.ImportBuildingsAsync", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Map editor"); }
         }
         public async Task ExportBuildingsAsync()
         {
@@ -3023,7 +3023,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             string path = await DialogHelper.SaveFileAsync(_owner, "Export buildings", new[] { new FilePickerFileType("Buildings") { Patterns = new[] { "*.bld" } } }, ModelName() + ".bld");
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _map.BuildingsToByteArray()); SaveNotice.Exported(path); }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Map editor"); }
+            catch (Exception ex) when (AppLogger.Noted("MapEditorViewModel.ExportBuildingsAsync", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Map editor"); }
         }
         public void DuplicateBuilding()
         {

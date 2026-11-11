@@ -76,7 +76,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 _timingWhy = VsIntroTimingAddon.WhyNot();
                 if (_timingWhy == null) _timing = VsIntroTimingAddon.Load();
             }
-            catch (Exception e) { _timingWhy = "The intro timings couldn't be read: " + e.Message; }
+            catch (Exception e) when (AppLogger.Noted("VsIntroEditorViewModel.LoadTimings", e)) { _timingWhy = "The intro timings couldn't be read: " + e.Message; }
         }
 
         private void ReadyTimings()

@@ -194,7 +194,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 using (FileStream fs = PlainFiles.OpenRead(src))
                     raw = ImageConverter.DecodeRawImage(fs);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("BannerEditorViewModel.ImportIconAsync", ex))
             {
                 await DialogHelper.ShowErrorAsync("Couldn't import the icon: " + ex.Message, "Game icon & banner");
                 return;

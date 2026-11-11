@@ -199,7 +199,7 @@ namespace DSPRE
                 }
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("TrainerClassTableExpansion.TryResolveByteTable", ex))
             {
                 error = ex.Message;
                 return false;
@@ -265,7 +265,7 @@ namespace DSPRE
             {
                 // No known repoint pointer for this family: the vanilla table is always the real one.
                 try { table = DSUtils.ReadFromFile(ovPath, vanillaOffset, vanillaCount); }
-                catch (Exception ex) { error = ex.Message; return false; }
+                catch (Exception ex) when (AppLogger.Noted("TrainerClassTableExpansion.TryReadPrizeMul", ex)) { error = ex.Message; return false; }
             }
             else if (!TryResolveByteTable(ovPath, pointerOffset, ovPath, vanillaOffset, vanillaCount, out table, out error))
             {
@@ -297,7 +297,7 @@ namespace DSPRE
             {
                 // No known repoint pointer: resolving one would read the overlay's first word as a pointer.
                 try { table = DSUtils.ReadFromFile(ovPath, vanillaOffset, vanillaCount); }
-                catch (Exception ex) { error = ex.Message; return false; }
+                catch (Exception ex) when (AppLogger.Noted("TrainerClassTableExpansion.TryWritePrizeMul", ex)) { error = ex.Message; return false; }
             }
             else if (!TryResolveByteTable(ovPath, pointerOffset, ovPath, vanillaOffset, vanillaCount, out table, out error))
             {
@@ -343,7 +343,7 @@ namespace DSPRE
                 error = "This class has no prize money entry.";
                 return false;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("TrainerClassTableExpansion.TryReadPairedPrizeMul", ex))
             {
                 error = ex.Message;
                 return false;
@@ -367,7 +367,7 @@ namespace DSPRE
                 error = "This class has no prize money entry.";
                 return false;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("TrainerClassTableExpansion.TryWritePairedPrizeMul", ex))
             {
                 error = ex.Message;
                 return false;
@@ -490,7 +490,7 @@ namespace DSPRE
                 Detect();
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("TrainerClassTableExpansion.AddTrainerClassTables", ex))
             {
                 error = ex.Message;
                 return false;
@@ -621,7 +621,7 @@ namespace DSPRE
                 DSUtils.WriteToFile(RomInfo.Arm9Path, BitConverter.GetBytes(newBase + 2), RomInfo.EncounterMusicTableOffsetToRAMAddress + 4);
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("TrainerClassTableExpansion.RepointEncounterMusic", ex))
             {
                 error = ex.Message;
                 return false;

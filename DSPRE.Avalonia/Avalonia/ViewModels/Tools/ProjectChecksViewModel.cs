@@ -88,7 +88,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                     ? $"No header references {kind} {(int)_lookupId}."
                     : $"{headers.Count} {(headers.Count == 1 ? "header references" : "headers reference")} {kind} {(int)_lookupId}.";
             }
-            catch (Exception ex) { FindStatus = "Lookup failed: " + ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("ProjectChecksViewModel.Find", ex)) { FindStatus = "Lookup failed: " + ex.Message; }
         }
     }
 }

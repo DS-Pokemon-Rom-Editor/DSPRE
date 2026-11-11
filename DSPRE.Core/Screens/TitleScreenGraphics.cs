@@ -161,7 +161,7 @@ namespace DSPRE.Screens
                 background = QuantizeAndTile(bgPng, reserveZero: false, tileCols: 32, tileRows: 24,
                     tileCapacity: BackgroundTileCapacity, bytesPerTile: 64, maxColors: 256);
             }
-            catch (Exception ex) { return ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("TitleScreenGraphics.ImportLogoOrBackground", ex)) { return ex.Message; }
 
             int total = 1 + logo.Colors.Count + background.Colors.Count; // slot 0 is reserved for the logo's transparency
             if (total > 256)
@@ -232,7 +232,7 @@ namespace DSPRE.Screens
             int room = (chrRaw.Length - NitroBgCodec.ReadTileHeader(chrRaw).TilesAt) / bytesPerTile;
             EncodedTiles encoded;
             try { encoded = QuantizeAndTile(png, reserveZero, 32, 24, Math.Min(tileCapacity, room), bytesPerTile, maxColors); }
-            catch (Exception ex) { return ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("TitleScreenGraphics.ImportPiece", ex)) { return ex.Message; }
             (byte r, byte g, byte b)[] palette = new (byte r, byte g, byte b)[colourSlots];
             for (int i = 0; i < encoded.Colors.Count; i++) palette[i + (reserveZero ? 1 : 0)] = encoded.Colors[i];
             ushort[] map = new ushort[mapCells];
@@ -279,7 +279,7 @@ namespace DSPRE.Screens
                 encoded = QuantizeAndTile(png, reserveZero: true, tileCols: 32, tileRows: 24,
                     tileCapacity: CopyrightTileCapacity, bytesPerTile: 32, maxColors: 15);
             }
-            catch (Exception ex) { return ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("TitleScreenGraphics.ImportCopyright", ex)) { return ex.Message; }
 
             (byte r, byte g, byte b)[] palette = new (byte r, byte g, byte b)[16];
             for (int i = 0; i < encoded.Colors.Count; i++) palette[1 + i] = encoded.Colors[i];

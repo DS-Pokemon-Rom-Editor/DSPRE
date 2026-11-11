@@ -102,7 +102,7 @@ namespace DSPRE
             // chatot already wrote a null code into these archives; newer JSON makes the next build retry them.
             foreach (string path in offending)
             {
-                try { File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddSeconds(2)); } catch { }   // only nudges the next build to retry; a file that can't be touched is retried later anyway
+                try { File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddSeconds(2)); } catch (Exception caught) when (AppLogger.Noted("TextConverter.FolderToBin", caught)) { }   // only nudges the next build to retry; a file that can't be touched is retried later anyway
             }
 
             error = string.Join("\n", problems.Distinct());
@@ -269,7 +269,7 @@ namespace DSPRE
                 chatot.WaitForExit();
                 exitCode = chatot.ExitCode;
             }
-            catch (Exception e)
+            catch (Exception e) when (AppLogger.Noted("TextConverter.ChatotWrapper", e))
             {
                 AppMessages.Error("The text archives couldn't be encoded:\n" + e.Message, "Error");
                 errorOutput += e.Message;

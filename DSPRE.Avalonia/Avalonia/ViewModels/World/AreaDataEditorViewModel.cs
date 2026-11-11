@@ -288,7 +288,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 StatusText = $"{count} area data entries.";
                 if (count > 0) SelectedIndex = Math.Min(Math.Max(0, InitialIndex), count - 1);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("AreaDataEditorViewModel.SetupAsync", ex))
             {
                 StatusText = "Error: " + ex.Message;
                 await DialogHelper.ShowErrorAsync($"Couldn't set up the Area data editor:\n{ex.Message}", "Area data editor");
@@ -310,7 +310,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 StatusText = "";
                 OnPropertyChanged(nameof(UnsavedChangesDescription));
             }
-            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't load area data {index}:\n{ex.Message}", "Area data editor"); }
+            catch (Exception ex) when (AppLogger.Noted("AreaDataEditorViewModel.LoadArea", ex)) { _ = DialogHelper.ShowErrorAsync($"Couldn't load area data {index}:\n{ex.Message}", "Area data editor"); }
         }
 
         // ── Import / export of the shown entry ──────────────────────────────────────────
@@ -421,7 +421,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (_area == null || _selectedIndex < 0) return;
             try { _archive.Save(_selectedIndex, _area.ToByteArray()); if (_areaPacks != null && _selectedIndex < _areaPacks.Length) _areaPacks[_selectedIndex] = (_area.MapTileset, _area.BuildingsTileset); SetClean(); _history.MarkSaved(); RaiseUndoState(); StatusText = $"Saved area data {_selectedIndex}."; SaveNotice.Saved(UnsavedChangesDescription); AppEvents.RaiseAreaDataSaved(this, _selectedIndex); }
-            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't save:\n{ex.Message}", "Area data editor"); }
+            catch (Exception ex) when (AppLogger.Noted("AreaDataEditorViewModel.Save", ex)) { _ = DialogHelper.ShowErrorAsync($"Couldn't save:\n{ex.Message}", "Area data editor"); }
         }
     }
 }

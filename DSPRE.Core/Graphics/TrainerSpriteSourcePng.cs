@@ -53,7 +53,7 @@ namespace DSPRE.Graphics
                 PlainFiles.WriteBytes(pngPath, IndexedPng.Write(raster, palette, w, h, palette.Length <= 16 ? 4 : 8));
                 return null;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("TrainerSpriteSourcePng.Write", ex))
             {
                 return ex.Message;
             }

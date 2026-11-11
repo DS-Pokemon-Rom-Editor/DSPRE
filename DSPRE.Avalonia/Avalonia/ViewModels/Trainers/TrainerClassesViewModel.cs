@@ -542,7 +542,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 if (ClassNames.Count > 0)
                     SelectedClassIndex = Math.Min(Math.Max(0, initialClass), ClassNames.Count - 1);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("TrainerClassesViewModel.ctor", ex))
             {
                 StatusText = "Error: " + ex.Message;
                 _ = DialogHelper.ShowErrorAsync($"Couldn't load trainer classes:\n{ex.Message}", "Trainer editor");

@@ -664,7 +664,7 @@ namespace DSPRE.Graphics
                 else if (style + 1 < DSPRE.Resources.PokeDatabase.Area.PtAreaIconValues.Length)
                     label = DSPRE.Resources.PokeDatabase.Area.PtAreaIconValues[style + 1];
             }
-            catch { }   // an unknown banner style is called Banner N
+            catch (Exception caught) when (AppLogger.Noted("GraphicUnits.AreaWindowName", caught)) { }   // an unknown banner style is called Banner N
             if (label != null && label.StartsWith("[") && label.Contains(']')) label = label.Substring(label.IndexOf(']') + 1).Trim();
             return string.IsNullOrEmpty(label) ? $"Banner {style + 1}" : $"{label} banner";
         }

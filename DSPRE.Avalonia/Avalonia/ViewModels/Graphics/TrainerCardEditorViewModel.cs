@@ -179,7 +179,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             byte[] bytes;
             try { bytes = PlainFiles.ReadBytes(nclrPath); }
-            catch (Exception ex) { return ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("TrainerCardEditorViewModel.ImportRankPalette", ex)) { return ex.Message; }
             return Imported(() => _graphics.ImportRankPaletteRaw(SelectedRankIndex, bytes));
         }
 
@@ -188,7 +188,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             byte[] bytes = _graphics.ExportRankPaletteRaw(SelectedRankIndex);
             if (bytes == null) return "Couldn't read the current palette.";
             try { PlainFiles.WriteBytes(nclrPath, bytes); return null; }
-            catch (Exception ex) { return ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("TrainerCardEditorViewModel.ExportRankPalette", ex)) { return ex.Message; }
         }
 
         // Imports land in the unpacked archive at once; Save keeps them, Discard or closing without saving puts the old bytes back.
@@ -213,14 +213,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (raw == null) error = "Couldn't read this PNG.";
                 return raw;
             }
-            catch (Exception ex) { error = ex.Message; return null; }
+            catch (Exception ex) when (AppLogger.Noted("TrainerCardEditorViewModel.DecodePng", ex)) { error = ex.Message; return null; }
         }
 
         private static string SavePng(DSPRE.RawImage raw, string path)
         {
             if (raw == null) return "Couldn't decode this image.";
             try { ImageConverter.ToAvaloniaBitmap(raw).Save(path, global::Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default); return null; }
-            catch (Exception ex) { return ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("TrainerCardEditorViewModel.SavePng", ex)) { return ex.Message; }
         }
     }
 }

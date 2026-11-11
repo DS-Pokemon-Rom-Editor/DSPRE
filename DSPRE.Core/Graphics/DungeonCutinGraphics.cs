@@ -110,7 +110,7 @@ namespace DSPRE.Graphics
                                             .Put(DirNames.DungeonCutinGraphics, s, nscrBytes));
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("DungeonCutinGraphics.Import", ex))
             {
                 error = ex.Message;
                 newPaletteIdx = newTilesIdx = newScreenIdx = -1;

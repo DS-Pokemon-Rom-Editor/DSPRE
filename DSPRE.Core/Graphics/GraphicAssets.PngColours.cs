@@ -116,7 +116,7 @@ namespace DSPRE.Graphics
             ScriptNarc narc = new ScriptNarc(a.Dir);
             check.PaletteEntry = paletteIndex >= 0 ? paletteIndex : FindColourIndex(a, narc, index);
             if (ix.BitsPerPixel == 4 && paletteBank >= 0) check.Bank = paletteBank;
-            else if (ix.BitsPerPixel == 4) { try { check.Bank = a.ColourBank?.Invoke(index) ?? 0; } catch { } }   // without a known bank the first bank is used
+            else if (ix.BitsPerPixel == 4) { try { check.Bank = a.ColourBank?.Invoke(index) ?? 0; } catch (Exception caught) when (AppLogger.Noted("GraphicAssets.CheckNumbers", caught)) { } }   // without a known bank the first bank is used
             Dictionary<int, List<string>> users = ix.BitsPerPixel == 4 && check.PaletteEntry >= 0
                 ? SlotUsers(a, narc, index, check.PaletteEntry, check.Bank) : new Dictionary<int, List<string>>();
             bool[] used = new bool[256];
@@ -161,7 +161,7 @@ namespace DSPRE.Graphics
         private static HashSet<uint> ArrangedColours(Archive a, ScriptNarc narc, int index, (byte r, byte g, byte b)[] all, int count)
         {
             int arranged = -1;
-            try { arranged = a.ArrangementEntry?.Invoke(index) ?? -1; } catch { }   // without an arrangement the row check applies
+            try { arranged = a.ArrangementEntry?.Invoke(index) ?? -1; } catch (Exception caught) when (AppLogger.Noted("GraphicAssets.ArrangedColours", caught)) { }   // without an arrangement the row check applies
             byte[] scr = arranged >= 0 ? narc.Get(arranged) : null;
             if (scr == null) return null;
             scr = Unsqueeze(scr);
@@ -200,7 +200,7 @@ namespace DSPRE.Graphics
             }
 
             int own = Identify(narc.Get(index)) == Kind.TileGraphic ? index : -1;
-            if (own < 0) { try { own = a.DrawingEntry?.Invoke(index) ?? -1; } catch { } }   // without the game's pairing the drawing is found by searching
+            if (own < 0) { try { own = a.DrawingEntry?.Invoke(index) ?? -1; } catch (Exception caught) when (AppLogger.Noted("GraphicAssets.SlotUsers", caught)) { } }   // without the game's pairing the drawing is found by searching
             if (own < 0) own = FindDrawingIndex(narc, index);
 
             for (int i = 0; i < narc.Count; i++)

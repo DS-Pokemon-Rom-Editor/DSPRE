@@ -162,7 +162,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
                 if (FileNames.Count > 0) SelectedFileIndex = 0;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("SafariZoneEncounterViewModel.SetupAsync", ex))
             {
                 await DialogHelper.ShowErrorAsync($"Couldn't load the Safari Zone data:\n{ex.Message}", "Special encounters editor");
             }
@@ -300,7 +300,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 SaveNotice.Saved(UnsavedChangesDescription);
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("SafariZoneEncounterViewModel.SaveCore", ex))
             {
                 failure = ex.Message;
                 return false;
@@ -320,7 +320,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                         "The encounter data couldn't be turned into a file.", "Special encounters editor");
                 else SaveNotice.Exported(path);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("SafariZoneEncounterViewModel.SaveAsAsync", ex))
             {
                 await DialogHelper.ShowErrorAsync($"Couldn't write {path}:\n{ex.Message}", "Special encounters editor");
             }
@@ -341,7 +341,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 Edited();
                 SaveNotice.Imported("Safari Zone encounters", path);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("SafariZoneEncounterViewModel.ImportAsync", ex))
             {
                 await DialogHelper.ShowErrorAsync($"Couldn't import the file: {ex.Message}", "Special encounters editor");
             }

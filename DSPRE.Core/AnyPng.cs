@@ -69,7 +69,7 @@ namespace DSPRE
                 zlib.CopyTo(outMs);
                 raw = outMs.ToArray();
             }
-            catch (Exception ex) { whynot = "That PNG's pixels couldn't be unpacked: " + ex.Message; return false; }
+            catch (Exception ex) when (AppLogger.Noted("AnyPng.TryReadRgba", ex)) { whynot = "That PNG's pixels couldn't be unpacked: " + ex.Message; return false; }
 
             int bits = channels * depth;
             int stride = (w * bits + 7) / 8;

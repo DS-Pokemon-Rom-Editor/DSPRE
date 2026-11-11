@@ -126,7 +126,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex) { AppLogger.Error("MapGeometry.Scene: " + ex.Message); }
 
             float modelScale = 1f;
-            try { modelScale = map.MapModel?.Models?.FirstOrDefault()?.ModelScale ?? 1f; } catch { }   // without a model the default scale is used
+            try { modelScale = map.MapModel?.Models?.FirstOrDefault()?.ModelScale ?? 1f; } catch (Exception caught) when (AppLogger.Noted("MapGeometryViewModel.Open", caught)) { }   // without a model the default scale is used
             _toScene = Model3D?.CellToScene(0, 0, modelScale);
 
             LoadWhatTheAreaCarries(areaId);
@@ -816,7 +816,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 float scale = _map?.MapModel?.Models?.FirstOrDefault()?.ModelScale ?? 0f;
                 if (scale > 0f) return scale;
             }
-            catch { }   // without a model the default scale is used
+            catch (Exception caught) when (AppLogger.Noted("MapGeometryViewModel.ModelScaleOfMap", caught)) { }   // without a model the default scale is used
             return 64f;
         }
 

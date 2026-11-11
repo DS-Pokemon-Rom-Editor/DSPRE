@@ -1106,7 +1106,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     await DialogHelper.ShowInfoAsync($"{unread.Count} Pokémon couldn't be read and were left out: {string.Join(", ", unread.Take(10))}{(unread.Count > 10 ? ", ..." : "")}",
                         "Pokémon left out");
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Pokémon editor"); }
+            catch (Exception ex) when (AppLogger.Noted("PersonalDataEditorViewModel.ExportCommandAsync", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Pokémon editor"); }
         }
 
         /// <summary>Imports the Pokémon in the file. Changes stay unsaved until Save.</summary>

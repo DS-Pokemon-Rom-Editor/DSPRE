@@ -385,7 +385,7 @@ namespace DSPRE.Avalonia.Views.World
                     if (!pngOk) _ = DialogHelper.ShowErrorAsync("The report was written, but the render couldn't be captured.", "Event editor");
                 });
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't write the report:\n{ex.Message}", "Event editor"); }
+            catch (Exception ex) when (AppLogger.Noted("EventEditorView.ExportDebug_Click.2", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't write the report:\n{ex.Message}", "Event editor"); }
         }
 
         // Builds a PNG from a raw RGBA framebuffer (origin bottom-left → flipped to top-left for the image).

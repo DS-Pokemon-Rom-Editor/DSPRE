@@ -66,7 +66,7 @@ namespace DSPRE.Screens
                         if (MapHeader.TryReadLocationNameIndex(i, dynamic, out int at)
                             && at >= 0 && at < placeNames.Count) answered++;
                     }
-                    catch { }   // a header that can't be read doesn't count towards the answered places
+                    catch (Exception caught) when (AppLogger.Noted("BattleScenes.Read.2", caught)) { }   // a header that can't be read doesn't count towards the answered places
                 }
                 trustDisplayedNames = answered * 10 >= headers * 9;
             }
@@ -84,7 +84,7 @@ namespace DSPRE.Screens
                             if (!string.IsNullOrEmpty(shown) && shown.Trim('-').Length > 0) return shown;
                         }
                     }
-                    catch { }   // a header that can't be read falls back to its internal name
+                    catch (Exception caught) when (AppLogger.Noted("BattleScenes.NameOfPlace", caught)) { }   // a header that can't be read falls back to its internal name
                 }
                 if (internalNames != null && id < internalNames.Count)
                 {

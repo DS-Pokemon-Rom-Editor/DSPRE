@@ -103,7 +103,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                     ResultText = "Build failed. See the log above for details.";
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("CompileRomViewModel.RunAsync", ex))
             {
                 ResultText = "Build failed: " + ex.Message;
             }

@@ -164,7 +164,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.MapTextures, DirNames.BuildingTextures, DirNames.BuildingConfigFiles });
                 ReloadPacks();
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("NsbtxEditorViewModel.SetupAsync", ex))
             {
                 StatusText = "Error: " + ex.Message;
                 await DialogHelper.ShowErrorAsync($"Couldn't open Map & building textures:\n{ex.Message}", "Map & building textures");
@@ -330,7 +330,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 PackIndex = newId;
                 StatusText = $"Added texture pack {newId}.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't add the pack:\n{ex.Message}", "Map & building textures"); }
+            catch (Exception ex) when (AppLogger.Noted("NsbtxEditorViewModel.AddPack", ex)) { _ = DialogHelper.ShowErrorAsync($"Couldn't add the pack:\n{ex.Message}", "Map & building textures"); }
         }
 
         public async Task RemoveLastPackAsync()
@@ -349,7 +349,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     if (config) step.Remove(DirNames.BuildingConfigFiles, last);
                 });
             }
-            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't remove the pack:\n{ex.Message}", "Map & building textures"); }
+            catch (Exception ex) when (AppLogger.Noted("NsbtxEditorViewModel.RemoveLastPackAsync", ex)) { _ = DialogHelper.ShowErrorAsync($"Couldn't remove the pack:\n{ex.Message}", "Map & building textures"); }
         }
 
         // ── Import / export whole packs ─────────────────────────────────────────────────
@@ -369,7 +369,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             string path = await DialogHelper.SaveFileAsync(_owner, "Export texture pack", new[] { filter }, suggested);
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _pending.ReadMember(Archive, _packIndex)); SaveNotice.Exported(path); }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Map & building textures"); }
+            catch (Exception ex) when (AppLogger.Noted("NsbtxEditorViewModel.ExportAsync", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Map & building textures"); }
         }
 
         public async Task ImportAsync()
@@ -386,7 +386,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     return;
                 }
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"That file couldn't be read:\n{ex.Message}", "Map & building textures"); return; }
+            catch (Exception ex) when (AppLogger.Noted("NsbtxEditorViewModel.ImportAsync.2", ex)) { await DialogHelper.ShowErrorAsync($"That file couldn't be read:\n{ex.Message}", "Map & building textures"); return; }
 
             string question = $"Replace texture pack {_packIndex} with this file?";
             if (!_mapTextures)
@@ -404,7 +404,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 _pending.Change(step => step.Put(Archive, _packIndex, pack));
                 SaveNotice.Imported($"texture pack {_packIndex}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Map & building textures"); }
+            catch (Exception ex) when (AppLogger.Noted("NsbtxEditorViewModel.ImportAsync.3", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Map & building textures"); }
         }
     }
 }

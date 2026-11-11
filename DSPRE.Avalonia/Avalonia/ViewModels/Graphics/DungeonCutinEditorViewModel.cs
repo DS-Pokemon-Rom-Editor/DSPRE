@@ -248,7 +248,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             RawImage raw = _graphics.Composite(pal, tiles, scr);
             if (raw == null) return "Couldn't decode this slot's graphics.";
             try { ImageConverter.ToAvaloniaBitmap(raw).Save(pngPath, global::Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default); return null; }
-            catch (Exception ex) { return ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("DungeonCutinEditorViewModel.ExportTimezoneImage", ex)) { return ex.Message; }
         }
 
         /// <summary>
@@ -265,7 +265,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 using FileStream stream = PlainFiles.OpenRead(pngPath);
                 raw = ImageConverter.DecodeRawImage(stream);
             }
-            catch (Exception ex) { return ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("DungeonCutinEditorViewModel.ImportTimezoneImage", ex)) { return ex.Message; }
             if (raw == null) return "Couldn't read this PNG.";
 
             if (!_graphics.Import(raw, out int pal, out int tiles, out int scr, out string error))
@@ -317,7 +317,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 SaveNotice.Saved(UnsavedChangesDescription);
                 StatusText = "Saved.";
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("DungeonCutinEditorViewModel.SaveCommandAsync", ex))
             {
                 await DialogHelper.ShowErrorAsync($"Couldn't save: {ex.Message}", "Dungeon cut-in editor");
             }
@@ -333,7 +333,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 await Task.Run(() => PlainFiles.WriteText(path, csv));
                 return null;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("DungeonCutinEditorViewModel.ExportCsvAsync", ex))
             {
                 return ex.Message;
             }

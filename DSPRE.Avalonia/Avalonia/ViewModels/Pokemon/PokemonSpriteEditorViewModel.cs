@@ -1738,7 +1738,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (_shinyPal != null && !narc.WritePalette(baseOffset + 5, _shinyPal))
                     failed.Add("Shiny palette: its file isn't a 16-colour palette.");
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("PokemonSpriteEditorViewModel.Save", ex))
             {
                 failed.Add(ex.Message);
             }
@@ -1800,7 +1800,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     if (colours != null && HgEngineSourceAssets.ConvertedPaletteFor(DirNames.OtherPokemonBattleSprites, index) is string pal)
                         HgEngineOverworlds.WriteJasc(pal, colours.Take(16).Select(c => (int)(c & 0xFFFFFF)).ToArray());
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("PokemonSpriteEditorViewModel.SaveAlternateForm", ex))
             {
                 failed.Add(ex.Message);
             }

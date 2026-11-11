@@ -129,7 +129,7 @@ namespace DSPRE.Avalonia.Views.Tools
                             return;
                         }
                     }
-                    catch { }   // a header that can't be read is skipped
+                    catch (System.Exception caught) when (AppLogger.Noted("ResearchHelperView.IncomingWarpsGrid_DoubleTapped", caught)) { }   // a header that can't be read is skipped
                 }
                 VM.StatusText = $"Couldn't find header for event file {r.EventFileID}";
             }

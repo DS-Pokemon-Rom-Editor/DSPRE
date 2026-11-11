@@ -136,7 +136,7 @@ namespace DSPRE.Screens
                 backTiles = QuantizeAndTile(backPng, tileCols: CardTileCols, tileRows: CardTileRows,
                     tileCapacity: capacity, maxColors: 256);
             }
-            catch (Exception ex) { return ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("TrainerCardGraphics.ImportCardDesign", ex)) { return ex.Message; }
 
             int[] slots = CardSlots();
             int total = frontTiles.Colors.Count + backTiles.Colors.Count;
@@ -206,7 +206,7 @@ namespace DSPRE.Screens
                 femaleTiles = QuantizeAndTile(femalePng, tileCols: TrainerWidth / 8, tileRows: TrainerHeight / 8,
                     tileCapacity: capacity, maxColors: 255, reserveZero: true);
             }
-            catch (Exception ex) { return ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("TrainerCardGraphics.ImportTrainer", ex)) { return ex.Message; }
 
             int total = maleTiles.Colors.Count + femaleTiles.Colors.Count;
             if (total > PoseColourSlots)

@@ -688,7 +688,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 _current = null;
                 LoadTrainer(_currentTrainerId);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("BattleMessageEditorViewModel.SaveAsync", ex))
             {
                 await DialogHelper.ShowErrorAsync($"Couldn't write the trainer message table:\n{ex.Message}", "Trainer battle messages");
             }

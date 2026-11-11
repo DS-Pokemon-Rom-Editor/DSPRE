@@ -315,7 +315,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 why = IsDrawings ? ApplyDrawings(result) : ApplyAnimation(result);
             }
-            catch (Exception e) { why = e.Message; }
+            catch (Exception e) when (AppLogger.Noted("TrainerSheetImportViewModel.Retry", e)) { why = e.Message; }
             if (why == null && _useSheetColours) result.Palettes = TrainerSpriteSheet.SheetPalettes(_sheet, _palettes);
             if (why == null && !_useSheetColours && _approximated > 0)
                 Outcome += $" {_approximated} pixel{(_approximated == 1 ? "" : "s")} had no exact colour and took the nearest.";

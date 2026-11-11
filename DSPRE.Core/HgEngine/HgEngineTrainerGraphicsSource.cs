@@ -61,7 +61,7 @@ namespace DSPRE.HgEngine
             cells = null; error = null;
             CellJson doc;
             try { doc = PlainFiles.ReadJson<CellJson>(cellJsonPath); }
-            catch (Exception ex) { error = cellJsonPath + " couldn't be read: " + ex.Message; return false; }
+            catch (Exception ex) when (AppLogger.Noted("HgEngineTrainerGraphicsSource.TryReadCells", ex)) { error = cellJsonPath + " couldn't be read: " + ex.Message; return false; }
             if (doc?.Cells == null || doc.Cells.Length == 0) { error = cellJsonPath + " has no cells."; return false; }
 
             List<NcerFile.Cell> list = new List<NcerFile.Cell>();
@@ -86,7 +86,7 @@ namespace DSPRE.HgEngine
             cells = null; durations = null; error = null;
             AnimJson doc;
             try { doc = PlainFiles.ReadJson<AnimJson>(animJsonPath); }
-            catch (Exception ex) { error = animJsonPath + " couldn't be read: " + ex.Message; return false; }
+            catch (Exception ex) when (AppLogger.Noted("HgEngineTrainerGraphicsSource.TryReadAnimSequence", ex)) { error = animJsonPath + " couldn't be read: " + ex.Message; return false; }
             if (doc?.Sequences == null || doc.Sequences.Length == 0 || doc.AnimationResults == null || doc.AnimationResults.Length == 0)
             {
                 error = animJsonPath + " has no sequences.";

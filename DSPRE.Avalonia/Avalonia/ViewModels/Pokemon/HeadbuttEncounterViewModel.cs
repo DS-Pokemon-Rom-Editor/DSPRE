@@ -219,7 +219,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 StatusText = $"{count} headbutt files.";
                 if (count > 0) SelectedFileIndex = System.Math.Clamp(InitialIndex < 0 ? FirstWithTrees(count) : InitialIndex, 0, count - 1);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("HeadbuttEncounterViewModel.SetupAsync", ex))
             {
                 StatusText = "Error: " + ex.Message;
                 await DialogHelper.ShowErrorAsync($"Couldn't set up the Headbutt editor:\n{ex.Message}", "Special encounters editor");
@@ -1017,7 +1017,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (_file.SaveToFile(_selFile)) MarkSaved(_selFile);
                 else StatusText = "Couldn't save; the log says why.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't save:\n{ex.Message}", "Special encounters editor"); }
+            catch (Exception ex) when (AppLogger.Noted("HeadbuttEncounterViewModel.Save", ex)) { _ = DialogHelper.ShowErrorAsync($"Couldn't save:\n{ex.Message}", "Special encounters editor"); }
         }
 
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()

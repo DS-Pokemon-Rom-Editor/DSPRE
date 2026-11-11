@@ -144,7 +144,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         private void Open(string rel)
         {
             try { _loadedText = HgEngineBattleTests.Read(rel).Replace("\r\n", "\n"); }
-            catch (Exception ex) { _loadedText = ""; StatusText = ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("BattleTestsViewModel.Open", ex)) { _loadedText = ""; StatusText = ex.Message; }
             _restoring = true;
             Text = _loadedText;
             _restoring = false;
@@ -178,7 +178,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             if (rel.Length > 0 && !rel.EndsWith(".c", StringComparison.OrdinalIgnoreCase)) rel += ".c";
             string start;
             try { start = from == _selected ? _loadedText : HgEngineBattleTests.Read(from).Replace("\r\n", "\n"); }
-            catch (Exception ex) { StatusText = ex.Message; return; }
+            catch (Exception ex) when (AppLogger.Noted("BattleTestsViewModel.AddTest", ex)) { StatusText = ex.Message; return; }
             string error = HgEngineBattleTests.Create(rel, start);
             if (error != null) { StatusText = error; return; }
             _all = HgEngineBattleTests.List();

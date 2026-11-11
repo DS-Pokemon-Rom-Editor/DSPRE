@@ -57,7 +57,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void LoadMotion()
         {
             try { _motion = VsIntroMotion.Load(out _motionWhy); }
-            catch (Exception e) { _motion = null; _motionWhy = "The intro motion couldn't be read: " + e.Message; }
+            catch (Exception e) when (AppLogger.Noted("VsIntroEditorViewModel.LoadMotion", e)) { _motion = null; _motionWhy = "The intro motion couldn't be read: " + e.Message; }
         }
 
         private void ReadyMotion()

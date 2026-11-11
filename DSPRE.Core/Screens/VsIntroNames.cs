@@ -43,7 +43,7 @@ namespace DSPRE.Screens
                         if (b.Length > 1 && !n._firstOfClass.ContainsKey(b[1])) n._firstOfClass[b[1]] = i;
                     }
                 }
-                catch { }   // a trainer that can't be read is skipped
+                catch (Exception caught) when (AppLogger.Noted("VsIntroNames.Read", caught)) { }   // a trainer that can't be read is skipped
             }
             return n;
         }

@@ -128,7 +128,7 @@ namespace DSPRE.Graphics
         private static List<CellPlacement.Piece> PiecesFor(Archive a, ScriptNarc narc, int index, int bpp)
         {
             int layout = -1;
-            try { layout = a.CellPlacementEntry?.Invoke(index) ?? -1; } catch { }   // without a cell placement the drawing is shown as plain tiles
+            try { layout = a.CellPlacementEntry?.Invoke(index) ?? -1; } catch (Exception caught) when (AppLogger.Noted("GraphicAssets.PiecesFor", caught)) { }   // without a cell placement the drawing is shown as plain tiles
             byte[] ncer = layout >= 0 && layout != index ? narc.Get(layout) : null;
             return ncer == null ? null : CellPlacement.Pieces(Unsqueeze(ncer), bpp);
         }
@@ -148,7 +148,7 @@ namespace DSPRE.Graphics
         private static int WidthFor(Archive a, int index)
         {
             int said = 0;
-            try { said = a.PixelWidthOf?.Invoke(index) ?? 0; } catch { }   // without a known width the width is worked out from the size
+            try { said = a.PixelWidthOf?.Invoke(index) ?? 0; } catch (Exception caught) when (AppLogger.Noted("GraphicAssets.WidthFor", caught)) { }   // without a known width the width is worked out from the size
             if (said > 0) return said;
             return a.PixelWidth > 0 ? a.PixelWidth : SourcePngWidth(a, index);
         }
@@ -337,7 +337,7 @@ namespace DSPRE.Graphics
 
             byte[] file;
             try { file = File.ReadAllBytes(path); }
-            catch (Exception ex) { return "That file couldn't be read: " + ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("GraphicAssets.ImportPng", ex)) { return "That file couldn't be read: " + ex.Message; }
 
             if (IndexedPng.IsInterlaced(file))
                 return "That PNG is interlaced. Save it without interlacing and import it again.";
@@ -399,7 +399,7 @@ namespace DSPRE.Graphics
             if (kind == Kind.TileGraphic)
             {
                 int arranged = -1;
-                try { arranged = a.ArrangementEntry?.Invoke(index) ?? -1; } catch { }   // without an arrangement the drawing is treated as loose tiles
+                try { arranged = a.ArrangementEntry?.Invoke(index) ?? -1; } catch (Exception caught) when (AppLogger.Noted("GraphicAssets.PutWholePictureBack", caught)) { }   // without an arrangement the drawing is treated as loose tiles
                 wholeBackground = arranged >= 0;
             }
             if (!assembledSprite && !wholeBackground) return Skipped;
@@ -410,7 +410,7 @@ namespace DSPRE.Graphics
 
             byte[] file;
             try { file = File.ReadAllBytes(path); }
-            catch (Exception ex) { return "That file couldn't be read: " + ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("GraphicAssets.PutWholePictureBack.2", ex)) { return "That file couldn't be read: " + ex.Message; }
 
             if (IndexedPng.IsInterlaced(file))
                 return "That PNG is interlaced. Save it without interlacing and import it again.";

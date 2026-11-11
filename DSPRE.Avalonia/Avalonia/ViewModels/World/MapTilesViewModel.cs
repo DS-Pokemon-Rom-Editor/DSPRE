@@ -1096,7 +1096,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     NsbtxWriter.Contents b = bld != null ? NsbtxWriter.Read(bld) : null;
                     buildings = b?.TextureBytes ?? 0; buildingPalettes = b?.PaletteBytes ?? 0;
                 }
-                catch { }   // without the building pack its size counts as zero
+                catch (Exception caught) when (AppLogger.Noted("MapTilesViewModel.PlanPictures.2", caught)) { }   // without the building pack its size counts as zero
                 worstTex = Math.Max(worstTex, tex + buildings);
                 worstPal = Math.Max(worstPal, pal + buildingPalettes);
             }
@@ -1252,7 +1252,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     if (first != null && (first.Width != t.Width || first.Height != t.Height || first.Format != (int)t.Format))
                         clashes.Add($"{t.Name} ({t.Width}x{t.Height} {Formats[(int)t.Format & 7]} here, frames {first.Width}x{first.Height} {Formats[first.Format & 7]})");
                 }
-                catch { }   // a texture that can't be read isn't checked for clashes
+                catch (Exception caught) when (AppLogger.Noted("MapTilesViewModel.PutPicturesIntoTheRom", caught)) { }   // a texture that can't be read isn't checked for clashes
             }
             Warning = clashes.Count == 0 ? null
                 : "The game animates these by name with frames that don't fit: " + string.Join(", ", clashes)
@@ -1646,7 +1646,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             DirNames models = DirNames.ExteriorBuildingModels;
             if (_family == GameFamilies.HGSS)
-                try { models = new AreaData(_areaId).BuildingModels; } catch { }   // without the area data the area is treated as outdoors
+                try { models = new AreaData(_areaId).BuildingModels; } catch (Exception caught) when (AppLogger.Noted("MapTilesViewModel.BuildingModelsDir", caught)) { }   // without the area data the area is treated as outdoors
             if (models == DirNames.InteriorBuildingModels) DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.InteriorBuildingModels });
             return GameDirs[models].unpackedDir;
         }
@@ -1695,7 +1695,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                                       mesh.Vertices.Min(v => v.Y) * s, mesh.Vertices.Max(v => v.Y) * s);
                         }
                     }
-                    catch { }   // a model that can't be read has no extent
+                    catch (Exception caught) when (AppLogger.Noted("MapTilesViewModel.BuildingSquares.2", caught)) { }   // a model that can't be read has no extent
                     ModelExtent[(dir, b.ModelID)] = extent;
                 }
                 if (extent is not (float ex0, float ex1, float ez0, float ez1, float ey0, float ey1)) continue;
@@ -2024,7 +2024,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 Warning = inPack > 16 ? $"{inPack} of this area's textures are animated; the game animates the first 16." : null;
                 Note = $"{name}: {frames.Count} frames";
             }
-            catch (Exception ex) { return Fail(ex.Message); }
+            catch (Exception ex) when (AppLogger.Noted("MapTilesViewModel.AnimateChosen", ex)) { return Fail(ex.Message); }
 
             Rebuild();
             Raise(nameof(AnimationNote)); Raise(nameof(IsAnimated));
@@ -2583,7 +2583,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                         }
                     }
                 }
-                catch (Exception ex) { Warning = "Couldn't read PDSMS files: " + ex.Message; }
+                catch (Exception ex) when (AppLogger.Noted("MapTilesViewModel.Apply", ex)) { Warning = "Couldn't read PDSMS files: " + ex.Message; }
             }
 
             int stamped = AlsoMovement && SetHasMovement && !savedMovement
@@ -2654,7 +2654,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 _map.Buildings = was.Buildings;
                 _map.Bgs = was.Bgs;
             }
-            catch (Exception ex) { Warning = ex.Message; return; }
+            catch (Exception ex) when (AppLogger.Noted("MapTilesViewModel.Undo", ex)) { Warning = ex.Message; return; }
 
             Dirty = _before.Count > 0;
             Rebuild();

@@ -179,7 +179,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (newHistory || _undo == null) ResetUndo();
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("BugContestEncounterViewModel.LoadFile", ex))
             {
                 _ = DialogHelper.ShowErrorAsync($"Couldn't load the Bug Contest encounters: {ex.Message}", "Special encounters editor");
                 return false;
@@ -306,7 +306,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 Edited();
                 SaveNotice.Imported("Bug Contest encounters", path);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("BugContestEncounterViewModel.ImportAsync", ex))
             {
                 await DialogHelper.ShowErrorAsync($"Couldn't import the file: {ex.Message}", "Special encounters editor");
             }

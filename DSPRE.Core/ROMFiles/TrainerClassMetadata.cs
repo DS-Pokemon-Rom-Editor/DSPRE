@@ -364,7 +364,7 @@ namespace DSPRE.ROMFiles
                 _recordCount = unpackedRecordCount;
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("TrainerClassMetadata.EnsureUnpacked", ex))
             {
                 error = ex.Message;
                 return false;
@@ -533,7 +533,7 @@ namespace DSPRE.ROMFiles
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("TrainerClassMetadata.ValidateConsumedAssets", ex))
             {
                 result.Errors.Add("Couldn't inspect /a/1/0/9: " + ex.Message);
             }
@@ -593,7 +593,7 @@ namespace DSPRE.ROMFiles
                 }
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("TrainerClassMetadata.TryReadRecordBytes", ex))
             {
                 error = ex.Message;
                 return false;
@@ -608,7 +608,7 @@ namespace DSPRE.ROMFiles
                 ArchiveMembers.Put(DirNames.TrainerClassMetadata, classId, record);
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("TrainerClassMetadata.TryWriteRecordBytes", ex))
             {
                 error = ex.Message;
                 return false;
@@ -673,7 +673,7 @@ namespace DSPRE.ROMFiles
                 detail = memberCount + " valid records";
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("TrainerClassMetadata.TryInspectArchive", ex))
             {
                 detail = ex.Message;
                 return false;

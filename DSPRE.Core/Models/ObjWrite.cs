@@ -128,7 +128,7 @@ namespace DSPRE.Models
                 PlainFiles.WriteText(objPath, obj.ToString());
                 PlainFiles.WriteText(mtlPath, mtl.ToString());
             }
-            catch (Exception ex) { r.Whynot = ex.Message; return r; }
+            catch (Exception ex) when (AppLogger.Noted("ObjWrite.To", ex)) { r.Whynot = ex.Message; return r; }
 
             r.Obj = objPath;
             r.Mtl = mtlPath;

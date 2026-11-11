@@ -178,7 +178,7 @@ namespace DSPRE.Tracking
                     }
                 return null;
             }
-            catch (Exception ex) { return ex.GetType().Name + ": " + ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("FieldKind.WhyNotRoundTrip", ex)) { return ex.GetType().Name + ": " + ex.Message; }
         }
 
         public override Dictionary<TrackedFile, byte[]> Apply(string id, RecordFiles change, Func<TrackedFile, byte[]> start, ChangeContext ctx, Func<Conflict, bool> resolve)

@@ -446,7 +446,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (failure == null) return true;
                 AppMessages.Error(failure, "Starter Pokémon editor");
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("StarterEditorViewModel.SaveThroughTheScriptAsync", ex))
             {
                 AppMessages.Error("The script couldn't be saved: " + ex.Message, "Starter Pokémon editor");
             }

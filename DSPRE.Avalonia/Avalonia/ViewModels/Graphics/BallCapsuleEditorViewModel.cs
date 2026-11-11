@@ -294,7 +294,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 StatusText = "Trainer capsules saved.";
                 Data.TrainerCapsuleCatalog.Saved();
             }
-            catch (Exception ex) { StatusText = "Couldn't save: " + ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("BallCapsuleEditorViewModel.SaveChanges", ex)) { StatusText = "Couldn't save: " + ex.Message; }
         }
 
         public void DiscardChanges()

@@ -359,7 +359,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (colours < 0) colours = Nearest(kinds, i, GraphicAssets.Kind.Palette);
 
                 int paletteRow = 0;
-                try { if (sprites >= 0 && described?.ColourBank != null) paletteRow = Math.Max(0, described.ColourBank(sprites)); } catch { }   // without a known bank the first palette row is used
+                try { if (sprites >= 0 && described?.ColourBank != null) paletteRow = Math.Max(0, described.ColourBank(sprites)); } catch (Exception caught) when (AppLogger.Noted("CellAnimationPickerViewModel.InArchive.2", caught)) { }   // without a known bank the first palette row is used
 
                 found.Add(new CellAnimationFound
                 {

@@ -68,7 +68,7 @@ namespace DSPRE.Screens
                 BattleGaugeTextRenderer.Reset();
                 foreach (bool asNumbers in numbers ? new[] { false, true } : new[] { false }) now.Add(Draw(doubles, asNumbers));
             }
-            catch (Exception ex) { trouble = "The preview couldn't be drawn: " + ex.Message; return null; }
+            catch (Exception ex) when (AppLogger.Noted("HpBarImport.Preview", ex)) { trouble = "The preview couldn't be drawn: " + ex.Message; return null; }
             PendingArchiveWrites dry = new PendingArchiveWrites();
             byte[] sheet = null;
             string said = null;
@@ -86,7 +86,7 @@ namespace DSPRE.Screens
                     return shown;
                 }
             }
-            catch (Exception ex) { trouble = "The preview couldn't be drawn: " + ex.Message; return null; }
+            catch (Exception ex) when (AppLogger.Noted("HpBarImport.Preview.2", ex)) { trouble = "The preview couldn't be drawn: " + ex.Message; return null; }
             finally { BattleGaugeTextRenderer.Reset(); }
         }
 

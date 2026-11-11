@@ -180,7 +180,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 SetDirty(false);
                 SaveNotice.Show("Character map saved.");
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("CharMapManagerViewModel.SaveCommandAsync", ex))
             {
                 AppLogger.Error("Couldn't save the custom character map: " + ex);
                 await DialogHelper.ShowErrorAsync("Couldn't save the custom character map: " + ex.Message, "Character map manager");
@@ -291,7 +291,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                     await DialogHelper.ShowInfoAsync("Updated the character map from the built-in one.\n\n" + summary, "Update from the built-in map");
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("CharMapManagerViewModel.RebaseCommandAsync", ex))
             {
                 AppLogger.Error("Character map update from the built-in map failed: " + ex);
                 await DialogHelper.ShowErrorAsync("Couldn't update the character map: " + ex.Message, "Character map manager");

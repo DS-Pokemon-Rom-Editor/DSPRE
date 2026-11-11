@@ -858,7 +858,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     await DialogHelper.ShowInfoAsync($"{skipped.Count} moves couldn't be read and were left out:\n" + string.Join("\n", skipped.Take(10))
                         + (skipped.Count > 10 ? $"\n...and {skipped.Count - 10} more" : ""), "Moves left out");
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("MoveDataEditorViewModel.ExportCommandAsync", ex))
             {
                 await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Move data editor");
             }

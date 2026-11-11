@@ -622,7 +622,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 stagedImage = sourceData;
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("BtxEditorViewModel.TryBuildRawBtx", ex))
             {
                 error = ex.Message;
                 return false;
@@ -651,7 +651,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 stagedImage = BTX0.WriteNewPalette(btxData, import, 0, out error);
                 return stagedImage != null;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("BtxEditorViewModel.TryBuildPngBtx", ex))
             {
                 error = ex.Message;
                 return false;
@@ -802,7 +802,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 Edited();
                 return null;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("BtxEditorViewModel.ImportPng", ex))
             {
                 return ex.Message;
             }
@@ -885,7 +885,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     error = $"No existing overworld profile in this ROM accepts a {import.Width}×{import.Height} PNG with {colorCount} colours.";
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("BtxEditorViewModel.TryGetCompatibleProfiles", ex))
             {
                 error = ex.Message;
                 return false;
@@ -945,7 +945,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 Edited();
                 return null;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("BtxEditorViewModel.ImportPngUsingProfile", ex))
             {
                 return ex.Message;
             }

@@ -276,20 +276,20 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                             ScriptFile sf = new ScriptFile(i, readFunctions: true, readActions: true);
                             if (sf.IsLevelScript)
                             {
-                                try { ls.Add(new LevelScriptFile(i)); } catch { }   // a level script that can't be read is left out
+                                try { ls.Add(new LevelScriptFile(i)); } catch (Exception caught) when (AppLogger.Noted("ResearchHelperViewModel.LoadAllDataAsync", caught)) { }   // a level script that can't be read is left out
                             }
                             else
                             {
                                 sc.Add(sf);
                             }
                         }
-                        catch { }   // a script file that can't be read is left out
+                        catch (Exception caught) when (AppLogger.Noted("ResearchHelperViewModel.LoadAllDataAsync.2", caught)) { }   // a script file that can't be read is left out
                     }
 
                     int eventCount = Filesystem.GetEventFileCount();
                     for (int i = 0; i < eventCount; i++)
                     {
-                        try { ev.Add(new EventFile(i)); } catch { }   // an event file that can't be read is left out
+                        try { ev.Add(new EventFile(i)); } catch (Exception caught) when (AppLogger.Noted("ResearchHelperViewModel.LoadAllDataAsync.3", caught)) { }   // an event file that can't be read is left out
                     }
 
                     return (sc, ls, ev);
@@ -486,7 +486,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                     if (header.LevelScriptID == id)
                         FileWatcherResults.Add(new ScriptFileReferenceResult { ReferenceType = "Header", ReferenceID = i, Field = "levelScriptID" });
                 }
-                catch { }   // a header that can't be read is skipped
+                catch (Exception caught) when (AppLogger.Noted("ResearchHelperViewModel.SearchScriptFileReferences", caught)) { }   // a header that can't be read is skipped
             }
 
             StatusText = $"Found {FileWatcherResults.Count} references to script file {id}";
@@ -533,7 +533,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                     if (h != null && h.ScriptFileID == sf.FileID)
                         assocEventIds.Add(h.EventFileID);
                 }
-                catch { }   // a header that can't be read is skipped
+                catch (Exception caught) when (AppLogger.Noted("ResearchHelperViewModel.SearchScriptIdUsage", caught)) { }   // a header that can't be read is skipped
             }
 
             foreach (EventFile ev in _cachedEventFiles)

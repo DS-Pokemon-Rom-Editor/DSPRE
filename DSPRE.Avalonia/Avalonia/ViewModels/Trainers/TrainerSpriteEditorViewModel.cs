@@ -705,7 +705,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 StatusText = "Saved.";
                 return null;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("TrainerSpriteEditorViewModel.SaveRomAnimations", ex))
             {
                 StatusText = "Couldn't save: " + ex.Message;
                 return ex.Message;
@@ -747,7 +747,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     SetAnimJsonTextSilent(HgEngineTrainerGraphicsSource.ReadText(_animJsonPath));
                     AnimJsonStatusText = "";
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (AppLogger.Noted("TrainerSpriteEditorViewModel.LoadAnimJson", ex))
                 {
                     SetAnimJsonTextSilent("");
                     AnimJsonStatusText = "Couldn't read: " + ex.Message;
@@ -813,7 +813,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 OnPropertyChanged(nameof(CanCreateAnimJson));
                 return null;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("TrainerSpriteEditorViewModel.SaveAnimJson", ex))
             {
                 return ex.Message;
             }
@@ -960,7 +960,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 _animRoot = AnimJsonRoot.Parse(AnimJsonText);
                 AnimModelStatusText = "";
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("TrainerSpriteEditorViewModel.TryRebuildAnimModelFromText", ex))
             {
                 AnimModelStatusText = "JSON has an error, showing the last valid structure: " + ex.Message;
                 return; // keep whatever AnimSequenceChoices/AnimFrameRows already have
@@ -1628,7 +1628,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
                 return BankCount > 0 ? ImportPngComposited(import) : ImportPngFlat(import);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("TrainerSpriteEditorViewModel.ImportPng", ex))
             {
                 return ex.Message;
             }
@@ -2219,7 +2219,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 SaveNotice.Exported(path);
                 return null;
             }
-            catch (Exception ex) { return ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("TrainerSpriteEditorViewModel.ExportFramesSheet", ex)) { return ex.Message; }
         }
 
         private const int AnimationSheetColumns = 8;
@@ -2247,7 +2247,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 SaveNotice.Exported(path);
                 return null;
             }
-            catch (Exception ex) { return ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("TrainerSpriteEditorViewModel.ExportAnimationSheet", ex)) { return ex.Message; }
         }
 
         public List<TrainerSheetImportViewModel.AnimationChoice> AnimationSheetChoices(bool includeNew)
@@ -2290,7 +2290,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     animation ? TrainerSheetImportViewModel.Jobs.Animation : TrainerSheetImportViewModel.Jobs.Drawings,
                     targets, palettes, sheet, Path.GetFileName(pngPath), steps, animation ? AnimationSheetChoices(true) : new(), _activePart);
             }
-            catch (Exception ex) { why = ex.Message; return null; }
+            catch (Exception ex) when (AppLogger.Noted("TrainerSpriteEditorViewModel.OpenSheetImport", ex)) { why = ex.Message; return null; }
         }
 
         // Nothing is written until Save.

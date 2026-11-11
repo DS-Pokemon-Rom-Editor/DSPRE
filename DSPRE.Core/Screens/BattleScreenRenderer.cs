@@ -207,7 +207,7 @@ namespace DSPRE.Screens
                 if (img?.Rgba == null) piece.Whynot = "This backdrop couldn't be drawn.";
                 else { piece.Rgba = img.Rgba; piece.Width = img.Width; piece.Height = img.Height; }
             }
-            catch (Exception ex) { piece.Whynot = "This backdrop couldn't be drawn: " + ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("BattleScreenRenderer.AddBackdrop", ex)) { piece.Whynot = "This backdrop couldn't be drawn: " + ex.Message; }
             pieces.Add(piece);
         }
 
@@ -358,7 +358,7 @@ namespace DSPRE.Screens
                     if (g?.Rgba == null) piece.Whynot = "This HP bar couldn't be drawn.";
                     else { piece.Rgba = g.Rgba; piece.Width = g.Width; piece.Height = g.Height; piece.Left = g.Left; piece.Top = g.Top; }
                 }
-                catch (Exception ex) { piece.Whynot = "This HP bar couldn't be drawn: " + ex.Message; }
+                catch (Exception ex) when (AppLogger.Noted("BattleScreenRenderer.AddGauges", ex)) { piece.Whynot = "This HP bar couldn't be drawn: " + ex.Message; }
                 pieces.Add(piece);
             }
         }
@@ -412,7 +412,7 @@ namespace DSPRE.Screens
                     piece.Colours = frame.PaletteEntry;
                 }
             }
-            catch (Exception ex) { piece.Whynot = "This message box couldn't be drawn: " + ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("BattleScreenRenderer.BuildMessageBox", ex)) { piece.Whynot = "This message box couldn't be drawn: " + ex.Message; }
             return piece;
         }
 
@@ -590,7 +590,7 @@ namespace DSPRE.Screens
                     else { piece.Rgba = bg.Rgba; piece.Width = bg.Width; piece.Height = bg.Height; }
                 }
             }
-            catch (Exception ex) { piece.Whynot = "This panel couldn't be drawn: " + ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("BattleScreenRenderer.AddPanelLayer", ex)) { piece.Whynot = "This panel couldn't be drawn: " + ex.Message; }
             pieces.Add(piece);
             return piece;
         }

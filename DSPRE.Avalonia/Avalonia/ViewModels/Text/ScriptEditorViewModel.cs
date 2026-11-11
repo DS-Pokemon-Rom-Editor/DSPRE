@@ -538,7 +538,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 await StartLanguageServerAsync();
                 if (undecompiled != null) StatusText = undecompiled;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("ScriptEditorViewModel.SetupAsync", ex))
             {
                 IsReadOnly = true;
                 StatusText = "Error: " + ex.Message;
@@ -842,7 +842,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 if (!compiled) Dirty();   // source is on disk, but the binary wasn't regenerated: the editor is not fully saved
                 return compiled;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("ScriptEditorViewModel.SaveAsync", ex))
             {
                 await DialogHelper.ShowErrorAsync("Couldn't save:\n" + ex.Message, "Script editor");
                 return false;
@@ -887,7 +887,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                     await DialogHelper.ShowErrorAsync("rotom compile failed:\n" + RotomTool.FormatDetails(result), "Script editor");
                 return result.Success;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("ScriptEditorViewModel.CompileAsync", ex))
             {
                 StatusText = "Compile failed: " + ex.Message;
                 DiagnosticsStatusText = "Compile failed before diagnostics were available.";
@@ -1074,7 +1074,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 SelectedScriptIndex = _sourceFiles.FindIndex(p => ProjectPaths.Same(p, path));
                 StatusText = "Added " + DisplayPath(path) + ".";
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("ScriptEditorViewModel.AddScriptFile", ex))
             {
                 _ = DialogHelper.ShowErrorAsync("Couldn't add Rotom script:\n" + ex.Message, "Script editor");
             }
@@ -1094,7 +1094,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 ScriptText = RotomTool.ReadSource(path);
                 SaveNotice.Imported(ManagedSource?.RelPath ?? DisplayPath(_currentPath), path);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("ScriptEditorViewModel.ImportAsync", ex))
             {
                 await DialogHelper.ShowErrorAsync("Couldn't import:\n" + ex.Message, "Script editor");
             }
@@ -1115,7 +1115,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 PlainFiles.WriteText(path, ScriptText ?? "");
                 SaveNotice.Exported(path);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("ScriptEditorViewModel.ExportAsync", ex))
             {
                 await DialogHelper.ShowErrorAsync("Couldn't export:\n" + ex.Message, "Script editor");
             }
@@ -1730,7 +1730,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (!string.IsNullOrWhiteSpace(root))
             {
                 try { path = Path.GetRelativePath(root, path); }
-                catch { }   // a path on another drive stays absolute
+                catch (ArgumentException) { }   // an empty path is shown as it is
             }
             return path.Replace('\\', '/');
         }

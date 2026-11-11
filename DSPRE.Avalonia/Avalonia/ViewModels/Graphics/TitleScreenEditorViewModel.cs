@@ -159,7 +159,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             byte[] bytes;
             try { bytes = PlainFiles.ReadBytes(nclrPath); }
-            catch (Exception ex) { return ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("TitleScreenEditorViewModel.ImportPalette", ex)) { return ex.Message; }
             return Imported(() => _graphics.ImportPaletteRaw(bytes));
         }
 
@@ -168,7 +168,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             byte[] bytes = _graphics.ExportPaletteRaw();
             if (bytes == null) return "Couldn't read the current palette.";
             try { PlainFiles.WriteBytes(nclrPath, bytes); return null; }
-            catch (Exception ex) { return ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("TitleScreenEditorViewModel.ExportPalette", ex)) { return ex.Message; }
         }
 
         // The copyright strip over the bottom border, both 256 by 192.
@@ -192,14 +192,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (raw == null) error = "Couldn't read this PNG.";
                 return raw;
             }
-            catch (Exception ex) { error = ex.Message; return null; }
+            catch (Exception ex) when (AppLogger.Noted("TitleScreenEditorViewModel.DecodePng", ex)) { error = ex.Message; return null; }
         }
 
         private static string SavePng(DSPRE.RawImage raw, string path)
         {
             if (raw == null) return "Couldn't decode this image.";
             try { ImageConverter.ToAvaloniaBitmap(raw).Save(path, global::Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default); return null; }
-            catch (Exception ex) { return ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("TitleScreenEditorViewModel.SavePng", ex)) { return ex.Message; }
         }
     }
 }

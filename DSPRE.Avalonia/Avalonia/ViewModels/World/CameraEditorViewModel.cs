@@ -417,7 +417,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 StatusText = "Camera table saved.";
                 SaveNotice.Saved(UnsavedChangesDescription);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("CameraEditorViewModel.SaveAsync", ex))
             {
                 await DialogHelper.ShowErrorAsync($"Couldn't save:\n{ex.Message}", "Camera editor");
             }
@@ -436,7 +436,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 WriteCameraTable(path, 0);
                 SaveNotice.Exported(path);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("CameraEditorViewModel.ExportTableAsync", ex))
             {
                 await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Camera editor");
             }
@@ -470,7 +470,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 Edited();
                 SaveNotice.Imported($"{nCameras} cameras", path);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("CameraEditorViewModel.ImportTableAsync", ex))
             {
                 await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Camera editor");
             }
@@ -492,7 +492,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 DSUtils.WriteToFile(path, data, fmode: FileMode.Create);
                 SaveNotice.Exported(path);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("CameraEditorViewModel.ExportCameraAsync", ex))
             {
                 await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Camera editor");
             }
@@ -514,7 +514,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 Edited();
                 SaveNotice.Imported($"camera {index}", path);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("CameraEditorViewModel.ImportCameraAsync", ex))
             {
                 await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Camera editor");
             }

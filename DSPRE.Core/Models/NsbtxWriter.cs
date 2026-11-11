@@ -155,7 +155,7 @@ namespace DSPRE.Models
                 r.Bytes = NsbmdWriter.Envelope(new[] { o }, "BTX0", version: 1);
                 r.Pictures = texNames.Count;
             }
-            catch (Exception ex) { r.Whynot = "The texture pack couldn't be built: " + ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("NsbtxWriter.Extend", ex)) { r.Whynot = "The texture pack couldn't be built: " + ex.Message; }
             return r;
         }
 
@@ -186,7 +186,7 @@ namespace DSPRE.Models
                 r.Bytes = NsbmdWriter.Envelope(new[] { NsbmdWriter.BuildTex0(pictures) }, "BTX0", version: 1);
                 r.Pictures = pictures.Count;
             }
-            catch (Exception ex) { r.Whynot = "The texture pack couldn't be built: " + ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("NsbtxWriter.Build", ex)) { r.Whynot = "The texture pack couldn't be built: " + ex.Message; }
 
             return r;
         }

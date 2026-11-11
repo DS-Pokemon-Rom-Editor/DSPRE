@@ -66,7 +66,7 @@ namespace DSPRE.Screens
             if (index < 0) return null;
             if (_others.TryGetValue((dir, index), out byte[] known)) return known;
             byte[] data = null;
-            try { data = NitroBgCodec.Inflate(Other?.Invoke(dir, index)); } catch { }   // a member that can't be read is drawn as missing
+            try { data = NitroBgCodec.Inflate(Other?.Invoke(dir, index)); } catch (Exception caught) when (AppLogger.Noted("ScreenPageComposer.File", caught)) { }   // a member that can't be read is drawn as missing
             if (data != null) _others[(dir, index)] = data;
             return data;
         }
@@ -108,7 +108,7 @@ namespace DSPRE.Screens
             if (index < 0) return null;
             if (_files.TryGetValue(index, out byte[] known)) return known;
             byte[] raw = null;
-            try { raw = Replace?.Invoke(index) ?? _member(index); } catch { }   // a member that can't be read is drawn as missing
+            try { raw = Replace?.Invoke(index) ?? _member(index); } catch (Exception caught) when (AppLogger.Noted("ScreenPageComposer.File.2", caught)) { }   // a member that can't be read is drawn as missing
             byte[] data = NitroBgCodec.Inflate(raw);
             // A read that failed (a file another window is still writing) is tried again next time.
             if (data != null) _files[index] = data;
@@ -224,7 +224,7 @@ namespace DSPRE.Screens
         private string LabelName(ScreenText t)
         {
             string text = null;
-            try { text = _text?.Invoke(t, _variant); } catch { }   // a label without readable text is called Label
+            try { text = _text?.Invoke(t, _variant); } catch (Exception caught) when (AppLogger.Noted("ScreenPageComposer.LabelName", caught)) { }   // a label without readable text is called Label
             if (string.IsNullOrWhiteSpace(text)) return "Label";
             text = text.Replace((char)13, ' ').Replace((char)10, ' ').Trim();
             return "Label: " + (text.Length > 24 ? text.Substring(0, 24) + "…" : text);
@@ -484,7 +484,7 @@ namespace DSPRE.Screens
             if (s.Anim >= 0)
             {
                 byte[] nanr = File(s.Archive, s.Anim);
-                try { if (nanr != null) cell = NanrFile.Read(nanr).CellOf(seq, s.Frame); } catch { }   // without the animation the first cell is shown
+                try { if (nanr != null) cell = NanrFile.Read(nanr).CellOf(seq, s.Frame); } catch (Exception caught) when (AppLogger.Noted("ScreenPageComposer.Resolve", caught)) { }   // without the animation the first cell is shown
             }
             if (cell < 0 || cell >= cells.Count) return false;
             pieces = cells[cell];

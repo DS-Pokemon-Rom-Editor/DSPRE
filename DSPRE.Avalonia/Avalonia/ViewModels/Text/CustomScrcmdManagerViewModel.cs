@@ -105,7 +105,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             {
                 DSPRE.RotomTool.ReplaceDatabase(picked, targetPath, rotom);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("CustomScrcmdManagerViewModel.ImportAsync", ex))
             {
                 await DialogHelper.ShowErrorAsync($"Couldn't replace the database:\n{ex.Message}", "Custom script command manager");
                 return;
@@ -171,7 +171,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 }
                 StatusText = "";
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("CustomScrcmdManagerViewModel.ReloadAndReparseScriptsAsync", ex))
             {
                 await DialogHelper.ShowErrorAsync($"Couldn't reload the database: {ex.Message}", "Custom script command manager");
                 StatusText = "";
@@ -211,7 +211,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             {
                 await DialogHelper.ShowErrorAsync($"That folder can't be written to:\n{Path.GetDirectoryName(dest)}", "Custom script command manager");
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("CustomScrcmdManagerViewModel.ExportAsync", ex))
             {
                 await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Custom script command manager");
             }

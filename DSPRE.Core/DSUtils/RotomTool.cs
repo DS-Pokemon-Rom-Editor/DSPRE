@@ -507,7 +507,7 @@ namespace DSPRE
                         return failed == 0 ? $"{Plural.Of(ok, "file")} compiled." : $"{ok} compiled, {failed} failed.";
                     }
                 }
-                catch { }   // output that isn't Rotom's JSON report is summarised as plain text instead
+                catch (Exception ex) when (ex is JsonException || ex is InvalidOperationException) { }   // output that isn't Rotom's JSON report is summarised as plain text instead
             }
 
             string output = !string.IsNullOrWhiteSpace(result.Stderr) ? result.Stderr : result.Stdout;
@@ -536,7 +536,7 @@ namespace DSPRE
                     stdoutSummarizedAsJson = doc.RootElement.TryGetProperty("successes", out _)
                         && doc.RootElement.TryGetProperty("failures", out _);
                 }
-                catch { }   // output that isn't JSON is shown as it is
+                catch (Exception ex) when (ex is JsonException || ex is InvalidOperationException) { }   // output that isn't Rotom's JSON report is shown as it is
             }
 
             if (!stdoutSummarizedAsJson && !string.IsNullOrWhiteSpace(result.Stdout))

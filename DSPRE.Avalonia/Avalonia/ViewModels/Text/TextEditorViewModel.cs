@@ -971,7 +971,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 SetDirty();
                 SaveNotice.Imported($"{lines.Count} lines into text archive {_current.ID}", path);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("TextEditorViewModel.ImportAsync", ex))
             {
                 await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Text editor");
             }
@@ -1005,7 +1005,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 }
                 SaveNotice.Exported(path);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("TextEditorViewModel.ExportAsync", ex))
             {
                 await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Text editor");
             }

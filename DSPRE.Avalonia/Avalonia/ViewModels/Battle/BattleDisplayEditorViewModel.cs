@@ -2267,7 +2267,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 SaveSpriteData(); SaveFormHeights(); SaveAnim(); SaveFrames();
                 return null;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("BattleDisplayEditorViewModel.WriteAll", ex))
             {
                 return ex.Message;
             }

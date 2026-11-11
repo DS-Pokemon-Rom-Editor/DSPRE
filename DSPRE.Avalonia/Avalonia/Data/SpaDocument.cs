@@ -50,7 +50,7 @@ namespace DSPRE.Avalonia.Data
             byte[] data = (byte[])bytes.Clone();
             SpaArchive a;
             try { a = SpaArchive.Parse(data); }
-            catch (Exception ex) { error = "The emitter records run past the end of the file: " + ex.Message; return false; }
+            catch (Exception ex) when (AppLogger.Noted("SpaDocument.TryLoad", ex)) { error = "The emitter records run past the end of the file: " + ex.Message; return false; }
 
             if (a.Records.Count != a.EmitterCountInHeader)
             { error = $"The header lists {a.EmitterCountInHeader} emitters but only {a.Records.Count} could be read."; return false; }

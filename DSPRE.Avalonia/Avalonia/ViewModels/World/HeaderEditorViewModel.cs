@@ -583,7 +583,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 await DialogHelper.ShowErrorAsync(InternalNamesPath + " doesn't exist.", "Couldn't read internal names");
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("HeaderEditorViewModel.SetupAsync", ex))
             {
                 AppLogger.Error("HeaderEditorViewModel.SetupAsync: " + ex);
                 await DialogHelper.ShowErrorAsync($"Couldn't load headers:\n{ex.Message}", "Header editor");
@@ -1315,7 +1315,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 SetDirty();
                 SaveNotice.Imported($"header {_header.ID}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't import: this isn't a header file, or it's damaged.\n{ex.Message}", "Header editor"); }
+            catch (Exception ex) when (AppLogger.Noted("HeaderEditorViewModel.ImportAsync", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't import: this isn't a header file, or it's damaged.\n{ex.Message}", "Header editor"); }
         }
 
         public async Task ExportAsync()
@@ -1325,7 +1325,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             string path = await DialogHelper.SaveFileAsync(_owner, "Export header", new[] { filter }, $"header_{_header.ID:D4}.dsh");
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _header.ToByteArray()); SaveNotice.Exported(path); }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Header editor"); }
+            catch (Exception ex) when (AppLogger.Noted("HeaderEditorViewModel.ExportAsync", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Header editor"); }
         }
 
         /// <summary>Shows a header asked for from another editor.</summary>

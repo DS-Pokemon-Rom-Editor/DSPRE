@@ -1336,7 +1336,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (InitialSpawnableIndex >= 0 && InitialSpawnableIndex < _file?.Spawnables.Count)
                     SelectEvent(3, InitialSpawnableIndex);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("EventEditorViewModel.SetupAsync", ex))
             {
                 StatusText = "Error: " + ex.Message;
                 await DialogHelper.ShowErrorAsync($"Couldn't set up the Event editor:\n{ex.Message}", "Event editor");
@@ -1359,7 +1359,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 StatusText = "";
                 OnPropertyChanged(nameof(UnsavedChangesDescription));
             }
-            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't load event file {index}:\n{ex.Message}", "Event editor"); }
+            catch (Exception ex) when (AppLogger.Noted("EventEditorViewModel.LoadFile", ex)) { _ = DialogHelper.ShowErrorAsync($"Couldn't load event file {index}:\n{ex.Message}", "Event editor"); }
         }
 
         private void RefreshLists()
@@ -1526,7 +1526,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 SelectedEventIndex = dest;
                 StatusText = $"Warp leads to header {_warp.Header} at event file {dest}.";
             }
-            catch (Exception ex) { StatusText = "Test warp failed: " + ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("EventEditorViewModel.TestWarp", ex)) { StatusText = "Test warp failed: " + ex.Message; }
         }
 
         // ── Sort overworlds by OW id ─────────────────────────────────────────────────────
@@ -1544,7 +1544,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = $"Added event file {newId}.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't add event file:\n{ex.Message}", "Event editor"); }
+            catch (Exception ex) when (AppLogger.Noted("EventEditorViewModel.AddEventFile", ex)) { _ = DialogHelper.ShowErrorAsync($"Couldn't add event file:\n{ex.Message}", "Event editor"); }
         }
 
         public async Task RemoveLastEventFileAsync()
@@ -1570,7 +1570,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = $"Removed event file {last}.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't remove event file:\n{ex.Message}", "Event editor"); }
+            catch (Exception ex) when (AppLogger.Noted("EventEditorViewModel.RemoveLastEventFileAsync", ex)) { _ = DialogHelper.ShowErrorAsync($"Couldn't remove event file:\n{ex.Message}", "Event editor"); }
         }
 
         // ── 3D map view + event markers ─────────────────────────────────────────────────
@@ -1897,7 +1897,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                                     int map = _matrix.Maps[gcy, gcx];
                                     if (map != GameMatrix.EMPTY) col = new MapFile(map, GameFamily, false, false).Collisions;
                                 }
-                                catch { }   // a map that can't be read has no collisions to show
+                                catch (Exception caught) when (AppLogger.Noted("EventEditorViewModel.RefreshMarkers", caught)) { }   // a map that can't be read has no collisions to show
                                 _collisionCache[key] = col;
                             }
                             if (col == null) continue;
@@ -2072,7 +2072,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                             types = mf.Types;
                         }
                     }
-                    catch { }   // a map that can't be read has no collisions to show
+                    catch (Exception caught) when (AppLogger.Noted("EventEditorViewModel.Collision", caught)) { }   // a map that can't be read has no collisions to show
                     _collisionCache[key] = col;
                     grid.Add(x, y, col);
                     grid.AddTypes(x, y, types);
@@ -2662,7 +2662,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             string path = await DialogHelper.SaveFileAsync(_owner, "Export event file", new[] { filter }, $"event_{_selectedIndex:D4}.ev");
             if (path == null) return;
             try { PlainFiles.WriteBytes(path, _file.ToByteArray()); SaveNotice.Exported(path); }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Event editor"); }
+            catch (Exception ex) when (AppLogger.Noted("EventEditorViewModel.ExportAsync", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Event editor"); }
         }
     }
 

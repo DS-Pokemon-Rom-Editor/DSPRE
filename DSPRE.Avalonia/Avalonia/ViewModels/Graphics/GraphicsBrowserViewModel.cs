@@ -355,7 +355,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 string name = arc.NameOf?.Invoke(ShowingIndex);
                 if (!string.IsNullOrWhiteSpace(name)) return name;
             }
-            catch { }   // an entry without a name uses the archive's title
+            catch (Exception caught) when (AppLogger.Noted("GraphicsBrowserViewModel.Showing", caught)) { }   // an entry without a name uses the archive's title
             return arc.Title;
         }
 

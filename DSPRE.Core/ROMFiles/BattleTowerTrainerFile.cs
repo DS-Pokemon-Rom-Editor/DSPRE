@@ -193,7 +193,7 @@ namespace DSPRE.ROMFiles
                 messagesArchive.SaveToExpandedDir(RomInfo.BattleTowerTrainerMessagesNumber, showSuccessMessage: false);
                 return null;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("BattleTowerTrainerFile.Save", ex))
             {
                 return ex.Message;
             }

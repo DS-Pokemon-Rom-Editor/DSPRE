@@ -268,7 +268,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 SetClean();
                 SaveNotice.Saved(UnsavedChangesDescription);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("FlyEditorViewModel.SaveCommandAsync", ex))
             {
                 await DialogHelper.ShowErrorAsync($"Couldn't save:\n{ex.Message}", "Fly / warp editor");
             }

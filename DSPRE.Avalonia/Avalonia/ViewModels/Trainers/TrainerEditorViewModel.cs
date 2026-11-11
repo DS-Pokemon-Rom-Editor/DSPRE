@@ -924,7 +924,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 Uses.Clear();
                 UsesStatus = "";
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("TrainerEditorViewModel.LoadTrainer", ex))
             {
                 _ = DialogHelper.ShowErrorAsync($"Couldn't load trainer {index}:\n{ex.Message}", "Trainer editor");
             }
@@ -1601,7 +1601,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     : $"Added trainer {newIndex}. {after.RefusalReason}";
                 SelectedTrainerIndex = newIndex;
             }
-            catch (Exception ex) { _ = DialogHelper.ShowErrorAsync($"Couldn't add trainer:\n{ex.Message}", "Trainer editor"); }
+            catch (Exception ex) when (AppLogger.Noted("TrainerEditorViewModel.AddTrainer", ex)) { _ = DialogHelper.ShowErrorAsync($"Couldn't add trainer:\n{ex.Message}", "Trainer editor"); }
         }
 
         /// <summary>Removes only the final appended trainer after every known reference source is clear.</summary>
@@ -1654,7 +1654,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     $"{after.RemainingAdditions} trainer slots are available.";
                 SelectedTrainerIndex = Math.Max(0, removedId - 1);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("TrainerEditorViewModel.RemoveLastAddedTrainerAsync", ex))
             {
                 await DialogHelper.ShowErrorAsync($"Couldn't remove trainer:\n{ex.Message}",
                     "Trainer editor");
@@ -1674,7 +1674,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 PlainFiles.WriteBytes(path, _trainer.ToByteArray());
                 SaveNotice.Exported(path);
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Trainer editor"); }
+            catch (Exception ex) when (AppLogger.Noted("TrainerEditorViewModel.ExportTrainerAsync", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Trainer editor"); }
         }
 
         /// <summary>Loads a .trf (name, properties, party) into the selected trainer. Like the other imports,
@@ -1694,7 +1694,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 SetDirty();
                 SaveNotice.Imported($"trainer {_selectedTrainerIndex}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Trainer editor"); }
+            catch (Exception ex) when (AppLogger.Noted("TrainerEditorViewModel.ImportTrainerAsync", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Trainer editor"); }
         }
 
         public async Task ExportPropertiesAsync()
@@ -1709,7 +1709,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 PlainFiles.WriteBytes(path, _trainer.Trp.ToByteArray());
                 SaveNotice.Exported(path);
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Trainer editor"); }
+            catch (Exception ex) when (AppLogger.Noted("TrainerEditorViewModel.ExportPropertiesAsync", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Trainer editor"); }
         }
 
         public async Task ReplacePropertiesAsync()
@@ -1727,7 +1727,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 SetDirty();
                 SaveNotice.Imported($"the properties of trainer {_selectedTrainerIndex}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Trainer editor"); }
+            catch (Exception ex) when (AppLogger.Noted("TrainerEditorViewModel.ReplacePropertiesAsync", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Trainer editor"); }
         }
 
         public async Task ExportPartyAsync()
@@ -1746,7 +1746,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 PlainFiles.WriteBytes(path, condensed);
                 SaveNotice.Exported(path);
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Trainer editor"); }
+            catch (Exception ex) when (AppLogger.Noted("TrainerEditorViewModel.ExportPartyAsync", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Trainer editor"); }
         }
 
         public async Task ImportPartyAsync()
@@ -1764,7 +1764,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 SetDirty();
                 SaveNotice.Imported($"the party of trainer {_selectedTrainerIndex}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Trainer editor"); }
+            catch (Exception ex) when (AppLogger.Noted("TrainerEditorViewModel.ImportPartyAsync", ex)) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Trainer editor"); }
         }
 
         // ── Party order ───────────────────────────────────────────────────────────────

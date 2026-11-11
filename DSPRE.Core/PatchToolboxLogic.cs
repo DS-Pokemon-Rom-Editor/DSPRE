@@ -483,7 +483,7 @@ namespace DSPRE
             ARM9.DecompressIfMarked();
             PlainFiles.Copy(RomInfo.Arm9Path, RomInfo.Arm9Path + BackupSuffix, overwrite: true);
             try { TrainerCustomPokeballsPatch.Apply(); }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("PatchToolboxLogic.ApplyTrainerCustomPokeballsPatch", ex))
             {
                 ShowError("The patch failed. Restore the ARM9 from its backup if needed.\n\n" + ex.Message, "Patch failed");
                 return false;
@@ -628,7 +628,7 @@ namespace DSPRE
                 DSUtils.WriteToFile(expandedPath, SyntheticOverlaySpace.Header(SyntheticOverlaySpace.ClassMetadataMarker, blockLength), (uint)offsets[0]);
                 TrainerClassMetadataPatch.Apply(offset);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("PatchToolboxLogic.ApplyTrainerClassMetadataPatch", ex))
             {
                 ShowError("The patch failed: " + ex.Message + "\nRestore the ARM9, overlays, synthetic overlay and a/1/5/5 from their backups.", "Patch failed");
                 return false;

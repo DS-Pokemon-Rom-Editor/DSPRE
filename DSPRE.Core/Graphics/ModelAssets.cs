@@ -686,7 +686,7 @@ namespace DSPRE.Graphics
 
             byte[] file;
             try { file = File.ReadAllBytes(path); }
-            catch (Exception ex) { return "That file couldn't be read: " + ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("ModelAssets.ImportRaw", ex)) { return "That file couldn't be read: " + ex.Message; }
             if (file.Length < 4) return "That file is too short to be 3D data.";
 
             Kind was = Identify(there);

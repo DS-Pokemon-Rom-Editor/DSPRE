@@ -385,7 +385,7 @@ namespace DSPRE.Avalonia.Data
                 NsbmdTextureData dec = NsbmdTextureDecoder.Decode(mat);
                 if (dec != null) return new SpaTexture { Width = dec.Width, Height = dec.Height, Rgba = dec.Rgba, Format = fmt };
             }
-            catch { }   // a texture that can't be decoded is shown blank
+            catch (Exception caught) when (AppLogger.Noted("SpaArchive.DecodeOne", caught)) { }   // a texture that can't be decoded is shown blank
             return new SpaTexture { Width = w, Height = h, Rgba = null, Format = fmt };
         }
 

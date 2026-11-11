@@ -173,7 +173,7 @@ namespace DSPRE.ROMFiles
                 lines = text.Replace("\r\n", "\n").Split('\n');
                 if (endsWithNewline) lines = lines.Take(lines.Length - 1).ToArray();
             }
-            catch (Exception ex) { return "Couldn't read the script source: " + ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("StarterRotomSource.SaveAsync", ex)) { return "Couldn't read the script source: " + ex.Message; }
             void Write()
             {
                 ProjectSourceWatcher.Expect(path);
@@ -196,7 +196,7 @@ namespace DSPRE.ROMFiles
                 $"{indent}GivePokemon {give.Groups[1].Value.Trim()}, {newLevel}, {newItem}{tail}";
 
             try { Write(); }
-            catch (Exception ex) { return "Couldn't write the script source: " + ex.Message; }
+            catch (Exception ex) when (AppLogger.Noted("StarterRotomSource.SaveAsync.2", ex)) { return "Couldn't write the script source: " + ex.Message; }
 
             string failure = await CompileProjectAsync(path);
             if (failure != null)
@@ -228,7 +228,7 @@ namespace DSPRE.ROMFiles
                 if (failure != null)
                     return "The script didn't compile, so it was put back as it was: " + failure;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (AppLogger.Noted("StarterRotomSource.CompileProjectAsync", ex))
             {
                 return "The script didn't compile, so it was put back as it was: " + ex.Message;
             }
