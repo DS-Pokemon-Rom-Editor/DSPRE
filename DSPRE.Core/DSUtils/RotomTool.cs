@@ -52,6 +52,69 @@ namespace DSPRE
             return null;
         }
 
+        // A Rotom project's old database is kept under .rotom/backups.
+        public static void ReplaceDatabase(string picked, string target, bool rotom)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(target));
+            if (rotom && File.Exists(target))
+            {
+                string backup = Path.Combine(ProjectRoot, ".rotom", "backups", "custom-database-" + DateTime.Now.ToString("yyyyMMddHHmmss"));
+                Directory.CreateDirectory(backup);
+                PlainFiles.Copy(target, Path.Combine(backup, Path.GetFileName(target)), overwrite: true);
+            }
+            PlainFiles.Copy(picked, target, overwrite: true);
+        }
+
+        public static string WhyNotRotomDatabase(string path)
+        {
+            try
+            {
+                using System.Text.Json.JsonDocument doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
+                return doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object
+                       && doc.RootElement.TryGetProperty("commands", out System.Text.Json.JsonElement commands)
+                       && commands.ValueKind == System.Text.Json.JsonValueKind.Object
+                    ? null
+                    : "That isn't a Rotom command database (it has no \"commands\" list), so the project's database was left as it is.";
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.Text.Json.JsonException)
+            {
+                return "That file couldn't be read as JSON, so the project's database was left as it is.\n" + ex.Message;
+            }
+        }
+
+        public static string ReadSource(string path) => File.ReadAllText(path);
+
+        public static List<string> SourceFiles()
+        {
+            List<string> files = new List<string>();
+            foreach (string root in ScriptSourceRoots().Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                if (!Directory.Exists(root)) continue;
+                files.AddRange(Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories).Where(path =>
+                {
+                    string ext = Path.GetExtension(path);
+                    return ext.Equals(".rotom", StringComparison.OrdinalIgnoreCase) || ext.Equals(".json", StringComparison.OrdinalIgnoreCase);
+                }));
+            }
+            return files;
+        }
+
+        public static void EnsureSourceRoot() => Directory.CreateDirectory(Path.Combine(ProjectRoot, "expanded", "scripts"));
+
+        public static bool HasLegacyScripts() => ScriptSourceRoots().Any(root =>
+            Directory.Exists(root) && Directory.EnumerateFiles(root, "*.script", SearchOption.AllDirectories).Any());
+
+        // Empty binaries hold no script (retail Diamond ships one).
+        public static List<int> BinariesWithoutSource(ICollection<int> sourced)
+        {
+            List<int> left = new List<int>();
+            foreach (string path in Directory.EnumerateFiles(Filesystem.Scripts))
+                if (int.TryParse(Path.GetFileName(path), out int id) && !sourced.Contains(id) && new FileInfo(path).Length > 0)
+                    left.Add(id);
+            left.Sort();
+            return left;
+        }
+
         // One rotom at a time: two project compiles both rewrite compile state and text archives.
         private static readonly System.Threading.SemaphoreSlim OneAtATime = new System.Threading.SemaphoreSlim(1, 1);
 

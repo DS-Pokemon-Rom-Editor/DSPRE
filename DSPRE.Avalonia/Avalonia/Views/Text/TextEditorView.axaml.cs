@@ -73,23 +73,23 @@ namespace DSPRE.Avalonia.Views.Text
             FieldMessageBoxView.Font = FieldFont.LoadTalkFont();
             // Screens with their own window use the system font inside the standard border.
             FieldMenuWindowView.Font = FieldFont.LoadSystemFont();
-            FieldMenuWindowView.Frame = DSPRE.Avalonia.Data.WindowFrames.LoadStandard();
-            FieldMenuWindowView.Colours = DSPRE.Avalonia.Data.WindowFrames.LoadSystemFontColours();
+            FieldMenuWindowView.Frame = WindowFrames.LoadStandard();
+            FieldMenuWindowView.Colours = WindowFrames.LoadSystemFontColours();
 
             if (VM.BorderNames.Count == 0)
             {
-                foreach (string name in DSPRE.Avalonia.Data.WindowFrames.Names) VM.BorderNames.Add(name);
+                foreach (string name in WindowFrames.Names) VM.BorderNames.Add(name);
                 // The list filled after the box was bound, which leaves it showing nothing picked.
                 int picked = System.Math.Max(0, VM.BorderIndex);
                 VM.BorderIndex = -1;
                 VM.BorderIndex = picked;
                 VM.BorderChanged += (_, _) =>
                 {
-                    FieldMessageBoxView.Frame = DSPRE.Avalonia.Data.WindowFrames.Load(VM.BorderIndex);
+                    FieldMessageBoxView.Frame = WindowFrames.Load(VM.BorderIndex);
                     PreviewBox.InvalidateVisual();
                 };
             }
-            FieldMessageBoxView.Frame = DSPRE.Avalonia.Data.WindowFrames.Load(VM.BorderIndex);
+            FieldMessageBoxView.Frame = WindowFrames.Load(VM.BorderIndex);
             VM.MeasureText = FieldMessageBoxView.Measure;
             VM.PreviewFontNote = FieldMessageBoxView.Font == null
                 ? "Showing stand-in letters: the game's own font couldn't be read from this ROM."

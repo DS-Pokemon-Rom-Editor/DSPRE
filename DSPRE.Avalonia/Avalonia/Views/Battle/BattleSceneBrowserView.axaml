@@ -3,7 +3,7 @@
         xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Battle"
         xmlns:vmc="clr-namespace:DSPRE.Avalonia.ViewModels.Controls"
-        xmlns:data="clr-namespace:DSPRE.Avalonia.Data"
+        xmlns:data="clr-namespace:DSPRE.Screens;assembly=DSPRE.Core"
         x:Class="DSPRE.Avalonia.Views.Battle.BattleSceneBrowserView"
         x:DataType="vm:BattleSceneBrowserViewModel"
         Title="Battle scenes"

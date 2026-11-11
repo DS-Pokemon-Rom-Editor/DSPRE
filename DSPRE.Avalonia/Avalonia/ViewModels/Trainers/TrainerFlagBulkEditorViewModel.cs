@@ -109,7 +109,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         }
 
         // ── Undo / redo: every trainer's flags, one bit each ──
-        private DSPRE.Avalonia.ByteStateUndo _undo;
+        private ByteStateUndo _undo;
         public bool CanUndo => _undo?.CanUndo == true;
         public bool CanRedo => _undo?.CanRedo == true;
         public void Undo() => _undo?.Undo();
@@ -141,7 +141,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             RecountDirty();
         }
 
-        private void ResetUndo() { _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo); RaiseUndo(); }
+        private void ResetUndo() { _undo = new ByteStateUndo(TakeState, ApplyState, RaiseUndo); RaiseUndo(); }
 
         // Unsaved while any trainer's flags differ from what was last read or saved.
         private void RecountDirty()
@@ -196,7 +196,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _sourceBattle.Clear();
             for (int i = 0; i < _trainerCount; i++)
             {
-                using FileStream fs = new FileStream(Path.Combine(dir, i.ToString("D4")), FileMode.Open, FileAccess.Read);
+                using FileStream fs = PlainFiles.OpenRead(Path.Combine(dir, i.ToString("D4")));
                 _trainerData[i] = new TrainerProperties((ushort)i, fs);
                 if (source != null) ReadSource(i, i < source.Count ? source[i] : (HgEngine.HgEngineSourceBlock?)null);
                 _loadedFlags[i] = SnapshotFlags(_trainerData[i]);
@@ -468,7 +468,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 // Other editors may have saved this trainer since it was read here.
                 string path = Path.Combine(dir, id.ToString("D4"));
                 TrainerProperties onDisk;
-                using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read))
+                using (FileStream fs = PlainFiles.OpenRead(path))
                     onDisk = new TrainerProperties((ushort)id, fs);
                 for (int f = 0; f < current.Length; f++)
                     if (current[f] != loaded[f]) SetFlag(onDisk, f, current[f]);

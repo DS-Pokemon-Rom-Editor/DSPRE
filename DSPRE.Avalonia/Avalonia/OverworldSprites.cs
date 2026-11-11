@@ -44,7 +44,7 @@ namespace DSPRE.Avalonia
                 if (OverworldTable == null) { SetOWtable(); ReadOWTable(); }
                 if (OverworldTable != null && OverworldTable.TryGetValue(eventEntryID, out (uint spriteID, ushort properties) r) && r.spriteID != 0x3D3D)
                 {
-                    byte[] bank = Data.ScriptNarc.IfUnpacked(DirNames.OWSprites).GetFromDisk((int)r.spriteID);
+                    byte[] bank = ScriptNarc.IfUnpacked(DirNames.OWSprites).GetFromDisk((int)r.spriteID);
                     n = bank == null ? 0 : Tex0Block.ReadBtx0(bank, out _)?.Textures.Count ?? 0;
                 }
             }
@@ -126,7 +126,7 @@ namespace DSPRE.Avalonia
                 return ResourceImages.GetRaw("overworld");
 
             // Saved bytes only: an editor's pending sprite would otherwise stay in the cache after a Discard.
-            Data.ScriptNarc sprites = Data.ScriptNarc.Open(DirNames.OWSprites, ifUnpacked);
+            ScriptNarc sprites = ScriptNarc.Open(DirNames.OWSprites, ifUnpacked);
             byte[] bank = sprites.GetFromDisk((int)result.spriteID);
             if (bank == null) return null;
             try

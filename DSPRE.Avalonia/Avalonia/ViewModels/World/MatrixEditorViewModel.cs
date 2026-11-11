@@ -279,7 +279,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool HasUnsavedChanges => _dirty || _archive.IsDirty;
 
         // Added, removed and saved matrices wait here until Save.
-        private readonly DSPRE.Avalonia.Data.StagedArchive _archive = new(DirNames.Matrices);
+        private readonly StagedArchive _archive = new(DirNames.Matrices);
 
         private GameMatrix ReadMatrix(int id)
         {
@@ -295,7 +295,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             for (int i = 0; i < count; i++) MatrixNames.Add(ReadMatrix(i).ToString());
             _suppress = false;
         }
-        public string UnsavedChangesDescription => DSPRE.Avalonia.Data.StagedArchive.Join($"Matrix {_selectedIndex}", _dirty, _archive.Describe("matrix", "matrices"));
+        public string UnsavedChangesDescription => StagedArchive.Join($"Matrix {_selectedIndex}", _dirty, _archive.Describe("matrix", "matrices"));
         public void SaveChanges() => Save();
         public void DiscardChanges()
         {
@@ -542,7 +542,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (path == null) return;
             try
             {
-                using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read)) _matrix = new GameMatrix(fs);
+                using (FileStream fs = PlainFiles.OpenRead(path)) _matrix = new GameMatrix(fs);
                 MarkDirty();
                 SaveNotice.Imported($"matrix {_selectedIndex}", path);
                 RaiseLoaded();

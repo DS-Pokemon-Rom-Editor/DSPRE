@@ -144,7 +144,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         private string[] _speciesNames;
 
-        public string[] NoticeFrameChoices => Data.WindowFrames.Names;
+        public string[] NoticeFrameChoices => WindowFrames.Names;
 
         private int _noticeFrameIndex;
         public int NoticeFrameIndex

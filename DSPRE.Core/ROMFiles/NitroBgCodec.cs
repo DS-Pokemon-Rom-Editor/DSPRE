@@ -12,12 +12,18 @@ namespace DSPRE.ROMFiles
     {
         public sealed class BgImage { public byte[] Rgba; public int Width, Height; }
 
-        public static byte[] Inflate(byte[] b)
+        // Don't log a failed decompress when probing what a file is.
+        public static byte[] Inflate(byte[] b, bool probing = false)
         {
             if (b == null) return null;
             // A glyph font also starts with 0x10, but only a compressed file gives a nonzero size after it.
-            if (b.Length > 3 && b[0] == 0x10 && (b[1] | b[2] | b[3]) != 0) { try { return Lz77.Decompress(b); } catch (Exception ex) { AppLogger.WarnOnce("NitroBgCodec.Inflate", ex); return b; } }
-            return b;
+            if (b.Length <= 3 || b[0] != 0x10 || (b[1] | b[2] | b[3]) == 0) return b;
+            try { return Lz77.Decompress(b); }
+            catch (Exception ex)
+            {
+                if (!probing) AppLogger.WarnOnce("NitroBgCodec.Inflate", ex);
+                return b;
+            }
         }
 
         public static int Find(byte[] d, string magic, int from)

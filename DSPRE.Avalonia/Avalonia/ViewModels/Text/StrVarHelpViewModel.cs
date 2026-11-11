@@ -110,7 +110,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             if (Design.IsDesignMode || !AvaloniaEditorLauncher.IsRomLoaded) return;
             ushort[] speech = null, menus = null;
-            try { speech = Data.GameTextScreens.TalkColours; menus = Data.GameTextScreens.SystemColours; }
+            try { speech = GameTextScreens.TalkColours; menus = GameTextScreens.SystemColours; }
             catch (Exception ex) { AppLogger.WarnOnce("StrVarHelpViewModel.ReadColours", ex); }
             if (speech == null || menus == null || speech.Length < 16 || menus.Length < 16) return;
 

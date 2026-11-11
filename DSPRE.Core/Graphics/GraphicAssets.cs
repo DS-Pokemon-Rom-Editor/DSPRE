@@ -1,0 +1,1421 @@
+using DSPRE.Screens;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using DSPRE;
+using DSPRE.Editors;
+using DSPRE.ROMFiles;
+using static DSPRE.RomInfo;
+
+namespace DSPRE.Graphics
+{
+    /// <summary>
+    /// Every 2D graphic in the game, in one list, with a picture of each where one can be made.
+    /// </summary>
+    public static partial class GraphicAssets
+    {
+        /// <summary>Where a person would look for something, not where the ROM keeps it.</summary>
+        public enum Group
+        {
+            PokemonSprites, PokemonIcons,
+            Trainers,
+            BattleScenery, BattleGauges, BattleIcons, BattleChrome,
+            MoveEffects,
+            Items,
+            TextAndFonts, Windows, MenuScreens,
+            Places,
+            BottomScreen,
+        }
+
+        /// <summary>How the colours for a drawing are found.</summary>
+        public enum Pairing
+        {
+            /// <summary>The colours sit in this same archive; find the nearest palette before the drawing.</summary>
+            NearestInSameArchive,
+            /// <summary>The colours are in another archive, one for one by position.</summary>
+            SameIndexInOtherArchive,
+            /// <summary>One palette in this archive serves everything in it.</summary>
+            OnePaletteForAll,
+            /// <summary>Not worked out yet; say so instead of showing wrong colours.</summary>
+            NotKnown,
+        }
+
+        public sealed class Archive
+        {
+            public DirNames Dir;
+            public string Title;
+            public Group In;
+            public string What;                 // one line, what these are for
+            public Pairing Colours = Pairing.NearestInSameArchive;
+            public DirNames? ColourArchive;     // when the colours live somewhere else
+            public DirNames? DrawingArchive;    // when the drawing a layout arranges lives somewhere else
+            public string DeepEditor;           // the editor that already knows this, if any
+            public string CannotImportBecause;  // null when a PNG can go back in
+
+            // What the games actually do with these files, where it is known.
+            public int PixelWidth;              // 0 when the drawing has to be measured instead
+            public Func<int, int> PixelWidthOf; // when the width differs entry by entry; 0 to fall back
+            public bool ScrambledPixels;        // the pixels are run through a rolling key and must be undone
+
+            /// <summary>Whether the pixels are scrambled, when that differs by game.</summary>
+            public Func<bool> ScrambledNow;
+
+            /// <summary>Whether one file is scrambled, when only some files of an archive are.</summary>
+            public Func<int, bool> ScrambledEntry;
+
+            /// <summary>Whether the key walks back from the last word, when that is not the game's usual way.</summary>
+            public Func<bool> ScrambleFromEnd;
+
+            // Several of these files hold more than one picture: a party icon is two frames of an animation
+            // stacked up, a battle sprite is two side by side.
+            public int FrameWidth, FrameHeight; // 0 for both when the file holds a single picture
+            public Func<int, int> ColourBank;   // which bank of the palette an entry uses
+            public Func<int, int> ColourEntry;  // which entry holds the colours, when the game says so
+            public Func<int, string> NameOf;    // what this entry is, in the player's words
+
+            // Most of these archives do not hold one picture per file.
+            public int LeadIn;                  // files before the run of things starts
+            public int Stride;                  // how many files make one thing; 0 means one each
+            public string[] PartNames;          // what each of those files is, in order
+
+            /// <summary>
+            /// How many files a thing takes, when that differs by game. Diamond and Pearl keep two files
+            /// a trainer class where Platinum keeps five, so a fixed number groups Platinum's wrongly.
+            /// </summary>
+            public Func<int> StrideNow;
+            public Func<string[]> PartNamesNow;
+            public string LeadInName;           // what the files before the run are, together
+
+            /// <summary>For archives whose things cannot be described by a plain run: builds them itself.</summary>
+            public Func<int, List<Unit>> BuildUnits;
+
+            /// <summary>The shiny colours for a drawing, when the archive keeps a second set. Only used
+            /// when the shiny view is asked for.</summary>
+            public Func<int, int> ShinyColourEntry;
+
+            /// <summary>The file saying how a drawing's tiles are arranged, when it needs one. </summary>
+            public Func<int, int> ArrangementEntry;
+
+            /// <summary>The cell layout whose first cell places a drawing's tiles, when one does (footprints).</summary>
+            public Func<int, int> CellPlacementEntry;
+
+        /// <summary>Which entry holds the drawing a layout arranges, when the game says so.</summary>
+        public Func<int, int> DrawingEntry;
+
+            /// <summary>Colour numbers in a bank that something outside the archive draws with, and what that is.</summary>
+            public Func<int, int, IEnumerable<(int Slot, string Who)>> AlsoUsesColours;
+
+            /// <summary>The members are Pokéwalker pictures of this size (PokewalkerImage), not Nitro files.</summary>
+            public (int Width, int Height)? Pokewalker;
+
+            /// <summary>
+            /// This archive with one layout put together from a given drawing and colours. Several drawings can share
+            /// one cell layout (the boy's and girl's bag, every type icon), and the layout's own entry names only one.
+            /// </summary>
+            public Archive WithPairing(int layout, int drawing, int colours, int bank)
+            {
+                Archive copy = (Archive)MemberwiseClone();
+                Func<int, int> drawingOf = DrawingEntry, coloursOf = ColourEntry, bankOf = ColourBank;
+                copy.DrawingEntry = i => i == layout && drawing >= 0 ? drawing : drawingOf?.Invoke(i) ?? -1;
+                copy.ColourEntry = i => i == layout && colours >= 0 ? colours : coloursOf?.Invoke(i) ?? -1;
+                copy.ColourBank = i => i == layout ? bank : bankOf?.Invoke(i) ?? 0;
+                return copy;
+            }
+        }
+
+        /// <summary>One file of a thing, and what that file is.</summary>
+        public sealed class UnitPart
+        {
+            public Archive Archive;             // usually the unit's own, but not always
+            public int Index;
+            public string Name;
+
+            private Kind? _kind;
+            /// <summary>
+            /// What this file is. Worked out from the file itself the first time it is asked for, because
+            /// parts are built in half a dozen places and only the selected row ever needs it.
+            /// </summary>
+            public Kind Kind
+            {
+                get
+                {
+                    if (_kind == null)
+                    {
+                        try { _kind = Identify(new ScriptNarc(Archive.Dir).Get(Index)); }
+                        catch (Exception ex) { AppLogger.WarnOnce("UnitPart.Kind", ex); _kind = Kind.Unknown; }
+                    }
+                    return _kind.Value;
+                }
+                set => _kind = value;
+            }
+        }
+
+        /// <summary>One thing in an archive, which is usually several files. </summary>
+        public sealed class Unit
+        {
+            public Archive Archive;
+            public string Name;
+            /// <summary>Shown when hovering the row: the DS layer it is drawn on, or why it is odd.</summary>
+            public string Tip;
+            public List<UnitPart> Parts = new();
+            /// <summary>Files gathered from across the archive, so no single file number stands for them.</summary>
+            public bool Gathered;
+            /// <summary>
+            /// The lowest file this thing occupies, which is where it starts in the archive.
+            /// </summary>
+            public int First
+            {
+                get
+                {
+                    if (Parts.Count == 0) return 0;
+                    int lowest = Parts[0].Index;
+                    foreach (UnitPart p in Parts) if (p.Index < lowest) lowest = p.Index;
+                    return lowest;
+                }
+            }
+
+            /// <summary>Which tab this row belongs on, when that is not the whole archive's tab.</summary>
+            public Group? In;
+        }
+
+        /// <summary>Pieces show in working order: the assembled picture, then the drawing, the animation and the colours.</summary>
+        public static int PartRank(string part)
+        {
+            if (part == "As it appears") return 0;
+            bool Has(string word) => part != null && part.IndexOf(word, StringComparison.OrdinalIgnoreCase) >= 0;
+            return Has("drawing") ? 1 : Has("animation") ? 2 : Has("arrangement") ? 3 : Has("colours") ? 4 : 5;
+        }
+
+        public static List<Unit> Units(Archive a, int fileCount)
+        {
+            if (a.BuildUnits != null)
+            {
+                try { return SetAsideNonPictures(a, a.BuildUnits(fileCount) ?? new List<Unit>()); }
+                catch (Exception ex) { AppLogger.Error("GraphicAssets.Units failed: " + ex.Message); }
+            }
+            if (ScreenGraphicsLayouts.For(a.Dir).Count > 0) return LayoutUnits(a, fileCount);
+            return SetAsideNonPictures(a, PlainUnits(a, fileCount));
+        }
+
+        /// <summary>What the browser does with a file that is not a picture or part of one.</summary>
+        private enum Aside { Picture, Timing, ThreeD, Data }
+
+        private static readonly Dictionary<(string Rom, DirNames Dir, int Index), Aside> _aside = new();
+
+        private static Aside AsideOf(Archive a, int index)
+        {
+            (string, DirNames, int) key = (RomInfo.WorkDir ?? "", a.Dir, index);
+            lock (_aside)
+                if (_aside.TryGetValue(key, out Aside known)) return known;
+            Aside found = Aside.Picture;
+            if (a.Pokewalker == null)
+            {
+                byte[] b = null;
+                try { b = new ScriptNarc(a.Dir).Get(index); } catch { }   // an entry that can't be read is treated as empty
+                Kind kind = Identify(b);
+                if (kind == Kind.CellAnimation) found = Aside.Timing;
+                else if (ModelAssets.Identify(b) is not (ModelAssets.Kind.NotThreeD or ModelAssets.Kind.Empty)) found = Aside.ThreeD;
+                // Fonts, colour cycles and other data: kept only when an archive's own hooks still draw them.
+                else if (kind == Kind.NotAGraphic && Render(a, index).Rgba == null) found = Aside.Data;
+            }
+            lock (_aside) _aside[key] = found;
+            return found;
+        }
+
+        /// <summary>
+        /// Rows that hold only animation timing, or data that is not a picture, become one row each at the end, where
+        /// the files can still be exported, and 3D files leave the picture list for the model browser.
+        /// </summary>
+        private static List<Unit> SetAsideNonPictures(Archive a, List<Unit> units)
+        {
+            List<Unit> kept = new(units.Count);
+            Unit timing = null, other = null;
+            foreach (Unit u in units)
+            {
+                if (u.Parts.Count != 1) { kept.Add(u); continue; }
+                UnitPart part = u.Parts[0];
+                Aside aside = AsideOf(part.Archive ?? a, part.Index);
+                if (aside == Aside.ThreeD) continue;
+                if (aside == Aside.Picture) { kept.Add(u); continue; }
+                if (aside == Aside.Data)
+                {
+                    other ??= new Unit { Archive = a, Name = "Other files", Gathered = true };
+                    part.Name = "File " + part.Index;
+                    other.Parts.Add(part);
+                    continue;
+                }
+                timing ??= new Unit { Archive = a, Name = "Animation timing", Gathered = true };
+                part.Name = "Animation timing";
+                timing.Parts.Add(part);
+            }
+            if (other != null) kept.Add(other);
+            if (timing != null) kept.Add(timing);
+            return kept;
+        }
+
+        /// <summary>
+        /// Rows for an archive whose members the games' own load code pairs up (ScreenGraphicsLayouts): each screen with
+        /// its drawing and colours, each sprite with its cells, animation and colours. What is left is listed on its own,
+        /// timing files share one row, and 3D files are left to the model browser.
+        /// </summary>
+        private static List<Unit> LayoutUnits(Archive a, int fileCount)
+        {
+            IReadOnlyList<ScreenGraphicsLayouts.Entry> entries = ScreenGraphicsLayouts.For(a.Dir);
+            List<Unit> units = new();
+            HashSet<int> used = new();
+            Unit timing = null, other = null;
+
+            UnitPart Part(Archive arc, int index, string name)
+            {
+                used.Add(index);
+                return new UnitPart { Archive = arc, Index = index, Name = name };
+            }
+            void AddPairs(Unit u, int drawing, int anim, int colours)
+            {
+                if (drawing >= 0 && drawing < fileCount) u.Parts.Add(Part(a, drawing, "Drawing"));
+                if (anim >= 0 && anim < fileCount) u.Parts.Add(Part(a, anim, "Animation"));
+                if (colours >= 0 && colours < fileCount) u.Parts.Add(Part(a, colours, "Colours"));
+            }
+            string NameAt(int index) => ScreenGraphicsLayouts.NameOf(a.Dir, index) ?? a.Title;
+            string TipAt(int index) => ScreenGraphicsLayouts.TipOf(a.Dir, index);
+
+            foreach (ScreenGraphicsLayouts.Entry e in entries)
+            {
+                if (e.Index >= fileCount || e.Kind != "NSCR") continue;
+                Unit u = new() { Archive = a, Name = NameAt(e.Index), Tip = TipAt(e.Index) };
+                u.Parts.Add(Part(a, e.Index, "As it appears"));
+                AddPairs(u, ScreenGraphicsLayouts.DrawingFor(a.Dir, e.Index), -1, ScreenGraphicsLayouts.ColoursFor(a.Dir, e.Index));
+                units.Add(u);
+            }
+
+            // Sprites sharing a cell layout differ only in their drawing, so they're named by it.
+            foreach (ScreenGraphicsLayouts.Entry e in entries)
+            {
+                if (e.Index >= fileCount || e.Kind != "NCGR" || e.Cells < 0 || e.Cells >= fileCount) continue;
+                int colours = ScreenGraphicsLayouts.ColoursFor(a.Dir, e.Index);
+                Archive shown = ScreenGraphicsLayouts.DrawingFor(a.Dir, e.Cells) == e.Index
+                    ? a : a.WithPairing(e.Cells, e.Index, colours, ScreenGraphicsLayouts.BankFor(a.Dir, e.Index));
+                Unit u = new() { Archive = a, Name = NameAt(e.Index), Tip = TipAt(e.Index) };
+                u.Parts.Add(Part(shown, e.Cells, "As it appears"));
+                AddPairs(u, e.Index, ScreenGraphicsLayouts.AnimFor(a.Dir, e.Index), colours);
+                units.Add(u);
+            }
+            foreach (ScreenGraphicsLayouts.Entry e in entries)
+            {
+                if (e.Index >= fileCount || e.Kind != "NCER" || used.Contains(e.Index) || e.Drawing < 0) continue;
+                Unit u = new() { Archive = a, Name = NameAt(e.Drawing < fileCount ? e.Drawing : e.Index), Tip = TipAt(e.Index) };
+                u.Parts.Add(Part(a, e.Index, "As it appears"));
+                AddPairs(u, e.Drawing, ScreenGraphicsLayouts.AnimFor(a.Dir, e.Index), ScreenGraphicsLayouts.ColoursFor(a.Dir, e.Index));
+                units.Add(u);
+            }
+
+            for (int i = 0; i < fileCount; i++)
+            {
+                if (used.Contains(i)) continue;
+                string kind = entries.FirstOrDefault(x => x.Index == i).Kind;
+                if (kind == null)
+                {
+                    Aside aside = AsideOf(a, i);
+                    kind = aside == Aside.Timing ? "NANR" : aside == Aside.ThreeD ? "3D" : null;
+                }
+                switch (kind)
+                {
+                    case "NANR":
+                        timing ??= new Unit { Archive = a, Name = "Animation timing", Gathered = true };
+                        timing.Parts.Add(new UnitPart { Archive = a, Index = i, Name = "Animation timing" });
+                        break;
+                    case "NCGR":
+                    {
+                        Unit u = new() { Archive = a, Name = NameAt(i) };
+                        u.Parts.Add(Part(a, i, "Drawing"));
+                        int colours = ScreenGraphicsLayouts.ColoursFor(a.Dir, i);
+                        if (colours >= 0 && colours < fileCount) u.Parts.Add(Part(a, colours, "Colours"));
+                        units.Add(u);
+                        break;
+                    }
+                    case "NCER":
+                    case "NCLR":
+                    case "NSCR":
+                    {
+                        Unit u = new() { Archive = a, Name = NameAt(i) };
+                        u.Parts.Add(Part(a, i, kind == "NCLR" ? "Colours" : "As it appears"));
+                        units.Add(u);
+                        break;
+                    }
+                    case "BMD": case "BTX": case "BTP": case "BCA": case "BTA": case "BVA": case "BMA": case "3D":
+                        break;
+                    default:
+                        if (AsideOf(a, i) == Aside.ThreeD) break;
+                        other ??= new Unit { Archive = a, Name = "Other files", Gathered = true };
+                        other.Parts.Add(new UnitPart { Archive = a, Index = i, Name = "File " + i });
+                        break;
+                }
+            }
+
+            units.Sort((x, y) => x.First.CompareTo(y.First));
+            if (other != null) units.Add(other);
+            if (timing != null) units.Add(timing);
+            return units;
+        }
+
+        private static List<Unit> PlainUnits(Archive a, int fileCount)
+        {
+            List<Unit> units = new List<Unit>();
+            if (fileCount <= 0) return units;
+
+            int stride = 0;
+            try { stride = a.StrideNow?.Invoke() ?? 0; } catch (Exception ex) { AppLogger.Warn("Graphic assets: stride: " + ex.Message); }
+            if (stride <= 0) stride = a.Stride > 0 ? a.Stride : 1;
+
+            string[] partNames = a.PartNames;
+            try { partNames = a.PartNamesNow?.Invoke() ?? a.PartNames; } catch (Exception ex) { AppLogger.Warn("Graphic assets: part names: " + ex.Message); }
+            int at = 0;
+
+            if (a.LeadIn > 0)
+            {
+                int n = Math.Min(a.LeadIn, fileCount);
+                Unit lead = new Unit { Archive = a, Name = a.LeadInName ?? "Shared pieces" };
+                for (int k = 0; k < n; k++)
+                    lead.Parts.Add(new UnitPart { Archive = a, Index = k, Name = "File " + k });
+                units.Add(lead);
+                at = n;
+            }
+
+            for (; at < fileCount; at += stride)
+            {
+                int n = Math.Min(stride, fileCount - at);
+                string name = null;
+                try { name = a.NameOf?.Invoke(at); } catch { }   // an entry without a name uses the archive's title
+                Unit u = new Unit { Archive = a, Name = name ?? a.Title };
+                for (int k = 0; k < n; k++)
+                    u.Parts.Add(new UnitPart
+                    {
+                        Archive = a, Index = at + k,
+                        Name = partNames != null && k < partNames.Length
+                            ? partNames[k] : "File " + (at + k),
+                    });
+                u.Parts.Sort((x, y) => PartRank(x.Name).CompareTo(PartRank(y.Name)));
+                units.Add(u);
+            }
+            return units;
+        }
+
+        /// <summary>Which files in the item icon archive belong to which item.</summary>
+        internal static class ItemIcons
+        {
+            /// <summary>One icon: the drawing, the colours, and every item that uses that pair.</summary>
+            internal sealed class Icon
+            {
+                public int Drawing, Colours;
+                public List<string> Items = new();
+                public string Name => Items.Count <= 1 ? Items.FirstOrDefault()
+                                    : $"{Items[0]} and {Items.Count - 1} more";
+            }
+
+            private static List<Icon> _icons;
+            private static Dictionary<int, int> _sharing;   // drawing -> how many icons use it
+            private static Dictionary<int, int> _colours;   // drawing -> a colours entry that suits it
+            private static string _builtFor;
+
+            // Every game's item icon archive starts with these two, and ends with a spare drawing and an
+            // arrow. The archive's own index names them, and they are in the same place in every game.
+            public const int AnimationFile = 0;
+            public const int LayoutFile = 1;
+
+            private static void Build()
+            {
+                string now = RomInfo.GameDirs != null && RomInfo.GameDirs.ContainsKey(DirNames.ItemIcons)
+                    ? RomInfo.GameDirs[DirNames.ItemIcons].unpackedDir : null;
+                if (_builtFor == now && _icons != null) return;
+
+                _icons = new List<Icon>();
+                _sharing = new Dictionary<int, int>();
+                _colours = new Dictionary<int, int>();
+                _builtFor = now;
+                if (now == null) return;
+
+                try
+                {
+                    string[] itemNames = RomInfo.GetItemNames();
+                    Dictionary<(int, int), Icon> byPair = new Dictionary<(int, int), Icon>();
+                    for (int item = 0; item < itemNames.Length; item++)
+                    {
+                        if (!DSPRE.ROMFiles.ItemTable.Exists(item)) continue;
+                        ItemNarcTableEntry row = DSPRE.ROMFiles.ItemTable.Read(item);
+                        int drawing = (int)row.ItemIcon;
+                        int colours = (int)row.ItemPalette;
+
+                        // Items with the same drawing and colours share a row; the same drawing in other colours gets its own.
+                        if (!byPair.TryGetValue((drawing, colours), out Icon icon))
+                        {
+                            icon = new Icon { Drawing = drawing, Colours = colours };
+                            byPair[(drawing, colours)] = icon;
+                            _icons.Add(icon);
+                            _sharing[drawing] = _sharing.TryGetValue(drawing, out int n) ? n + 1 : 1;
+                        }
+                        string name = itemNames[item]?.Trim();
+                        icon.Items.Add(string.IsNullOrEmpty(name) || name.Trim('-').Length == 0
+                                       ? "Item " + item : name);
+                        if (!_colours.ContainsKey(drawing)) _colours[drawing] = colours;
+                    }
+                }
+                catch (Exception ex) { AppLogger.Error("ItemIcons.Build failed: " + ex.Message); }
+            }
+
+            /// <summary>Every icon in the archive, in item order.</summary>
+            public static IReadOnlyList<Icon> Icons() { Build(); return _icons ?? new List<Icon>(); }
+
+            /// <summary>How many icons use this drawing, so a row can say when one is shared.</summary>
+            public static int Sharing(int drawing)
+            {
+                Build();
+                return _sharing != null && _sharing.TryGetValue(drawing, out int n) ? n : 0;
+            }
+
+            /// <summary>The drawing an item uses, from the game's own table, or -1.</summary>
+            public static int DrawingForItem(int itemId)
+            {
+                try
+                {
+                    return DSPRE.ROMFiles.ItemTable.Exists(itemId) ? (int)DSPRE.ROMFiles.ItemTable.Read(itemId).ItemIcon : -1;
+                }
+                catch (Exception ex) { AppLogger.WarnOnce("ItemIcons.DrawingForItem", ex); return -1; }
+            }
+
+            public static string NameOfEntry(int entry)
+            {
+                Build();
+                if (entry == AnimationFile) return "Item icon animation";
+                if (entry == LayoutFile) return "Item icon layout";
+                Icon icon = _icons?.FirstOrDefault(i => i.Drawing == entry);
+                return icon?.Name;
+            }
+
+            public static int ColoursFor(int entry)
+            {
+                Build();
+                return _colours != null && _colours.TryGetValue(entry, out int c) ? c : -1;
+            }
+
+            public static void Forget() { _icons = null; _sharing = null; _colours = null; _builtFor = null; }
+        }
+
+        /// <summary>The drawing an item uses, for an editor handing one over.</summary>
+        public static int DrawingForItem(int itemId) => ItemIcons.DrawingForItem(itemId);
+
+        /// <summary>Looks a name up in a list, or gives nothing when the number is off the end of it.</summary>
+        private static readonly Dictionary<(string, DirNames), int> _firstCellLayout = new();
+
+        /// <summary>The first cell layout among an archive's opening members, or -1.</summary>
+        private static int FirstCellLayout(DirNames dir)
+        {
+            (string, DirNames dir) key = (RomInfo.WorkDir ?? "", dir);
+            lock (_firstCellLayout)
+                if (_firstCellLayout.TryGetValue(key, out int known)) return known;
+            int found = -1;
+            try
+            {
+                ScriptNarc narc = new ScriptNarc(dir);
+                for (int i = 0; narc.Available && i < Math.Min(8, narc.Count) && found < 0; i++)
+                    if (Identify(narc.Get(i)) == Kind.CellLayout) found = i;
+            }
+            catch (Exception ex) { AppLogger.Warn("Graphic assets: first cell layout: " + ex.Message); }
+            lock (_firstCellLayout) _firstCellLayout[key] = found;
+            return found;
+        }
+
+        /// <summary>The footprint archive's entry for a species, or -1 when the game has none for it.</summary>
+        public static int FootprintEntry(int species)
+        {
+            int c = FirstCellLayout(DirNames.FootprintGraphics);
+            if (c < 0 || species < 0) return -1;
+            int entry = c + 1 + species;
+            return entry < new ScriptNarc(DirNames.FootprintGraphics).Count ? entry : -1;
+        }
+
+        private static (string Rom, DSPRE.ROMFiles.PokewalkerSprites Index) _pokewalker;
+
+        /// <summary>The Pokéwalker picture index for the open ROM, or null when it can't be read.</summary>
+        public static DSPRE.ROMFiles.PokewalkerSprites PokewalkerIndex()
+        {
+            string rom = (RomInfo.WorkDir ?? "") + "|" + (HgEngine.HgEngineProject.IsActive ? HgEngine.HgEngineProject.RepoRootWindows : "");
+            (string Rom, PokewalkerSprites Index) known = _pokewalker;
+            if (known.Rom == rom) return known.Index;
+            DSPRE.ROMFiles.PokewalkerSprites index = null;
+            try { index = DSPRE.ROMFiles.PokewalkerSprites.Load(new ScriptNarc(DirNames.PokewalkerSprites).Count, out _); } catch (Exception ex) { AppLogger.Warn("Pokewalker sprite index: " + ex.Message); }
+            _pokewalker = (rom, index);
+            return index;
+        }
+
+        private static string PokewalkerPictureName(int picture)
+        {
+            PokewalkerSprites index = PokewalkerIndex();
+            if (index == null || !index.Pictures.TryGetValue(picture, out PokewalkerSprites.Picture p)) return null;
+            string name = FromList(RomInfo.GetPokemonNames, p.Species) ?? $"Pokémon {p.Species}";
+            return p.Form >= 0 ? $"{name} form {p.Form + 1}" : p.Female ? $"Female {name}" : name;
+        }
+
+        private static string FromList(Func<string[]> list, int at)
+        {
+            try
+            {
+                string[] names = list();
+                if (names == null || at < 0 || at >= names.Length) return null;
+                string name = names[at]?.Trim();
+                // The games fill their unused slots with dashes. That is not a name, so fall back to
+                // saying which archive the entry is in.
+                if (string.IsNullOrEmpty(name) || name.Trim('-').Length == 0) return null;
+                return name;
+            }
+            catch (Exception ex) { AppLogger.WarnOnce("GraphicAssets.FromList", ex); return null; }
+        }
+
+        /// <summary>
+        /// The eighteen archives that hold 2D graphics, from the census in
+        /// Research/Graphics/GraphicsCensus.md.
+        /// </summary>
+        public static readonly Archive[] All =
+        {
+            // Six files per Pokémon, in the order PokemonSpriteEditorViewModel reads them.
+            new Archive { Dir = DirNames.PokemonBattleSprites, Title = "Pokémon battle sprites", In = Group.PokemonSprites,
+                What = "Front and back of every Pokémon as it appears in a battle, with its normal and shiny colours.",
+                Colours = Pairing.NearestInSameArchive, DeepEditor = "Pokémon editor",
+                ScrambledPixels = true, FrameWidth = 80, FrameHeight = 80,
+                Stride = 6,
+                PartNames = new[] { "Female back", "Male back", "Female front", "Male front",
+                                    "Colours", "Shiny colours" },
+                // All four of a Pokemon's sprites share one set of colours; the only other set is the shiny
+                // one.
+                ColourEntry = i => (i / 6) * 6 + 4,
+                ShinyColourEntry = i => (i / 6) * 6 + 5,
+                NameOf = i => FromList(RomInfo.GetPokemonNames, i / 6) },
+            // This archive is not laid out in runs: a form's two drawings sit near the front and its two
+            // sets of colours a hundred files further on.
+            new Archive { Dir = DirNames.OtherPokemonBattleSprites, Title = "Alternate form sprites", In = Group.PokemonSprites,
+                What = "Battle sprites for Pokémon's alternate forms.",
+                Colours = Pairing.NearestInSameArchive, DeepEditor = "Pokémon editor",
+                ScrambledPixels = true, FrameWidth = 80, FrameHeight = 80,
+                ColourEntry = i => AlternateFormSprites.ColoursFor(i, shiny: false),
+                ShinyColourEntry = i => AlternateFormSprites.ColoursFor(i, shiny: true),
+                NameOf = i => AlternateFormSprites.WhoOwns(i)?.Form.Name,
+                BuildUnits = count => AlternateFormSprites.UnitsFor(
+                    All.First(x => x.Dir == DirNames.OtherPokemonBattleSprites), count) },
+            // Seven shared files, then one icon per Pokemon, then eggs and forms (PokemonIconFiles).
+            new Archive { Dir = DirNames.MonIcons, Title = "Pokémon party icons", In = Group.PokemonIcons,
+                What = "The small pictures used in the party, the box and the menus.",
+                Colours = Pairing.OnePaletteForAll, DeepEditor = "Pokémon editor",
+                PixelWidth = 32, FrameWidth = 32, FrameHeight = 32,
+                ColourBank = i =>
+                {
+                    if (i < 7) return 0;
+                    try { return DSUtils.GetMonIconPaletteId(i - 7); } catch (Exception ex) { AppLogger.WarnOnce("GraphicAssets.?", ex); return 0; }
+                },
+                NameOf = i =>
+                {
+                    PokemonIconFiles.Icon icon = DSPRE.ROMFiles.PokemonIconFiles.Describe(i);
+                    if (icon == null) return null;
+                    try { return DSPRE.ROMFiles.PokemonIconFiles.Label(icon, RomInfo.GetPokemonNames()); }
+                    catch (Exception ex) { AppLogger.WarnOnce("GraphicAssets.?", ex); return DSPRE.ROMFiles.PokemonIconFiles.Label(icon, null); }
+                },
+                BuildUnits = n => GraphicUnits.PartyIcons(All.First(x => x.Dir == DirNames.MonIcons), n) },
+
+            new Archive { Dir = DirNames.TrainerGraphics, Title = "Trainer sprites", In = Group.Trainers,
+                What = "Every trainer class as it appears when a battle starts.",
+                DeepEditor = "Trainer sprite editor",
+                Stride = 5,
+                PartNames = new[] { "Drawing", "Colours", "As it appears", "Animation", "Still picture" },
+                StrideNow = () => TrainerGraphicsLayout.Stride,
+                ScrambledNow = () => TrainerGraphicsLayout.PixelsAreScrambled,
+                // Platinum and HGSS scramble only the still picture, and HGSS keys it from the end like DP.
+                ScrambledEntry = i => TrainerGraphicsLayout.PixelsAreScrambled
+                    || (TrainerGraphicsLayout.HasCells && TrainerGraphicsLayout.ScanEntry(TrainerGraphicsLayout.ClassOf(i)) == i),
+                ScrambleFromEnd = () => TrainerGraphicsLayout.ScanScrambledFromEnd,
+                PartNamesNow = () => TrainerGraphicsLayout.HasCells
+                    ? new[] { "Drawing", "Colours", "As it appears", "Animation", "Still picture" }
+                    : new[] { "Drawing", "Colours" },
+                ColourEntry = i => TrainerGraphicsLayout.ColoursEntry(TrainerGraphicsLayout.ClassOf(i)),
+                DrawingEntry = i => TrainerGraphicsLayout.DrawingEntry(TrainerGraphicsLayout.ClassOf(i)),
+                NameOf = i => FromList(RomInfo.GetTrainerClassNames, TrainerGraphicsLayout.ClassOf(i)) },
+            new Archive { Dir = DirNames.TrainerBackGraphics, Title = "Trainer back sprites", In = Group.Trainers,
+                What = "The player and partners seen from behind, throwing a Poké Ball.",
+                DeepEditor = "Trainer back sprite editor",
+                Stride = 5,
+                PartNames = new[] { "Drawing", "Colours", "As it appears", "Animation", "Still picture" },
+                StrideNow = () => TrainerGraphicsLayout.Stride,
+                ScrambledNow = () => TrainerGraphicsLayout.PixelsAreScrambled,
+                // Platinum and HGSS scramble only the still picture, and HGSS keys it from the end like DP.
+                ScrambledEntry = i => TrainerGraphicsLayout.PixelsAreScrambled
+                    || (TrainerGraphicsLayout.HasCells && TrainerGraphicsLayout.ScanEntry(TrainerGraphicsLayout.ClassOf(i)) == i),
+                ScrambleFromEnd = () => TrainerGraphicsLayout.ScanScrambledFromEnd,
+                PartNamesNow = () => TrainerGraphicsLayout.HasCells
+                    ? new[] { "Drawing", "Colours", "As it appears", "Animation", "Still picture" }
+                    : new[] { "Drawing", "Colours" },
+                ColourEntry = i => TrainerGraphicsLayout.ColoursEntry(TrainerGraphicsLayout.ClassOf(i)),
+                DrawingEntry = i => TrainerGraphicsLayout.DrawingEntry(TrainerGraphicsLayout.ClassOf(i)),
+                NameOf = i => DSPRE.ROMFiles.TrainerBackSprites.Names(TrainerGraphicsLayout.ClassOf(i) + 1)[TrainerGraphicsLayout.ClassOf(i)] },
+            new Archive { Dir = DirNames.TrainerCardGraphics, Title = "Trainer card", In = Group.Trainers,
+                What = "The trainer card's face and back, and the poses drawn on it.",
+                DrawingEntry = GraphicUnits.TrainerCardDrawingFor,
+                ColourEntry = GraphicUnits.TrainerCardColoursFor,
+                BuildUnits = n => GraphicUnits.TrainerCard(
+                    All.First(x => x.Dir == DirNames.TrainerCardGraphics), n) },
+
+            new Archive { Dir = DirNames.EncounterEffectGraphics, Title = "Battle intros", In = Group.Trainers,
+                What = "The faces, banners, frames and VS mark shown when a special trainer battle starts.",
+                DeepEditor = "VS intro editor",
+                // Sets keep their palette next to the drawing, before it or, in HGSS banners, after it.
+                ColourEntry = i =>
+                {
+                    ScriptNarc narc = new ScriptNarc(DirNames.EncounterEffectGraphics);
+                    bool Palette(int k) => k >= 0 && k < narc.Count && Identify(narc.Get(k)) == Kind.Palette;
+                    // A layout or animation uses its set's palette, which sits beside the set's drawing.
+                    int at = i;
+                    Kind kind = Identify(narc.Get(i));
+                    if (kind == Kind.CellLayout || kind == Kind.CellAnimation)
+                        for (int k = i - 1; k >= 0 && k >= i - 3; k--)
+                            if (Identify(narc.Get(k)) == Kind.TileGraphic) { at = k; break; }
+                    return Palette(at - 1) ? at - 1 : Palette(at + 1) ? at + 1 : -1;
+                } },
+
+            new Archive { Dir = DirNames.BattleBg, Title = "Battle backgrounds", In = Group.BattleScenery,
+                What = "The scenery behind a battle, and the sweeping backgrounds some moves put up.",
+                ColourEntry = GraphicUnits.BackdropColours,
+                ColourBank = GraphicUnits.PanelBank,
+                DrawingEntry = GraphicUnits.PanelDrawing,
+                ArrangementEntry = GraphicUnits.BackdropArrangement,
+                NameOf = GraphicUnits.BackdropName,
+                BuildUnits = n => GraphicUnits.BattleBackdrops(All.First(x => x.Dir == DirNames.BattleBg), n) },
+            new Archive { Dir = DirNames.BattleObj, Title = "Battle objects", In = Group.BattleScenery,
+                What = "The ground the Pokémon stand on, the HP bars, the name boxes and the rest of the "
+                     + "battle screen.",
+                ColourEntry = BattleObjects.ColoursFor,
+                DrawingEntry = BattleObjects.DrawingFor,
+                ColourBank = BattleObjects.ColourBankFor,
+                PixelWidthOf = BattleObjects.WidthFor,
+                NameOf = BattleObjects.NameOf,
+                AlsoUsesColours = BattleObjects.AlsoUsesColours,
+                BuildUnits = n => BattleObjects.Units(All.First(x => x.Dir == DirNames.BattleObj), n) },
+            new Archive { Dir = DirNames.BattleBgPlanm, Title = "Battle background colour cycles", In = Group.BattleChrome,
+                What = "Colour changes played over a battle background. HeartGold and SoulSilver only.",
+                Colours = Pairing.NotKnown,
+                // A name per entry, so the 31 rows don't all read the archive's title.
+                NameOf = i => "Colour cycle " + i,
+                CannotImportBecause = "These are lists of colour changes played over a background, not pictures. "
+                                    + "There is nothing here to put a PNG in place of." },
+
+            new Archive { Dir = DirNames.WazaEffectChar, Title = "Move effect drawings", In = Group.MoveEffects,
+                What = "The flat drawings a move animation puts on the screen.",
+                Colours = Pairing.SameIndexInOtherArchive, ColourArchive = DirNames.WazaEffectPltt,
+                BuildUnits = n => GraphicUnits.MoveEffects(All.First(x => x.Dir == DirNames.WazaEffectChar), n) },
+            new Archive { Dir = DirNames.WazaEffectPltt, Title = "Move effect colours", In = Group.MoveEffects,
+                What = "The colours the move effect drawings are painted with." },
+            new Archive { Dir = DirNames.WazaEffectCell, Title = "Move effect layouts", In = Group.MoveEffects,
+                What = "How the move effect drawings are cut up and placed on screen.",
+                Colours = Pairing.SameIndexInOtherArchive, ColourArchive = DirNames.WazaEffectPltt,
+                DrawingArchive = DirNames.WazaEffectChar,
+                CannotImportBecause = "This is the arrangement of the pieces, not a picture of them. Edit the "
+                                    + "drawing it arranges instead." },
+            new Archive { Dir = DirNames.WazaEffectCellAnm, Title = "Move effect animations", In = Group.MoveEffects,
+                What = "The order and timing the move effect layouts are shown in.",
+                Colours = Pairing.NotKnown,
+                CannotImportBecause = "This is timing, not a picture. There is nothing here a PNG could replace." },
+
+            // The game holds a table saying which drawing and which colours each item uses, so neither has
+            // to be guessed at. See DSUtils.GetItemPicRaw for the same table read the same way.
+            new Archive { Dir = DirNames.ItemIcons, Title = "Item icons", In = Group.Items,
+                What = "The picture of every item as it appears in the bag.",
+                Colours = Pairing.NearestInSameArchive, DeepEditor = "Item editor",
+                NameOf = i => ItemIcons.NameOfEntry(i),
+                ColourEntry = i => ItemIcons.ColoursFor(i),
+                BuildUnits = n => GraphicUnits.ItemIcons(All.First(x => x.Dir == DirNames.ItemIcons), n) },
+            new Archive { Dir = DirNames.Fonts, Title = "Fonts", In = Group.TextAndFonts,
+                What = "The letters the game writes text with.",
+                NameOf = i => NamedArchives.NameOf(DirNames.Fonts, i),
+                ColourEntry = i => NamedArchives.ColoursFor(DirNames.Fonts, i),
+                BuildUnits = n => NamedArchives.Units(All.First(x => x.Dir == DirNames.Fonts), n) },
+            new Archive { Dir = DirNames.WindowFrames, Title = "Text box frames", In = Group.Windows,
+                What = "The borders drawn around text boxes and menus. The cursors take the colours of the box they "
+                     + "appear in, so the colours shown here are a stand-in.",
+                ColourEntry = i => GraphicUnits.WindowFrameColours(i),
+                BuildUnits = n => GraphicUnits.WindowFrames(All.First(x => x.Dir == DirNames.WindowFrames), n) },
+            // Left ungrouped on purpose.
+            new Archive { Dir = DirNames.SynthOverlay, Title = "Map screen overlay", In = Group.Windows,
+                What = "Pieces drawn over the map screen. In Diamond, Pearl and Platinum this is the weather.",
+                DeepEditor = "Header editor" },
+            new Archive { Dir = DirNames.WeatherGraphics, Title = "Weather", In = Group.Windows,
+                What = "The weather drawn over the map screen.",
+                DeepEditor = "Header editor" },
+            // One drawing and its colours per banner style, numbered one below the header's area icon.
+            new Archive { Dir = DirNames.AreaWindowGraphics, Title = "Location banner", In = Group.Places,
+                What = "The banner shown when you walk into a new place.", DeepEditor = "Header editor",
+                ColourEntry = i => i | 1,
+                BuildUnits = n => GraphicUnits.AreaWindows(All.First(x => x.Dir == DirNames.AreaWindowGraphics), n) },
+
+            // Seal stickers share one set of colours; the capsule screens have their own.
+            new Archive { Dir = DirNames.SealGraphics, Title = "Ball capsules", In = Group.Items,
+                What = "The seals stuck on a Ball Capsule and the screens they are placed on.",
+                DeepEditor = "Ball capsules",
+                BuildUnits = n => GraphicUnits.SealGraphics(All.First(x => x.Dir == DirNames.SealGraphics), n),
+                ColourEntry = i => GameFamily == GameFamilies.HGSS ? (i is >= 39 and <= 119 ? 6 : -1)
+                                 : i is >= 184 and <= 264 ? 293 : i == 267 ? 287 : i is 268 or 269 ? 288 : -1 },
+
+            new Archive { Dir = DirNames.DungeonCutinGraphics, Title = "Place splash screens", In = Group.Places,
+                BuildUnits = n => DungeonCutinUnits.UnitsFor(
+                    All.First(x => x.Dir == DirNames.DungeonCutinGraphics), n),
+                What = "The picture shown when you enter a dungeon. HeartGold and SoulSilver only." },
+
+            // What is on the bottom screen while you walk around. The nearest-palette rule lands right
+            // for both of the HGSS archives: the cursor's own colours sit immediately before it.
+            new Archive { Dir = DirNames.FieldTouchMenu, Title = "Field touch menu", In = Group.BottomScreen,
+                What = "The menu panel on the bottom screen while you walk around, with its seven icons, "
+                     + "the registered item slots, the running shoes and the A button. "
+                     + "HeartGold and SoulSilver only.",
+                DeepEditor = "Bottom screen" },
+
+            new Archive { Dir = DirNames.FieldTouchChoices, Title = "Field touch choices", In = Group.BottomScreen,
+                What = "The Poké Ball screen a script puts up to ask a question on the bottom screen, with "
+                     + "its yes/no and list arrangements and the red frame around the answer. "
+                     + "HeartGold and SoulSilver only.",
+                DeepEditor = "Bottom screen" },
+
+            new Archive { Dir = DirNames.Poketch, Title = "Pokétch", In = Group.BottomScreen,
+                What = "The Pokétch on the bottom screen: its casing in both colours, every application's "
+                     + "screen and sprites, and the Poké Ball picture shown before you are given one. "
+                     + "Diamond, Pearl and Platinum.",
+                DeepEditor = "Bottom screen",
+                // Nearly everything here is painted with the theme colours in member 0, which is nowhere
+                // near the drawing, so the nearest-palette rule would pick up the wrong ones.
+                ColourEntry = PoketchApps.ColoursFor,
+                ArrangementEntry = PoketchApps.ArrangementFor },
+
+            new Archive { Dir = DirNames.PartyMenuGraphics, Title = "Party", In = Group.MenuScreens,
+                What = "The party screen: its backgrounds, the Pokémon panels, buttons and status icons.", DeepEditor = "Screens" },
+            new Archive { Dir = DirNames.BoxGraphics, Title = "PC boxes", In = Group.MenuScreens,
+                What = "The PC box screens: their panels, the box wallpapers and the box buttons.", DeepEditor = "Screens" },
+            new Archive { Dir = DirNames.OptionsGraphics, Title = "Options", In = Group.MenuScreens,
+                What = "The options screen's background and cursor bar.", DeepEditor = "Screens" },
+            new Archive { Dir = DirNames.NameInputGraphics, Title = "Naming screen", In = Group.MenuScreens,
+                What = "The naming screen's backdrop, keys and sprites.", DeepEditor = "Screens" },
+            new Archive { Dir = DirNames.StartMenuGraphics, Title = "Start menu", In = Group.MenuScreens,
+                What = "The start menu's icons and cursor. Platinum.", DeepEditor = "Screens" },
+            new Archive { Dir = DirNames.PokegearGraphics, Title = "Pokégear", In = Group.MenuScreens,
+                What = "The Pokégear's frame and app buttons, six skins each. HeartGold and SoulSilver.", DeepEditor = "Screens" },
+            new Archive { Dir = DirNames.PokegearPhoneGraphics, Title = "Pokégear phone", In = Group.MenuScreens,
+                What = "The Pokégear phone's screens and sprites.", DeepEditor = "Screens" },
+            new Archive { Dir = DirNames.PokegearRadioGraphics, Title = "Pokégear radio", In = Group.MenuScreens,
+                What = "The Pokégear radio's screens and sprites.", DeepEditor = "Screens" },
+            new Archive { Dir = DirNames.MainMenuGraphics, Title = "Main menu", In = Group.MenuScreens,
+                What = "The main menu's scroll arrows and wireless icons. In Platinum also the Mystery Gift screens.", DeepEditor = "Screens" },
+            new Archive { Dir = DirNames.TouchYesNoGraphics, Title = "Touch Yes and No", In = Group.MenuScreens,
+                What = "The touch Yes and No buttons used by menus. HeartGold and SoulSilver only.", DeepEditor = "Screens" },
+            new Archive { Dir = DirNames.TouchListGraphics, Title = "Touch list menus", In = Group.MenuScreens,
+                What = "The button frames of touch list menus, like the Pokégear phone's. HeartGold and SoulSilver only.", DeepEditor = "Screens" },
+            new Archive { Dir = DirNames.PokegearMapGraphics, Title = "Pokégear map", In = Group.MenuScreens,
+                What = "The Pokégear map: the region map, its frame and the place pictures.", DeepEditor = "Screens" },
+
+            new Archive { Dir = DirNames.BagGraphics, Title = "Bag", In = Group.Items,
+                What = "The bag screen: the bag itself, its pockets and the item list.",
+                NameOf = i => ScreenGraphicsLayouts.NameOf(DirNames.BagGraphics, i),
+                DrawingEntry = i => ScreenGraphicsLayouts.DrawingFor(DirNames.BagGraphics, i),
+                ColourEntry = i => ScreenGraphicsLayouts.ColoursFor(DirNames.BagGraphics, i),
+                ColourBank = i => ScreenGraphicsLayouts.BankFor(DirNames.BagGraphics, i),
+                ArrangementEntry = i => ScreenGraphicsLayouts.ArrangementFor(DirNames.BagGraphics, i) },
+            // One palette, layout and animation first, then a footprint per Pokemon.
+            new Archive { Dir = DirNames.FootprintGraphics, Title = "Footprints", In = Group.PokemonIcons,
+                What = "Each Pokémon's footprint, shown in the Pokédex and on the summary screen.",
+                Colours = Pairing.OnePaletteForAll,
+                CellPlacementEntry = _ => FirstCellLayout(DirNames.FootprintGraphics),
+                // After the colours, animation and cell layout comes one drawing per species, from species 0.
+                NameOf = i => { int c = FirstCellLayout(DirNames.FootprintGraphics); return c >= 0 && i > c ? FromList(RomInfo.GetPokemonNames, i - c - 1) : null; } },
+            new Archive { Dir = DirNames.PokedexGraphics, Title = "Pokédex", In = Group.MenuScreens,
+                What = "The Pokédex screens: backgrounds, buttons, type icons and the sprites on them.",
+                NameOf = i => ScreenGraphicsLayouts.NameOf(DirNames.PokedexGraphics, i),
+                DrawingEntry = i => ScreenGraphicsLayouts.DrawingFor(DirNames.PokedexGraphics, i),
+                ColourEntry = i => ScreenGraphicsLayouts.ColoursFor(DirNames.PokedexGraphics, i),
+                ColourBank = i => ScreenGraphicsLayouts.BankFor(DirNames.PokedexGraphics, i),
+                ArrangementEntry = i => ScreenGraphicsLayouts.ArrangementFor(DirNames.PokedexGraphics, i) },
+            new Archive { Dir = DirNames.SummaryGraphics, Title = "Summary screen", In = Group.MenuScreens,
+                What = "The Pokémon summary pages: backgrounds, balls, markings, ribbons and the sprites on them.",
+                NameOf = i => ScreenGraphicsLayouts.NameOf(DirNames.SummaryGraphics, i),
+                DrawingEntry = i => ScreenGraphicsLayouts.DrawingFor(DirNames.SummaryGraphics, i),
+                ColourEntry = i => ScreenGraphicsLayouts.ColoursFor(DirNames.SummaryGraphics, i),
+                ColourBank = i => ScreenGraphicsLayouts.BankFor(DirNames.SummaryGraphics, i),
+                ArrangementEntry = i => ScreenGraphicsLayouts.ArrangementFor(DirNames.SummaryGraphics, i) },
+            new Archive { Dir = DirNames.SummarySprites, Title = "Summary screen sprites", In = Group.MenuScreens,
+                What = "The summary screen's ball cells, markings, arrows and other sprites. HeartGold and SoulSilver only." },
+            new Archive { Dir = DirNames.OpeningDemoGraphics, Title = "Opening movie", In = Group.Places,
+                What = "The pictures in the opening movie. HeartGold and SoulSilver only.",
+                NameOf = i => ScreenGraphicsLayouts.NameOf(DirNames.OpeningDemoGraphics, i),
+                DrawingEntry = i => ScreenGraphicsLayouts.DrawingFor(DirNames.OpeningDemoGraphics, i),
+                ColourEntry = i => ScreenGraphicsLayouts.ColoursFor(DirNames.OpeningDemoGraphics, i),
+                ColourBank = i => ScreenGraphicsLayouts.BankFor(DirNames.OpeningDemoGraphics, i),
+                ArrangementEntry = i => ScreenGraphicsLayouts.ArrangementFor(DirNames.OpeningDemoGraphics, i) },
+            new Archive { Dir = DirNames.PokewalkerSprites, Title = "Pokéwalker Pokémon", In = Group.PokemonIcons,
+                What = "The Pokémon on the Pokéwalker's screen, two frames each. Four shades of grey.",
+                Pokewalker = (DSPRE.ROMFiles.PokewalkerImage.SpriteWidth, DSPRE.ROMFiles.PokewalkerImage.SpriteHeight),
+                NameOf = PokewalkerPictureName },
+            new Archive { Dir = DirNames.PokewalkerIcons, Title = "Pokéwalker icons", In = Group.PokemonIcons,
+                What = "The Pokéwalker's small pictures, two frames each. Four shades of grey.",
+                Pokewalker = (DSPRE.ROMFiles.PokewalkerImage.IconWidth, DSPRE.ROMFiles.PokewalkerImage.IconHeight),
+                // The same order as the party icons, without their first entries.
+                NameOf = i => RomInfo.PokewalkerIconLeadIn < 0 ? null
+                    : All.First(x => x.Dir == DirNames.MonIcons).NameOf?.Invoke(i + RomInfo.PokewalkerIconLeadIn) },
+        };
+
+        // ── reading ────────────────────────────────────────────────────────────────────────────────
+
+        /// <summary>What one file in an archive is, from its own first four bytes.</summary>
+        public enum Kind { Unknown, Palette, TileGraphic, TileMap, CellLayout, CellAnimation, Empty, NotAGraphic }
+
+        public static Kind Identify(byte[] b)
+        {
+            if (b == null || b.Length == 0) return Kind.Empty;
+            byte[] d = b;
+            if (b.Length > 4 && (b[0] == 0x10 || b[0] == 0x11))
+            {
+                try { byte[] u = NitroBgCodec.Inflate(b, probing: true); if (u != null && u.Length >= 4) d = u; } catch { }   // data that doesn't inflate is identified as it is stored
+            }
+            if (d.Length < 4) return Kind.Empty;
+            switch (System.Text.Encoding.ASCII.GetString(d, 0, 4))
+            {
+                case "RLCN": return Kind.Palette;
+                case "RGCN": return Kind.TileGraphic;
+                case "RCSN": return Kind.TileMap;
+                case "RECN": return Kind.CellLayout;
+                case "RNAN": return Kind.CellAnimation;
+                default: return Kind.NotAGraphic;
+            }
+        }
+
+        /// <summary>A picture of one entry, or the reason there is not one.</summary>
+        public sealed class Preview
+        {
+            public byte[] Rgba;      // width*height*4, null when there is no picture
+            public int Width, Height;
+            public string Whynot;    // set when Rgba is null
+            public Kind Kind;
+        }
+
+        /// <summary>Decompresses a file if it's compressed, as every move effect archive is; the reader can't read it otherwise.</summary>
+        public static byte[] Unsqueeze(byte[] b)
+        {
+            if (b == null || b.Length < 5) return b;
+            if (b[0] != 0x10 && b[0] != 0x11) return b;
+            try { byte[] u = NitroBgCodec.Inflate(b); return u != null && u.Length >= 4 ? u : b; }
+            catch (Exception ex) { AppLogger.WarnOnce("GraphicAssets.Unsqueeze", ex); return b; }
+        }
+
+        /// <summary>Squeezes a file back down the way the game stores it. </summary>
+        public static byte[] Squeeze(byte[] plain, byte marker)
+        {
+            if (plain == null || plain.Length == 0 || marker != 0x10) return null;
+            try
+            {
+                byte[] squeezed = DSPRE.ROMFiles.Lz77.Compress(plain);
+                if (squeezed == null || squeezed.Length < 5 || squeezed[0] != 0x10) return null;
+                if (!DSPRE.ROMFiles.Lz77.EndsAtDeclaredSize(squeezed)) return null;
+                // Never hand back something that will not come out again as what went in.
+                byte[] check = NitroBgCodec.Inflate(squeezed);
+                return check != null && check.Length == plain.Length && check.SequenceEqual(plain)
+                    ? squeezed : null;
+            }
+            catch (Exception ex) { AppLogger.Error("GraphicAssets.Squeeze failed: " + ex.Message); return null; }
+        }
+
+        /// <summary>How a file is compressed, or zero when it isn't.</summary>
+        public static byte SqueezeMarker(byte[] b)
+            => b != null && b.Length > 4 && (b[0] == 0x10 || b[0] == 0x11) ? b[0] : (byte)0;
+
+        /// <summary>Draws a palette as a grid of its colours, which is the only sensible picture of one.</summary>
+        private static Preview PaletteSwatch(byte[] pal)
+        {
+            (byte r, byte g, byte b)[] colours = NitroBgCodec.ReadPalette(Unsqueeze(pal), out int count);
+            if (colours == null || count == 0)
+                return new Preview { Whynot = "Unreadable palette", Kind = Kind.Palette };
+            const int cell = 12, across = 16;
+            int rows = (count + across - 1) / across;
+            int w = across * cell, h = Math.Max(1, rows) * cell;
+            byte[] rgba = new byte[w * h * 4];
+            for (int i = 0; i < count; i++)
+            {
+                (byte r, byte g, byte b) c = colours[i];
+                int cx = (i % across) * cell, cy = (i / across) * cell;
+                for (int y = 0; y < cell; y++)
+                    for (int x = 0; x < cell; x++)
+                    {
+                        int o = ((cy + y) * w + cx + x) * 4;
+                        rgba[o] = c.r; rgba[o + 1] = c.g; rgba[o + 2] = c.b; rgba[o + 3] = 255;
+                    }
+            }
+            return new Preview { Rgba = rgba, Width = w, Height = h, Kind = Kind.Palette };
+        }
+
+        // Where the colours sit in each archive.
+        private static readonly Dictionary<(string Rom, DirNames Dir), List<int>> _paletteIndexes = new();
+
+        private static string OpenGame => (RomInfo.RomID ?? "") + "|" + (RomInfo.WorkDir ?? "");
+
+        private static List<int> PaletteIndexes(DirNames dir, ScriptNarc narc)
+        {
+            (string OpenGame, DirNames dir) key = (OpenGame, dir);
+            lock (_paletteIndexes)
+            {
+                if (_paletteIndexes.TryGetValue(key, out List<int> cached)) return cached;
+                List<int> found = new List<int>();
+                int n = narc.Count;
+                for (int i = 0; i < n; i++)
+                {
+                    byte[] b = narc.Get(i);
+                    if (b != null && Identify(b) == Kind.Palette) found.Add(i);
+                }
+                _paletteIndexes[key] = found;
+                return found;
+            }
+        }
+
+        /// <summary>Forgets where the colours were, for when a different game is opened.</summary>
+        public static void Forget()
+        {
+            lock (_paletteIndexes) _paletteIndexes.Clear();
+            lock (_aside) _aside.Clear();
+            ItemIcons.Forget();
+        }
+
+        /// <summary>The colours to paint entry <paramref name="index"/> with, following the archive's rule.</summary>
+        private static byte[] FindColours(Archive a, ScriptNarc narc, int index, bool shiny = false)
+        {
+            // A file the game itself names beats any rule about where colours usually sit.
+            int told = shiny && a.ShinyColourEntry != null
+                ? a.ShinyColourEntry(index)
+                : a.ColourEntry?.Invoke(index) ?? -1;
+            if (told >= 0)
+            {
+                byte[] b = narc.Get(told);
+                if (b != null && Identify(b) == Kind.Palette) return b;
+            }
+
+            switch (a.Colours)
+            {
+                case Pairing.SameIndexInOtherArchive:
+                    if (a.ColourArchive == null) return null;
+                    ScriptNarc other = new ScriptNarc(a.ColourArchive.Value);
+                    return other.Available ? other.Get(index) : null;
+
+                case Pairing.OnePaletteForAll:
+                {
+                        // One set of colours at the very start serves the whole archive.
+                        byte[] first = narc.Get(0);
+                    if (first != null && Identify(first) == Kind.Palette) return first;
+                    return null;
+                }
+
+                case Pairing.NearestInSameArchive:
+                {
+                        // The closest palette to the drawing anywhere in the archive.
+                        List<int> palettes = PaletteIndexes(a.Dir, narc);
+                    if (palettes.Count == 0) return null;
+                    int best = -1, bestGap = int.MaxValue;
+                    foreach (int i in palettes)
+                    {
+                        int gap = Math.Abs(i - index);
+                        // prefer the one before, which is how these archives are usually laid out
+                        if (i < index) gap = gap * 2 - 1;
+                        if (gap < bestGap) { bestGap = gap; best = i; }
+                    }
+                    return best >= 0 ? narc.Get(best) : null;
+                }
+                default: return null;
+            }
+        }
+
+        /// <summary>The drawing that a layout or a tile map arranges: the nearest one before it, else after.</summary>
+        private static byte[] FindDrawing(ScriptNarc narc, int index)
+        {
+            int at = FindDrawingIndex(narc, index);
+            return at >= 0 ? narc.Get(at) : null;
+        }
+
+        // The nearest drawing to a layout, before it first: how sets of palette, tiles and cells are usually laid out.
+        private static int FindDrawingIndex(ScriptNarc narc, int index)
+        {
+            for (int i = index - 1; i >= 0 && i > index - 64; i--)
+            {
+                byte[] b = narc.Get(i);
+                if (b != null && Identify(b) == Kind.TileGraphic) return i;
+            }
+            for (int i = index + 1; i < index + 64; i++)
+            {
+                byte[] b = narc.Get(i);
+                if (b == null) break;
+                if (Identify(b) == Kind.TileGraphic) return i;
+            }
+            return -1;
+        }
+
+
+        /// <summary>
+        /// Puts a painted picture of an assembled sprite back into the tiles it is drawn from.
+        /// </summary>
+        public static string PutAssembledBack(Archive a, int layoutIndex, byte[] painted, int width, int height)
+        {
+            ScriptNarc narc = new ScriptNarc(a.Dir);
+            if (!narc.Available) return "This game doesn't have this archive.";
+
+            byte[] raw = narc.Get(layoutIndex);
+            if (raw == null || Identify(raw) != Kind.CellLayout)
+                return "This entry isn't a layout, so there is no assembled picture to put back.";
+
+            int drawingAt = -1;
+            try { drawingAt = a.DrawingEntry?.Invoke(layoutIndex) ?? -1; } catch { }
+            // Where the game's pairing is not known, the drawing the picture was shown with is the one written.
+            if (drawingAt < 0 && a.DrawingArchive == null) drawingAt = FindDrawingIndex(narc, layoutIndex);
+            byte[] drawing = drawingAt >= 0 ? narc.Get(drawingAt) : null;
+            if (drawing == null)
+                return "The drawing this layout arranges isn't known, so it can't be put back.";
+            if (drawingAt < 0) return "The drawing this layout arranges isn't known, so it can't be put back.";
+
+            byte[] pal = FindColours(a, narc, layoutIndex, false);
+            if (pal == null) return "No colours could be found for this sprite.";
+
+            // The drawing may be compressed: edit it decompressed and compress it again, as for a flat drawing.
+            byte drawMarker = SqueezeMarker(drawing);
+            if (drawMarker == 0x11)
+                return "This drawing uses a compression DSPRE can't write yet, so nothing was changed.";
+            byte[] openDrawing = drawMarker != 0 ? Unsqueeze(drawing) : drawing;
+
+            try
+            {
+                NcerFile ncer = NcerFile.Read(Unsqueeze(raw));
+                if (ncer == null || ncer.Cells.Count == 0) return "This layout has no pieces in it.";
+                ushort[] colours = NitroBgCodec.ReadColours(Unsqueeze(pal));
+
+                // Draw it once to find the crop, so the pieces go back against the full canvas.
+                RawImage whole = CellRenderer.Draw(ncer, 0, openDrawing, colours, CellCanvas, CellCanvas);
+                if (whole.IsEmpty) return "This sprite couldn't be put together.";
+                (byte[] _, int shownW, int shownH) = CropToPieces(ToRgba(whole), whole.Width, whole.Height, ncer.Cells[0],
+                                                       out int cutLeft, out int cutTop);
+
+                // The picture has to be the one this sprite is drawn at, or every piece would be read
+                // from the wrong place and the edit would land somewhere else entirely.
+                if (width != shownW || height != shownH)
+                    return $"This sprite is {shownW} by {shownH} and that picture is {width} by {height}. "
+                         + "Save this one first and paint over what comes out.";
+
+                string why = CellDecompose.PutBack(ncer, 0, openDrawing, colours, painted, width, height,
+                                                  out byte[] outp, CellCanvas, cutLeft, cutTop);
+                if (why != null) return why;
+
+                if (drawMarker != 0)
+                {
+                    byte[] packed = Squeeze(outp, drawMarker);
+                    if (packed == null)
+                        return "This drawing couldn't be compressed again, so nothing was changed.";
+                    outp = packed;
+                }
+
+                narc.Put(drawingAt, outp);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("GraphicAssets.PutAssembledBack: " + ex.Message);
+                return "This sprite couldn't be put back.";
+            }
+        }
+
+
+        /// <summary>
+        /// Puts a painted picture of a whole background back into the tiles it is drawn from.
+        /// </summary>
+        /// <param name="drawingIndex">The background's drawing. Several backgrounds share one arrangement, so the drawing
+        /// identifies the background.</param>
+        public static string PutBackgroundBack(Archive a, int drawingIndex, byte[] painted,
+                                               int width, int height, out int changed, out int shared,
+                                               out int fought)
+        {
+            changed = 0; shared = 0; fought = 0;
+
+            ScriptNarc narc = new ScriptNarc(a.Dir);
+            if (!narc.Available) return "This game doesn't have this archive.";
+
+            int drawingAt = drawingIndex;
+            byte[] drawing = narc.Get(drawingAt);
+            if (drawing == null || Identify(drawing) != Kind.TileGraphic)
+                return "This entry isn't a drawing, so there is no background to put back.";
+
+            int arrangementAt = -1;
+            try { arrangementAt = a.ArrangementEntry?.Invoke(drawingIndex) ?? -1; } catch { }   // without the game's pairing there is no arrangement to put back
+            byte[] scr = arrangementAt >= 0 ? narc.Get(arrangementAt) : null;
+            if (scr == null)
+                return "The arrangement this drawing is laid out by isn't known, so it can't be put back.";
+
+            byte[] pal = FindColours(a, narc, drawingIndex, false);
+            if (pal == null) return "No colours could be found for this background.";
+
+            byte marker = SqueezeMarker(drawing);
+            if (marker == 0x11)
+                return "This drawing uses a compression DSPRE can't write yet, so nothing was changed.";
+            byte[] open = marker != 0 ? Unsqueeze(drawing) : drawing;
+
+            BackgroundDecompose.Result it = BackgroundDecompose.PutBack(open, Unsqueeze(pal), Unsqueeze(scr),
+                                                 painted, width, height);
+            if (it.Whynot != null) return it.Whynot;
+            if (it.Tiles == null) return "This background couldn't be taken apart.";
+
+            changed = it.SquaresChanged;
+            shared = it.SquaresSharingATile;
+            fought = it.PixelsPaintedTwoWays;
+
+            byte[] outp = it.Tiles;
+            if (marker != 0)
+            {
+                byte[] packed = Squeeze(outp, marker);
+                if (packed == null)
+                    return "This drawing couldn't be compressed again, so nothing was changed.";
+                outp = packed;
+            }
+
+            narc.Put(drawingAt, outp);
+            return null;
+        }
+
+        /// <summary>Female-only species leave the male file empty, so this falls back to the female drawing.</summary>
+        public static (int Index, Preview Picture, bool Female) BattleSprite(int species, bool back)
+        {
+            Archive sprites = All.First(a => a.Dir == DirNames.PokemonBattleSprites);
+            // Six files a species: back female, back male, front female, front male, colours, shiny.
+            int male = species * 6 + (back ? 1 : 3);
+            Preview picture = Render(sprites, male);
+            if (picture?.Rgba != null) return (male, picture, false);
+            Preview female = Render(sprites, male - 1);
+            return female?.Rgba != null ? (male - 1, female, true) : (male, picture, false);
+        }
+
+        /// <summary>A picture of one entry of one archive, or why there is not one.</summary>
+        /// <param name="source">Where to read the archive; by default the unpacked copy every editor uses.</param>
+        /// <param name="paletteIndex">The colours to show it in, when the caller knows the game's pairing.</param>
+        public static Preview Render(Archive a, int index, bool shiny = false, ScriptNarc source = null, int paletteIndex = -1)
+        {
+            ScriptNarc narc = source ?? new ScriptNarc(a.Dir);
+            if (!narc.Available)
+                return new Preview { Whynot = "This game doesn't have this archive." };
+
+            if (a.Pokewalker != null)
+            {
+                Indexed px = ReadIndexed(a, index, out string pwWhy, source: narc);
+                if (px == null) return new Preview { Kind = Kind.TileGraphic, Whynot = pwWhy };
+                byte[] rgba = new byte[px.Width * px.Height * 4];
+                for (int i = 0; i < px.Indices.Length; i++)
+                {
+                    uint c = px.Palette[px.Indices[i]];
+                    rgba[i * 4] = (byte)(c >> 16); rgba[i * 4 + 1] = (byte)(c >> 8); rgba[i * 4 + 2] = (byte)c; rgba[i * 4 + 3] = 0xFF;
+                }
+                return new Preview { Rgba = rgba, Width = px.Width, Height = px.Height, Kind = Kind.TileGraphic };
+            }
+
+            byte[] raw = narc.Get(index);
+            Kind kind = Identify(raw);
+
+            if (kind == Kind.Empty) return new Preview { Kind = kind, Whynot = "This entry is empty." };
+            if (kind == Kind.Palette) { Preview p = PaletteSwatch(raw); p.Kind = kind; return p; }
+
+            if (kind == Kind.CellAnimation)
+                return new Preview { Kind = kind, Whynot = "Animation timing, not a picture" };
+            if (kind == Kind.NotAGraphic)
+                return new Preview { Kind = kind, Whynot = "Not a picture" };
+
+            if (a.Colours == Pairing.NotKnown && paletteIndex < 0)
+                return new Preview { Kind = kind, Whynot = "Palette unknown" };
+
+            byte[] pal = paletteIndex >= 0 ? narc.Get(paletteIndex) : FindColours(a, narc, index, shiny);
+            if (pal == null)
+                return new Preview { Kind = kind, Whynot = "No palette found" };
+
+            try
+            {
+                if (pal.Length == 0)
+                    return new Preview { Kind = kind, Whynot = "This entry couldn't be read." };
+
+                if (kind == Kind.TileMap || kind == Kind.CellLayout)
+                {
+                    // A layout and a tile map are both instructions for arranging a drawing that lives in a
+                    // different entry. Find that drawing and put the two together.
+                    byte[] drawing = null;
+                    if (a.DrawingArchive != null)
+                    {
+                        ScriptNarc dn = new ScriptNarc(a.DrawingArchive.Value);
+                        drawing = dn.Available ? dn.Get(index) : null;
+                    }
+                    else
+                    {
+                        // What the game itself pairs this layout with, where that is known.
+                        int said = -1;
+                        try { said = a.DrawingEntry?.Invoke(index) ?? -1; } catch { }   // without the game's pairing the drawing is found by searching
+                        if (said >= 0) drawing = narc.Get(said);
+                        drawing ??= FindDrawing(narc, index);
+                    }
+                    if (drawing == null)
+                        return new Preview { Kind = kind, Whynot = kind == Kind.TileMap
+                            ? "This arranges a background's tiles, and the drawing it arranges couldn't be found."
+                            : "This arranges the pieces of a sprite, and the drawing it arranges couldn't be found." };
+
+                    if (kind == Kind.TileMap)
+                    {
+                        NitroBgCodec.BgImage bg = NitroBgCodec.Composite(Unsqueeze(drawing), Unsqueeze(pal), Unsqueeze(raw));
+                        if (bg?.Rgba == null)
+                            return new Preview { Kind = kind, Whynot = "This background couldn't be put together." };
+                        return new Preview { Rgba = bg.Rgba, Width = bg.Width, Height = bg.Height, Kind = kind };
+                    }
+
+                    NcerFile ncer = NcerFile.Read(Unsqueeze(raw));
+                    byte[] openDrawing = Unsqueeze(drawing);
+                    if (ncer == null || !(NitroBgCodec.ReadDrawingHeader(openDrawing) is NitroBgCodec.DrawingHeader head))
+                        return new Preview { Kind = kind, Whynot = "This sprite couldn't be put together." };
+                    ushort[] colours = NitroBgCodec.ReadColours(Unsqueeze(pal));
+                    // A sprite whose palette the game picks at run time (the dex's type icons) has its cells on palette 0;
+                    // turning the rows round puts the chosen one there.
+                    int bank = a.ColourBank?.Invoke(index) ?? 0;
+                    int rowSize = head.EightBit ? 256 : 16;
+                    int rows = colours.Length / rowSize;
+                    if (bank > 0 && bank < rows)
+                    {
+                        ushort[] turned = new ushort[colours.Length];
+                        Array.Copy(colours, bank * rowSize, turned, 0, (rows - bank) * rowSize);
+                        Array.Copy(colours, 0, turned, (rows - bank) * rowSize, bank * rowSize);
+                        Array.Copy(colours, rows * rowSize, turned, rows * rowSize, colours.Length - rows * rowSize);
+                        colours = turned;
+                    }
+                    RawImage cell = CellRenderer.Draw(ncer, 0, openDrawing, colours, CellCanvas, CellCanvas);
+                    // These are laid out on a whole screen and most use a corner of it, so show only the pieces.
+                    (byte[] crop, int cw, int ch) = ncer.Cells.Count > 0
+                        ? CropToPieces(ToRgba(cell), cell.Width, cell.Height, ncer.Cells[0], out _, out _)
+                        : TrimBlank(ToRgba(cell), cell.Width, cell.Height);
+                    return new Preview { Rgba = crop, Width = cw, Height = ch, Kind = kind };
+                }
+
+                // A drawing that needs an arrangement is a heap of tiles without it, so put the two together as the game does.
+                int arrangedBy = a.ArrangementEntry?.Invoke(index) ?? -1;
+                if (arrangedBy >= 0 && kind == Kind.TileGraphic)
+                {
+                    byte[] map = narc.Get(arrangedBy);
+                    if (map != null)
+                    {
+                        NitroBgCodec.BgImage put = NitroBgCodec.Composite(Unsqueeze(raw), Unsqueeze(pal), Unsqueeze(map));
+                        if (put?.Rgba != null)
+                            return new Preview { Rgba = put.Rgba, Width = put.Width, Height = put.Height, Kind = kind };
+                    }
+                }
+
+                // Read it the same way the painter does, so the size shown here and the size you paint on
+                // are never different numbers.
+                Indexed art = ReadIndexed(a, index, out string cannot, shiny, narc, paletteIndex);
+                if (art != null)
+                    return new Preview { Rgba = Flatten(art), Width = art.Width, Height = art.Height, Kind = kind };
+                return new Preview { Kind = kind, Whynot = cannot ?? "This drawing couldn't be turned into a picture." };
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("GraphicAssets.Render failed: " + ex.Message);
+                return new Preview { Kind = kind, Whynot = "Unreadable drawing" };
+            }
+        }
+
+        /// <summary>Cuts the see-through border off a picture, leaving what was drawn.</summary>
+        /// <summary>How much room the pieces of a sprite are laid out on before the blank border is
+        /// trimmed off. The game draws them against the middle of this.</summary>
+        private const int CellCanvas = 256;
+
+        private static (byte[] rgba, int w, int h) TrimBlank(byte[] rgba, int w, int h)
+            => TrimBlank(rgba, w, h, out _, out _);
+
+        /// <summary>
+        /// Cuts a sprite drawn on the canvas down to the rectangle its pieces cover, see-through edges included, so a
+        /// 96 by 64 VS portrait stays 96 by 64 whatever its outer columns hold. Falls back to the drawn pixels when
+        /// the pieces say nothing.
+        /// </summary>
+        private static (byte[] rgba, int w, int h) CropToPieces(byte[] rgba, int w, int h, NcerFile.Cell cell,
+                                                                out int cutLeft, out int cutTop)
+        {
+            int left = w, top = h, right = 0, bottom = 0;
+            foreach (NcerFile.Piece p in cell.Pieces)
+            {
+                // Where the renderer puts the piece: the canvas middle plus its offset.
+                int x0 = w / 2 + p.X, y0 = h / 2 + p.Y;
+                left = Math.Min(left, x0); top = Math.Min(top, y0);
+                right = Math.Max(right, x0 + p.Width); bottom = Math.Max(bottom, y0 + p.Height);
+            }
+            left = Math.Max(0, left); top = Math.Max(0, top); right = Math.Min(w, right); bottom = Math.Min(h, bottom);
+            if (right <= left || bottom <= top) return TrimBlank(rgba, w, h, out cutLeft, out cutTop);
+
+            cutLeft = left; cutTop = top;
+            int nw = right - left, nh = bottom - top;
+            byte[] outp = new byte[nw * nh * 4];
+            for (int y = 0; y < nh; y++)
+                Array.Copy(rgba, ((top + y) * w + left) * 4, outp, y * nw * 4, nw * 4);
+            return (outp, nw, nh);
+        }
+
+        /// <summary>Trims the blank border off a picture, saying where the picture it kept began.</summary>
+        private static (byte[] rgba, int w, int h) TrimBlank(byte[] rgba, int w, int h,
+                                                             out int cutLeft, out int cutTop)
+        {
+            cutLeft = 0; cutTop = 0;
+            int left = w, right = -1, top = h, bottom = -1;
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                    if (rgba[(y * w + x) * 4 + 3] != 0)
+                    {
+                        if (x < left) left = x;
+                        if (x > right) right = x;
+                        if (y < top) top = y;
+                        if (y > bottom) bottom = y;
+                    }
+            if (right < left || bottom < top) return (rgba, w, h);   // nothing drawn, leave it alone
+
+            int nw = right - left + 1, nh = bottom - top + 1;
+            if (nw == w && nh == h) return (rgba, w, h);
+            cutLeft = left; cutTop = top;
+            byte[] outp = new byte[nw * nh * 4];
+            for (int y = 0; y < nh; y++)
+                Array.Copy(rgba, ((top + y) * w + left) * 4, outp, y * nw * 4, nw * 4);
+            return (outp, nw, nh);
+        }
+
+        private static byte[] ToRgba(RawImage img)
+        {
+            int w = img.Width, h = img.Height;
+            byte[] outp = new byte[w * h * 4];
+            byte[] src = img.Bgra;
+            for (int i = 0; i < w * h && i * 4 + 3 < src.Length; i++)
+            {
+                outp[i * 4] = src[i * 4 + 2];
+                outp[i * 4 + 1] = src[i * 4 + 1];
+                outp[i * 4 + 2] = src[i * 4];
+                outp[i * 4 + 3] = src[i * 4 + 3];
+            }
+            return outp;
+        }
+
+        /// <summary>The first entry in an archive that holds colours, or -1 if none does. Used where the
+        /// layout of an archive shifts between games but the order of what is in it does not.</summary>
+        public static int FirstPaletteIndex(Archive a)
+        {
+            try
+            {
+                ScriptNarc narc = new ScriptNarc(a.Dir);
+                if (!narc.Available) return -1;
+                List<int> found = PaletteIndexes(a.Dir, narc);
+                return found.Count > 0 ? found[0] : -1;
+            }
+            catch (Exception ex) { AppLogger.WarnOnce("GraphicAssets.FirstPaletteIndex", ex); return -1; }
+        }
+
+        /// <summary>How many entries an archive has in the game that is open, or 0 if it has none.</summary>
+        public static int Count(Archive a)
+        {
+            ScriptNarc narc = new ScriptNarc(a.Dir);
+            return narc.Available ? narc.Count : 0;
+        }
+    }
+}

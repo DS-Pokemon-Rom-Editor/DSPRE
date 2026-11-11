@@ -103,11 +103,11 @@ namespace DSPRE.Avalonia
                 Views.Controls.HgssTouchScreenView.Screen = null;
                 Views.Controls.HgssTouchScreenView.Font = null;
                 Views.Controls.HgssTouchScreenView.IconFont = null;
-                Data.SoundArchive.Reset();
+                SoundArchive.Reset();
                 ROMFiles.FieldFontCharacters.Reset();
                 ViewModels.Graphics.FontEditorViewModel.Forget();
                 // Unsaved label edits were made for the project being closed.
-                Data.LabelStore.DiscardDraft();
+                LabelStore.DiscardDraft();
 
                 try { _ = new RomInfo(gameCode, folder); }   // populates the static RomInfo.* (gameFamily, workDir, gameDirs, …)
                 catch (Exception ex) { error = "Couldn't initialise ROM data: " + ex.Message; AppLogger.Error(error); return false; }

@@ -60,7 +60,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // The whole TM/HM table is one editable unit (one Save writes it all), so history is a single
         // timeline reset once at load. Snapshot = a clone of both arrays.
         private sealed class TMSnapshot { public int[] Moves; public int[] Palettes; }
-        private readonly DSPRE.Avalonia.UndoHistory<TMSnapshot> _history = new();
+        private readonly UndoHistory<TMSnapshot> _history = new();
         private DateTime _lastCaptureUtc = DateTime.MinValue;
         private const int CoalesceMs = 500;
 
@@ -398,8 +398,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void OnNamesChanged(object sender, System.EventArgs e)
         {
-            DSPRE.Avalonia.Data.ListSync.Apply(MoveNames, RomInfo.GetAttackNames());
-            DSPRE.Avalonia.Data.ListSync.Apply(TypeNames, RomInfo.GetTypeNames());
+            ListSync.Apply(MoveNames, RomInfo.GetAttackNames());
+            ListSync.Apply(TypeNames, RomInfo.GetTypeNames());
         }
         /// <summary>Unsubscribes from app-wide events; call when the editor window closes.</summary>
         public void Detach() => AppEvents.NamesChanged -= OnNamesChanged;
@@ -449,7 +449,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 SetDirty(false);
                 _history.MarkSaved();
                 RaiseUndoState();
-                DSPRE.Avalonia.Data.MoveInfo.Forget();
+                MoveInfo.Forget();
                 SaveNotice.Saved(UnsavedChangesDescription);
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException || ex is ArgumentException)

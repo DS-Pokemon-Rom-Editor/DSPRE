@@ -71,10 +71,10 @@ namespace DSPRE.Avalonia.ViewModels.World
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
 
         // An import waits here until Save, and the preview reads it from here.
-        private readonly DSPRE.Avalonia.Data.PendingArchiveWrites _pending = new();
+        private readonly PendingArchiveWrites _pending = new();
         public bool HasUnsavedChanges => _pending.IsDirty;
         public string UnsavedChangesDescription
-            => DSPRE.Avalonia.Data.StagedArchive.Join("Building models", false, DSPRE.Avalonia.Data.StagedArchive.Describe("building model", "building models", _pending.Pending(Archive)));
+            => StagedArchive.Join("Building models", false, StagedArchive.Describe("building model", "building models", _pending.Pending(Archive)));
         public void SaveChanges()
         {
             if (!_pending.IsDirty) return;
@@ -158,7 +158,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 string dir = BuildingDir();
-                if (Directory.Exists(dir))
+                if (PlainFiles.FolderExists(dir))
                 {
                     int count = NarcAPI.Narc.MemberCount(dir);
                     for (int i = 0; i < count; i++)
@@ -330,15 +330,11 @@ namespace DSPRE.Avalonia.ViewModels.World
             // Asked once here, so the converter never stops to ask about each folder in the background.
             List<string> taken = models.Select(m => format == ExportFormat.Nsbmd
                     ? Path.Combine(folder, m.Stem + ".nsbmd") : Path.Combine(folder, m.Stem))
-                .Where(p => File.Exists(p) || (Directory.Exists(p) && Directory.EnumerateFileSystemEntries(p).Any())).ToList();
+                .Where(PlainFiles.IsTaken).ToList();
             if (taken.Count > 0)
             {
                 if (!await DialogHelper.AskYesNoAsync($"{taken.Count} of these are already in that folder. Replace them?", "Export all", _owner)) return;
-                foreach (string p in taken)
-                {
-                    if (File.Exists(p)) File.Delete(p);
-                    else Directory.Delete(p, recursive: true);
-                }
+                foreach (string p in taken) PlainFiles.Remove(p);
             }
 
             int done = 0;

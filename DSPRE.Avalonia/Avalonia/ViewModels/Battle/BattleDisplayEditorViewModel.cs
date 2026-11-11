@@ -195,8 +195,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public bool HasRealGauges => _gaugePlayerImage != null || _gaugeOpponentImage != null;
         public bool PlaceholderGaugesVisible => !HasRealGauges;
         /// <summary>The gauge picture is 256 wide, centred on the bar.</summary>
-        public double PlayerGaugeImageLeft => Data.BattleGaugeComposer.CentreOf(Data.BattleGaugeComposer.Kind.PlayerSingle).X - 128;
-        public double PlayerHealthFillLeft => Data.BattleGaugeComposer.HealthFillLeft(Data.BattleGaugeComposer.Kind.PlayerSingle);
+        public double PlayerGaugeImageLeft => BattleGaugeComposer.CentreOf(BattleGaugeComposer.Kind.PlayerSingle).X - 128;
+        public double PlayerHealthFillLeft => BattleGaugeComposer.HealthFillLeft(BattleGaugeComposer.Kind.PlayerSingle);
 
         public IBrush GaugeTextBrush => Data.GaugeTextImages.StandInBrush;
 
@@ -636,7 +636,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 if (!DSPRE.DSUtils.TryGetMonIconIndexedPixels(IconIdFor(_currentId), _partyPaletteIndex, out byte[] indices, out int w, out int h, out System.Drawing.Color[] palette))
                     return null;
-                return DSPRE.Avalonia.IndexedPngWriter.Encode4Bpp(indices, w, h, palette);
+                return IndexedPngWriter.Encode4Bpp(indices, w, h, palette);
             }
             catch (Exception ex) { AppLogger.WarnOnce("BattleDisplayEditorViewModel.ExportIconGraphicIndexedPng", ex); return null; }
         }
@@ -2092,7 +2092,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         // ── Undo / redo: the shown Pokémon's offsets, heights, palette and animation ──
         private sealed record DisplayState(int[] Values, int[][] Back, int[][] Pattern, int[][] Front, int[][] BackRuns);
-        private DSPRE.Avalonia.ByteStateUndo _undo;
+        private ByteStateUndo _undo;
         public bool CanUndo => _undo?.CanUndo == true;
         public bool CanRedo => _undo?.CanRedo == true;
         public void Undo() => _undo?.Undo();
@@ -2219,7 +2219,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             RaiseSprites();
             SetClean();
             _loading = false;
-            _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo);
+            _undo = new ByteStateUndo(TakeState, ApplyState, RaiseUndo);
             RaiseUndo();
         }
 
@@ -2336,24 +2336,24 @@ namespace DSPRE.Avalonia.ViewModels.Battle
     /// a comma/space-separated list; padded/truncated to the opcode's fixed arg count on save).</summary>
     public sealed class ProgramCmdRow : INotifyPropertyChanged
     {
-        private static readonly DSPRE.Avalonia.Data.PokemonAnimOp[] _ops =
-            (DSPRE.Avalonia.Data.PokemonAnimOp[])System.Enum.GetValues(typeof(DSPRE.Avalonia.Data.PokemonAnimOp));
-        public System.Collections.Generic.IReadOnlyList<DSPRE.Avalonia.Data.PokemonAnimOp> Ops => _ops;
+        private static readonly PokemonAnimOp[] _ops =
+            (PokemonAnimOp[])System.Enum.GetValues(typeof(PokemonAnimOp));
+        public System.Collections.Generic.IReadOnlyList<PokemonAnimOp> Ops => _ops;
 
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise(string n) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
-        private DSPRE.Avalonia.Data.PokemonAnimOp _op;
-        public DSPRE.Avalonia.Data.PokemonAnimOp Op { get => _op; set { if (_op != value) { _op = value; Raise(nameof(Op)); Raise(nameof(ArgHint)); } } }
+        private PokemonAnimOp _op;
+        public PokemonAnimOp Op { get => _op; set { if (_op != value) { _op = value; Raise(nameof(Op)); Raise(nameof(ArgHint)); } } }
         private string _argsText = "";
         public string ArgsText { get => _argsText; set { if (_argsText != value) { _argsText = value; Raise(nameof(ArgsText)); } } }
         public string ArgHint
         {
             get
             {
-                string[] names = DSPRE.Avalonia.Data.PokeAnimScript.ArgNames(Op);
+                string[] names = PokeAnimScript.ArgNames(Op);
                 if (names.Length > 0) return string.Join(", ", names);
-                int n = DSPRE.Avalonia.Data.PokeAnimScript.ArgsFor(Op);
+                int n = PokeAnimScript.ArgsFor(Op);
                 return n == 0 ? "No values" : Plural.Of(n, "value");
             }
         }

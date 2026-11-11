@@ -153,9 +153,9 @@ namespace DSPRE.Avalonia.ViewModels.World
                 AreaData area = new AreaData(areaId);
                 string path = Path.Combine(GameDirs[DirNames.MapTextures].unpackedDir,
                                            area.MapTileset.ToString("D4"));
-                if (!File.Exists(path)) return;
+                if (!PlainFiles.Exists(path)) return;
 
-                NSBTXLoader.LoadNsbtx(new MemoryStream(File.ReadAllBytes(path)),
+                NSBTXLoader.LoadNsbtx(new MemoryStream(PlainFiles.ReadBytes(path)),
                                       out List<NSBMDTexture> pictures, out List<NSBMDPalette> colours);
                 if (pictures != null)
                     foreach (NSBMDTexture t in pictures)

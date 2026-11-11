@@ -188,7 +188,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         }
 
         // ── Undo / redo: every row's trainer ids ──
-        private DSPRE.Avalonia.ByteStateUndo _undo;
+        private ByteStateUndo _undo;
         private List<ushort[]> _savedIds = new();
         public bool CanUndo => _undo?.CanUndo == true;
         public bool CanRedo => _undo?.CanRedo == true;
@@ -199,7 +199,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void ResetUndo()
         {
             _savedIds = _rows.Select(r => (ushort[])r.Ids.Clone()).ToList();
-            _undo = new DSPRE.Avalonia.ByteStateUndo(() => DSPRE.Avalonia.UndoJson.Take(_rows.Select(r => r.Ids)), ApplyState, RaiseUndo);
+            _undo = new ByteStateUndo(() => DSPRE.Avalonia.UndoJson.Take(_rows.Select(r => r.Ids)), ApplyState, RaiseUndo);
             RaiseUndo();
         }
 

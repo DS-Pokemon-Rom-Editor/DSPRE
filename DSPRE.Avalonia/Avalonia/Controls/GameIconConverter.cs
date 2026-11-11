@@ -50,7 +50,7 @@ namespace DSPRE.Avalonia.Controls
                 catch (Exception ex) { AppLogger.Warn("Game icon archives: " + ex.Message); }
             }
             // Move data can be edited while open, so moves are not cached here; MoveInfo is told about saves.
-            if (_kind == Kind.MoveType) return Data.MoveInfo.Of(id) is Data.MoveInfo.Facts mf ? Data.TypeIcons.For(mf.Type) : null;
+            if (_kind == Kind.MoveType) return MoveInfo.Of(id) is MoveInfo.Facts mf ? Data.TypeIcons.For(mf.Type) : null;
             if (_cache.TryGetValue(id, out Bitmap known)) return known;
 
             Bitmap icon = null;

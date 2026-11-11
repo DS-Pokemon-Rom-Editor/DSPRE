@@ -633,7 +633,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         // ── Undo / redo: every tab's tables ───────────────────────────────────
         private sealed record PickupState(ushort[] Common, ushort[] Rare, int Divisor, byte[] Weights);
         private sealed record TablesState(PickupState Pickup, int[][] Hidden, int[][] RockSmash, ushort[][] Slots);
-        private DSPRE.Avalonia.ByteStateUndo _undo;
+        private ByteStateUndo _undo;
         private TablesState _saved;
         private bool _applyingUndo;
         public bool CanUndo => _undo?.CanUndo == true;
@@ -659,7 +659,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         private void ResetUndo()
         {
             _saved = Current();
-            _undo = new DSPRE.Avalonia.ByteStateUndo(() => DSPRE.Avalonia.UndoJson.Take(Current()), ApplyState, RaiseUndo);
+            _undo = new ByteStateUndo(() => DSPRE.Avalonia.UndoJson.Take(Current()), ApplyState, RaiseUndo);
             RaiseUndo();
         }
 

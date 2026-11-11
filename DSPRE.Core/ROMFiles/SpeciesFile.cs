@@ -31,6 +31,12 @@ namespace DSPRE.ROMFiles
         public const int GiratinaIdNum = 487;
         public const int ShayminIdNum = 492;
 
+        public static byte GenderRatioOf(int species)
+        {
+            byte[] data = ArchiveMembers.ReadOrNull(RomInfo.DirNames.PersonalPokeData, species);
+            return data != null && data.Length > GenderRatioByteOffset ? data[GenderRatioByteOffset] : (byte)127;
+        }
+
         public SpeciesFile(FileStream pokeData)
         {
             BinaryReader pokeDataReader = new BinaryReader(pokeData);

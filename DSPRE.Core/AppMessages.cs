@@ -32,6 +32,14 @@ namespace DSPRE
         /// <summary>Keeps the UI responsive during a long synchronous operation. Does nothing by default.</summary>
         public static Action PumpEventsHook = () => { };
 
+        public static Func<bool> OnUiThreadHook = () => true;
+
+        /// <summary>Posts an action to the UI thread, after pending input if asked.</summary>
+        public static Action<Action, bool> PostToUiHook = (action, background) => action();
+
+        public static bool OnUiThread() => OnUiThreadHook?.Invoke() ?? true;
+        public static void PostToUi(Action action, bool background = false) => PostToUiHook?.Invoke(action, background);
+
         public static void Error(string message, string title = "Error") => ErrorHook?.Invoke(message, title);
         public static void Info(string message, string title = "") => InfoHook?.Invoke(message, title);
         public static void Warning(string message, string title = "Warning") => WarningHook?.Invoke(message, title);

@@ -123,7 +123,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         /// <summary>The camera's name, which the header editor shows beside the number.</summary>
-        public string Name => DSPRE.Avalonia.Data.LabelStore.GetLabel(DSPRE.Avalonia.Data.LabelStore.CameraKey, Index);
+        public string Name => LabelStore.GetLabel(LabelStore.CameraKey, Index);
 
         /// <summary>The number the header editor asks for, with the name it shows beside it.</summary>
         public string Label => Index.ToString("D2") + "  " + Name;
@@ -306,7 +306,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void LoadPreviewWeathers()
         {
-            PreviewWeather.LoadLabels(DSPRE.Avalonia.Data.LabelStore.WeatherKey);
+            PreviewWeather.LoadLabels(LabelStore.WeatherKey);
             AppEvents.LabelsChanged -= OnLabelsChanged;
             AppEvents.LabelsChanged += OnLabelsChanged;
             global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
@@ -450,7 +450,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             try
             {
-                long len = new FileInfo(path).Length;
+                long len = PlainFiles.Length(path);
                 if (len % RomInfo.CameraSize != 0)
                 {
                     await DialogHelper.ShowErrorAsync(
@@ -508,7 +508,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             try
             {
-                byte[] data = File.ReadAllBytes(path);
+                byte[] data = PlainFiles.ReadBytes(path);
                 GameCamera cam = new GameCamera(data);
                 Cameras[index].LoadFrom(cam);
                 Edited();
@@ -539,8 +539,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (row == null) return;
             string name = await DialogHelper.PromptTextAsync($"Camera {row.Index}", "Rename camera", row.Name, _owner);
             if (name == null || name.Trim() == row.Name) return;
-            DSPRE.Avalonia.Data.LabelStore.SetLabel(DSPRE.Avalonia.Data.LabelStore.CameraKey, row.Index, name, global: false);
-            string error = DSPRE.Avalonia.Data.LabelStore.Save(global: false);
+            LabelStore.SetLabel(LabelStore.CameraKey, row.Index, name, global: false);
+            string error = LabelStore.Save(global: false);
             AppEvents.RaiseLabelsChanged();
             if (error != null) await DialogHelper.ShowErrorAsync("The name wasn't saved:\n" + error, "Camera editor", _owner);
         }
@@ -548,7 +548,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void OnLabelsChanged(object sender, EventArgs e)
         {
             foreach (CameraRowVM row in Cameras) row.RefreshName();
-            PreviewWeather.LoadLabels(DSPRE.Avalonia.Data.LabelStore.WeatherKey);
+            PreviewWeather.LoadLabels(LabelStore.WeatherKey);
             int keep = _previewWeatherIndex;
             _previewWeatherIndex = -1;
             Notify(nameof(PreviewWeatherIndex));

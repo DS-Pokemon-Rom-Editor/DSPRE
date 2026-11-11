@@ -660,7 +660,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private List<int> _sourceMachineMoves, _sourceMachineMovesSaved;
         private HashSet<int> _sourceLevelUpMoves = new HashSet<int>();
         private int[] _machineMoveIds = Array.Empty<int>();
-        private readonly DSPRE.Avalonia.UndoHistory<PersonalSnapshot> _history = new();
+        private readonly UndoHistory<PersonalSnapshot> _history = new();
         private PersonalSnapshot _savedSnapshot;   // UndoHistory doesn't expose it, and Discard restores it
         private DateTime _lastCaptureUtc = DateTime.MinValue;
         private const int CoalesceMs = 500;
@@ -783,10 +783,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _machineMoveNames = TMEditor.ReadMachineMoveNames().ToArray();
             _machineMoves = TMEditor.ReadMachineMoves();
             _allFileNames     = pokemonNames;
-            DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, _allFileNames);
-            DSPRE.Avalonia.Data.ListSync.Apply(TypeNames, _typeNamesArr);
-            DSPRE.Avalonia.Data.ListSync.Apply(AbilityNames, _abilityNamesArr);
-            DSPRE.Avalonia.Data.ListSync.Apply(ItemNames, _itemNamesArr);
+            ListSync.Apply(PokemonNames, _allFileNames);
+            ListSync.Apply(TypeNames, _typeNamesArr);
+            ListSync.Apply(AbilityNames, _abilityNamesArr);
+            ListSync.Apply(ItemNames, _itemNamesArr);
             RebuildMachineLists();
         }
 
@@ -794,9 +794,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// (Tools ▸ Edit Dropdown Labels), so a ROM hack can rename/add them. Indices stay stable.</summary>
         private void LoadEnumLabels()
         {
-            DSPRE.Avalonia.Data.LabelStore.Sync(GrowthCurveNames, "pokemon_growth_curves");
-            DSPRE.Avalonia.Data.LabelStore.Sync(DexColorNames,    "pokemon_dex_colors");
-            DSPRE.Avalonia.Data.LabelStore.Sync(EggGroupNames,    "pokemon_egg_groups");
+            LabelStore.Sync(GrowthCurveNames, "pokemon_growth_curves");
+            LabelStore.Sync(DexColorNames,    "pokemon_dex_colors");
+            LabelStore.Sync(EggGroupNames,    "pokemon_egg_groups");
             AppEvents.LabelsChanged -= OnLabelsChanged;   // idempotent (re)subscribe so live edits refresh
             AppEvents.LabelsChanged += OnLabelsChanged;
             AppEvents.PersonalDataSaved -= OnPersonalDataSaved;
@@ -961,7 +961,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 _current.SaveToFileDefaultDir(_currentId, showSuccessMessage: false);
             AppEvents.RaisePersonalDataSaved(this, _currentId);
             // hg-engine rebuilds pms.narc from data/BabyMons.c, which the Baby Pokémon picker edits.
-            if (!HgEngineProject.IsActive && (_savedSnapshot == null || _savedSnapshot.Hatch != HatchResultIndex)) WriteHatchResult(_currentId, HatchResultIndex);
+            if (!HgEngineProject.IsActive && (_savedSnapshot == null || _savedSnapshot.Hatch != HatchResultIndex)) HatchResultTable.Write(_currentId, HatchResultIndex);
             PersonalSnapshot saved = Snapshot();
             _history.Capture(saved, coalesce: true);
             _history.MarkSaved();
@@ -989,8 +989,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             int? templateSpecies = null;
             if (s.OwSpritePath != null)
             {
-                if (!File.Exists(s.OwSpritePath)) return $"{Path.GetFileName(s.OwSpritePath)} wasn't found.";
-                if (s.OwShinySpritePath != null && !File.Exists(s.OwShinySpritePath)) return $"{Path.GetFileName(s.OwShinySpritePath)} wasn't found.";
+                if (!PlainFiles.Exists(s.OwSpritePath)) return $"{Path.GetFileName(s.OwSpritePath)} wasn't found.";
+                if (s.OwShinySpritePath != null && !PlainFiles.Exists(s.OwShinySpritePath)) return $"{Path.GetFileName(s.OwShinySpritePath)} wasn't found.";
                 if (OwNeedsTemplate)
                 {
                     if (_owTemplateSpeciesIndex < 0 || _owTemplateSpeciesIndex >= PokemonNames.Count)
@@ -1056,7 +1056,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             { _owPendingCreate = false; followerFilesChanged = true; }
             string importWarning = null;
             if (Step(s.OwSpritePath != null, "Overworld sprite",
-                    () => DSPRE.Avalonia.Data.OverworldSourceFiles.ImportFollower(id, s.OwSpritePath, s.OwShinySpritePath, templateSpecies, out importWarning)))
+                    () => OverworldSourceFiles.ImportFollower(id, s.OwSpritePath, s.OwShinySpritePath, templateSpecies, out importWarning)))
             { _owPendingSpritePath = null; _owPendingShinyPath = null; followerFilesChanged = true; }
 
             if (followerFilesChanged)
@@ -1670,7 +1670,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             LoadHgEngineExtras();
             LoadRetailFollower();
             LoadPokeathlon();
-            _hatchResultIndex = GetHatchResult(id); OnPropertyChanged(nameof(HatchResultIndex));
+            _hatchResultIndex = HatchResultTable.Read(id); OnPropertyChanged(nameof(HatchResultIndex));
 
             ShowMonIcon();
 
@@ -1750,28 +1750,5 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
         }
 
-        private static int GetHatchResult(int monId)
-        {
-            string path = Path.Combine(DataPath, @"poketool/personal/pms.narc");
-            if (!File.Exists(path)) return 0;
-            using FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read);
-            int offset = monId * 2;
-            if (offset + 2 > stream.Length) return 0;
-            stream.Seek(offset, SeekOrigin.Begin);
-            using BinaryReader reader = new BinaryReader(stream);
-            return reader.ReadUInt16();
-        }
-
-        private static void WriteHatchResult(int monId, int value)
-        {
-            string path = Path.Combine(DataPath, @"poketool/personal/pms.narc");
-            if (!File.Exists(path)) return;
-            using FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Write);
-            int offset = monId * 2;
-            if (offset + 2 > stream.Length) return;
-            stream.Seek(offset, SeekOrigin.Begin);
-            using BinaryWriter writer = new BinaryWriter(stream);
-            writer.Write((ushort)value);
-        }
     }
 }

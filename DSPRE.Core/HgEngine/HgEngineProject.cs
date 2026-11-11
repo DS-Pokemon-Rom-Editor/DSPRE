@@ -106,6 +106,24 @@ namespace DSPRE.HgEngine
             Directory.Exists(Path.Combine(path, "data")) &&
             Directory.Exists(Path.Combine(path, "armips"));
 
+        /// <summary>A checkout opens as itself, a project folder inside one as that checkout.</summary>
+        public static string CheckoutFor(string path)
+        {
+            if (LooksLikeCheckout(path)) return path;
+            string parent = Path.GetDirectoryName(path.TrimEnd('\\', '/'));
+            return LooksLikeCheckout(parent) && DSUtils.GetFolderType(path) == 2 ? parent : null;
+        }
+
+        public static string CheckoutBesideProject()
+        {
+            try
+            {
+                string parent = Directory.GetParent(WorkDir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))?.FullName;
+                return LooksLikeCheckout(parent) ? parent : null;
+            }
+            catch (Exception ex) { AppLogger.Error("CheckoutBesideProject: " + ex.Message); return null; }
+        }
+
         /// <summary>True when the path is inside WSL, so the shell is settled and nothing needs asking.</summary>
         public static bool IsWslPath(string path) => WslPaths.IsWslPath(path);
 

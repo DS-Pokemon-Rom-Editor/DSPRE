@@ -8,6 +8,12 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.ROMFiles
 {
+    public enum TradeOriginLang
+    {
+        NONE = 0, JAPANESE = 1, ENGLISH = 2, FRENCH = 3,
+        ITALIAN = 4, GERMAN = 5, UNUSED = 6, SPANISH = 7, KOREAN = 8
+    }
+
     internal class TradeData : RomFile
     {
 

@@ -575,7 +575,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         // Composite snapshot via the SAME serialization the proven Save/Load round-trip uses: trp bytes +
         // party bytes (synced from the VM first) + the name. Edit bursts within CoalesceMs collapse into one.
         private sealed class TrainerSnapshot { public byte[] Trp; public byte[] Party; public string Name; public byte[] Source; }
-        private readonly DSPRE.Avalonia.UndoHistory<TrainerSnapshot> _history = new();
+        private readonly UndoHistory<TrainerSnapshot> _history = new();
         private DateTime _lastCaptureUtc = DateTime.MinValue;
         private const int CoalesceMs = 500;
 
@@ -680,9 +680,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void OnNamesChanged(object sender, System.EventArgs e)
         {
-            DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, GetPokemonNames());
-            DSPRE.Avalonia.Data.ListSync.Apply(MoveNames,    GetAttackNames());
-            DSPRE.Avalonia.Data.ListSync.Apply(ItemNames,    GetItemNames());
+            ListSync.Apply(PokemonNames, GetPokemonNames());
+            ListSync.Apply(MoveNames,    GetAttackNames());
+            ListSync.Apply(ItemNames,    GetItemNames());
             if (_customPokeballsPatch) ShowCapsuleNames();
             string[] classNames = GetTrainerClassNames();
             // Replacing the selected row can clear the list's selection, as in RefreshTrainerListEntry.
@@ -691,7 +691,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _suppress = true;
             try
             {
-                DSPRE.Avalonia.Data.ListSync.Apply(TrainerNames, TrainerListEntries(classNames));
+                ListSync.Apply(TrainerNames, TrainerListEntries(classNames));
                 if (keep >= 0 && keep < TrainerNames.Count)
                 {
                     _selectedTrainerIndex = keep;
@@ -702,7 +702,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             List<string> formatted = new System.Collections.Generic.List<string>(classNames.Length);
             for (int i = 0; i < classNames.Length; i++) formatted.Add($"[{i:D3}] {classNames[i]}");
-            DSPRE.Avalonia.Data.ListSync.Apply(TrainerClassItems, formatted);
+            ListSync.Apply(TrainerClassItems, formatted);
         }
         /// <summary>Unsubscribes from app-wide events; call when the editor window closes.</summary>
         public void Detach()
@@ -871,9 +871,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 try
                 {
                     string path = Path.Combine(dir, i.ToString("D4"));
-                    if (!File.Exists(path)) { _abilities[i] = (0, 0); continue; }
+                    if (!PlainFiles.Exists(path)) { _abilities[i] = (0, 0); continue; }
                     // hg-engine widens both abilities to u16 at other offsets.
-                    PokemonPersonalData personal = new PokemonPersonalData(new FileStream(path, FileMode.Open, FileAccess.Read));
+                    PokemonPersonalData personal = new PokemonPersonalData(new MemoryStream(PlainFiles.ReadBytes(path)));
                     _abilities[i] = (personal.FirstAbility, personal.SecondAbility);
                 }
                 catch (Exception ex) { AppLogger.WarnOnce("TrainerEditorViewModel.LoadAbilities", ex); _abilities[i] = (0, 0); }
@@ -1256,7 +1256,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (IsHgeActive || _trainer == null || _loadedTrainerId < 0) return;
             string path = ArchiveMembers.PathOf(DirNames.TrainerProperties, _loadedTrainerId);
-            if (!File.Exists(path) || File.ReadAllBytes(path).AsSpan().SequenceEqual(_trainer.Trp.ToByteArray())) return;
+            if (!PlainFiles.Exists(path) || PlainFiles.ReadBytes(path).AsSpan().SequenceEqual(_trainer.Trp.ToByteArray())) return;
             if (_dirty)
             {
                 StatusText = $"Trainer {_loadedTrainerId} was changed in another editor. Saving here replaces those changes.";
@@ -1687,7 +1687,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (path == null) return;
             try
             {
-                _trainer = TrainerFile.FromExport(File.ReadAllBytes(path), (ushort)_selectedTrainerIndex);
+                _trainer = TrainerFile.FromExport(PlainFiles.ReadBytes(path), (ushort)_selectedTrainerIndex);
 
                 _suppress = true;
                 try { PopulateFromTrainer(); } finally { _suppress = false; }
@@ -1720,7 +1720,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (path == null) return;
             try
             {
-                using FileStream fs = File.OpenRead(path);
+                using FileStream fs = PlainFiles.OpenRead(path);
                 _trainer.Trp = new TrainerProperties((ushort)_selectedTrainerIndex, fs);
                 _suppress = true;
                 try { PopulateFromTrainer(); } finally { _suppress = false; }
@@ -1757,7 +1757,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (path == null) return;
             try
             {
-                using FileStream fs = File.OpenRead(path);
+                using FileStream fs = PlainFiles.OpenRead(path);
                 _trainer.Party = new Party(readFirstByte: true, TrainerFile.PokeInParty, fs, _trainer.Trp);
                 _suppress = true;
                 try { PopulateFromTrainer(); } finally { _suppress = false; }

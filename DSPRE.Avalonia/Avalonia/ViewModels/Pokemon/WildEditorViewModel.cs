@@ -67,7 +67,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty || _archive.IsDirty;
         public string UnsavedChangesDescription
-            => Data.StagedArchive.Join($"Encounter file {SelectedEncounterIndex}", _dirty, _archive.Describe("encounter file", "encounter files"));
+            => StagedArchive.Join($"Encounter file {SelectedEncounterIndex}", _dirty, _archive.Describe("encounter file", "encounter files"));
         void IEditorWithUnsavedChanges.SaveChanges() => DialogHelper.Watch(SaveCommandAsync());
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
@@ -132,7 +132,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ── State ─────────────────────────────────────────────────────────
         protected TFile Current { get; private set; }
         // Added, removed and saved encounter files wait here until Save.
-        private readonly Data.StagedArchive _archive = new(DirNames.Encounters);
+        private readonly StagedArchive _archive = new(DirNames.Encounters);
         private readonly int _totalHeaders;
         /// <summary>True while rows are filled from the file, so setters don't count it as an edit.</summary>
         protected bool Loading { get; private set; }
@@ -276,7 +276,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ── Events ────────────────────────────────────────────────────────
         private void OnNamesChanged(object sender, EventArgs e)
         {
-            Data.ListSync.Apply(PokemonNames, GetPokemonNames());
+            ListSync.Apply(PokemonNames, GetPokemonNames());
             RefreshNotes();
         }
 
@@ -482,7 +482,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public void ImportEncounterFile(string path)
         {
-            using FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read);
+            using FileStream stream = PlainFiles.OpenRead(path);
             Current = Parse(stream);
             PopulateRows();
             SetDirty();

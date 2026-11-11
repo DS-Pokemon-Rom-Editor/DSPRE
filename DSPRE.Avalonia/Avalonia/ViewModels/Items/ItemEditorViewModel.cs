@@ -565,7 +565,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             // In-place update (ListSync), not Clear+Add: Clear briefly empties the collection, which
             // resets the FusionAutoCompleteBox's bound SelectedIndex.
             _syncingList = true;
-            try { DSPRE.Avalonia.Data.ListSync.Apply(ItemNames, names); }
+            try { ListSync.Apply(ItemNames, names); }
             finally { _syncingList = false; }
             MaxItemIndex = ItemNames.Count - 1;
             OnPropertyChanged(nameof(MaxItemIndex));
@@ -644,7 +644,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             if (path == null) return;
 
             byte[] bytes;
-            try { bytes = File.ReadAllBytes(path); }
+            try { bytes = PlainFiles.ReadBytes(path); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {
                 await DialogHelper.ShowErrorAsync($"The file couldn't be read.\n{e.Message}", "Import item data", owner);
@@ -853,10 +853,9 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         private static (ItemData data, string loadError) ReadItemData(int dataId)
         {
-            string path = Path.Combine(RomInfo.GameDirs[DirNames.ItemData].unpackedDir, dataId.ToString("D4"));
-            if (!HgEngineProject.IsActive) return (ReadBuiltItemData(path, dataId), null);
+            if (!HgEngineProject.IsActive) return (ReadBuiltItemData(dataId), null);
             // The built copy only fills a field the entry lacks, which the save then reports.
-            ItemData data = File.Exists(path) ? ReadBuiltItemData(path, dataId) : new ItemData(new MemoryStream(new byte[ItemDataSize]), dataId);
+            ItemData data = ArchiveMembers.Has(DirNames.ItemData, dataId) ? ReadBuiltItemData(dataId) : new ItemData(new MemoryStream(new byte[ItemDataSize]), dataId);
             HgEngineItemSource.TryLoad(dataId, data, out string loadError);
             return (data, loadError);
         }
@@ -868,11 +867,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
             PopulateFromCurrentData();
         }
 
-        private static ItemData ReadBuiltItemData(string path, int dataId)
-        {
-            using FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read);
-            return new ItemData(stream, dataId);
-        }
+        private static ItemData ReadBuiltItemData(int dataId) =>
+            new ItemData(new MemoryStream(ArchiveMembers.Read(DirNames.ItemData, dataId)), dataId);
 
         private void PopulateFromCurrentData()
         {
@@ -1039,13 +1035,10 @@ namespace DSPRE.Avalonia.ViewModels.Items
             }
             try
             {
-                string dir     = RomInfo.GameDirs[DirNames.ItemIcons].unpackedDir;
-                string palFile = _currentEntry.ItemPalette.ToString("D4");
-                string imgFile = _currentEntry.ItemIcon.ToString("D4");
-                byte[] drawing = File.ReadAllBytes(Path.Combine(dir, imgFile));
+                byte[] drawing = ArchiveMembers.Read(DirNames.ItemIcons, (int)_currentEntry.ItemIcon);
                 (int width, int height) = NitroBgCodec.ReadDrawingHeader(drawing) is NitroBgCodec.DrawingHeader head ? NitroBgCodec.DrawingSize(head) : (32, 32);
-                RawImage raw = CellRenderer.Draw(NcerFile.Read(File.ReadAllBytes(Path.Combine(dir, "0001"))), 0, drawing,
-                    NitroBgCodec.ReadColours(File.ReadAllBytes(Path.Combine(dir, palFile))), width, height);
+                RawImage raw = CellRenderer.Draw(NcerFile.Read(ArchiveMembers.Read(DirNames.ItemIcons, 1)), 0, drawing,
+                    NitroBgCodec.ReadColours(ArchiveMembers.Read(DirNames.ItemIcons, (int)_currentEntry.ItemPalette)), width, height);
                 ItemIcon = ImageConverter.ToAvaloniaBitmap(raw);
             }
             catch (Exception ex) { AppLogger.Error("UpdateIcon: " + ex); ItemIcon = null; }
@@ -1053,18 +1046,11 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         private void PopulateIconPaletteDropdowns()
         {
-            string dir = RomInfo.GameDirs[DirNames.ItemIcons].unpackedDir;
-            string[] files  = Directory.GetFiles(dir, "*", SearchOption.TopDirectoryOnly);
-            uint idx   = 0;
-            foreach (string file in files)
+            foreach (int id in ArchiveMembers.Ids(DirNames.ItemIcons))
             {
-                using FileStream stream = File.OpenRead(file);
-                byte[] header = new byte[4];
-                stream.Read(header, 0, 4);
-                string magic = Encoding.ASCII.GetString(header);
-                if      (magic == "RGCN") IconImages.Add(idx.ToString("D4"));
-                else if (magic == "RLCN") IconPalettes.Add(idx.ToString("D4"));
-                idx++;
+                string magic = ArchiveMembers.Magic(DirNames.ItemIcons, id);
+                if      (magic == "RGCN") IconImages.Add(id.ToString("D4"));
+                else if (magic == "RLCN") IconPalettes.Add(id.ToString("D4"));
             }
         }
 
@@ -1072,11 +1058,11 @@ namespace DSPRE.Avalonia.ViewModels.Items
         // to keep the selection.
         private void PopulateEnumCollections()
         {
-            DSPRE.Avalonia.Data.LabelStore.Sync(HoldEffectNames,      HoldEffectKey);
-            DSPRE.Avalonia.Data.LabelStore.Sync(FieldPocketNames,     "item_field_pockets");
-            DSPRE.Avalonia.Data.LabelStore.Sync(FieldUseFuncNames,    FieldUseKey);
-            DSPRE.Avalonia.Data.LabelStore.Sync(BattleUseFuncNames,   "item_battle_use");
-            DSPRE.Avalonia.Data.LabelStore.Sync(NaturalGiftTypeNames, "item_natural_gift");
+            LabelStore.Sync(HoldEffectNames,      HoldEffectKey);
+            LabelStore.Sync(FieldPocketNames,     "item_field_pockets");
+            LabelStore.Sync(FieldUseFuncNames,    FieldUseKey);
+            LabelStore.Sync(BattleUseFuncNames,   "item_battle_use");
+            LabelStore.Sync(NaturalGiftTypeNames, "item_natural_gift");
             AppEvents.LabelsChanged -= OnLabelsChanged; AppEvents.LabelsChanged += OnLabelsChanged;
             _iconSaved ??= AppEvents.WhenSaved(UpdateIcon, DirNames.ItemIcons);
         }
@@ -1095,7 +1081,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         /// <summary>Back to the game's own labels, plus a slot for a value read beyond them.</summary>
         private static void ResetAndCover(System.Collections.ObjectModel.ObservableCollection<string> coll, string key, int index)
         {
-            if (coll.Count > DSPRE.Avalonia.Data.LabelStore.Count(key)) DSPRE.Avalonia.Data.LabelStore.Sync(coll, key);
+            if (coll.Count > LabelStore.Count(key)) LabelStore.Sync(coll, key);
             EnsureCovers(coll, key, index);
         }
 
@@ -1104,7 +1090,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         private static void EnsureCovers(System.Collections.ObjectModel.ObservableCollection<string> coll, string key, int index)
         {
             while (coll.Count <= index && coll.Count < 256)
-                coll.Add(DSPRE.Avalonia.Data.LabelStore.GetLabel(key, coll.Count));
+                coll.Add(LabelStore.GetLabel(key, coll.Count));
         }
 
         private void OnLabelsChanged(object sender, EventArgs e)

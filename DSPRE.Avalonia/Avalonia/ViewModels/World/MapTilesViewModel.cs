@@ -745,7 +745,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (_map == null) return;
             byte[] data;
-            try { data = File.ReadAllBytes(path); }
+            try { data = DSUtils.ReadFromFile(path); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { Warning = ex.Message; return; }
             if (MapFile.ReadImport(data, _family, out MapFile read, out byte[] model, out bool converted) is string whynot) { Warning = whynot; return; }
 
@@ -852,7 +852,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             PdsmapFile.Project project = PdsmapFile.Read(path, out string whynot);
             if (project == null) { Warning = whynot; return; }
-            if (string.IsNullOrEmpty(project.TilesetPath) || !File.Exists(project.TilesetPath))
+            if (!project.HasTileset)
             {
                 Warning = $"Tileset not found: {Path.GetFileName(project.TilesetPath ?? "")}";
                 return;
@@ -906,13 +906,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             PdsmapFile.Map map = _project.Maps[_projectMap];
 
             _saved.Clear();
-            string stem = Path.Combine(Path.GetDirectoryName(_projectPath) ?? ".",
-                                       $"{Path.GetFileNameWithoutExtension(_projectPath)}_{map.X:D2}_{map.Y:D2}");
-            foreach (string kind in new[] { "per", "bld", "bgs", "bdhc" })
-            {
-                if (kind == "bgs" && _family != GameFamilies.HGSS) continue;
-                if (File.Exists(stem + "." + kind)) _saved[kind] = stem + "." + kind;
-            }
+            foreach (KeyValuePair<string, string> part in PdsmapFile.SavedParts(_projectPath, map, _family == GameFamilies.HGSS)) _saved[part.Key] = part.Value;
             Raise(nameof(HasSaved));
             Raise(nameof(SavedNote));
             TileGrid grid = PdsmapFile.ToGrid(map, _set, out int dropped);
@@ -1041,7 +1035,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 try
                 {
-                    if (!AnyPng.TryReadRgba(File.ReadAllBytes(kv.Value), out byte[] rgba, out int w, out int h, out _))
+                    if (!AnyPng.TryReadRgbaFile(kv.Value, out byte[] rgba, out int w, out int h, out _))
                     { plan.Unreadable.Add(Path.GetFileName(kv.Value)); continue; }
                     DsTexture texture = DsTexture.From(rgba, w, h, kv.Key);
                     texture.PaletteNames = OwnFaces().Where(f => f.Picture == kv.Key && !string.IsNullOrEmpty(f.Palette))
@@ -1056,14 +1050,12 @@ namespace DSPRE.Avalonia.ViewModels.World
             // Every area whose headers show this map; areas sharing a pack share the new one.
             List<byte> areas = AreasOfMap?.Invoke() ?? new List<byte>();
             if (!areas.Contains(_areaId)) areas.Insert(0, _areaId);
-            string folder = GameDirs[DirNames.MapTextures].unpackedDir;
             foreach (IGrouping<int, byte> g in areas.GroupBy(a => (int)new AreaData(a).MapTileset)) plan.Packs.Add((g.Key, g.ToList()));
 
             Dictionary<int, (NsbtxWriter.Contents contents, Dictionary<string, (byte[] rgba, int w, int h)> pictures)> incoming = new Dictionary<int, (NsbtxWriter.Contents contents, Dictionary<string, (byte[] rgba, int w, int h)> pictures)>();
             foreach ((int pack, List<byte> _) in plan.Packs)
             {
-                string path = Path.Combine(folder, pack.ToString("D4"));
-                byte[] bytes = File.Exists(path) ? File.ReadAllBytes(path) : null;
+                byte[] bytes = ArchiveMembers.ReadOrNull(DirNames.MapTextures, pack);
                 incoming[pack] = (bytes == null ? null : NsbtxWriter.Read(bytes),
                                 bytes == null ? new Dictionary<string, (byte[] rgba, int w, int h)>() : PicturesInPack(bytes, PalettesOf));
             }
@@ -1100,8 +1092,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 int buildings = 0, buildingPalettes = 0;
                 try
                 {
-                    string bld = Path.Combine(GameDirs[DirNames.BuildingTextures].unpackedDir, new AreaData(packAreas[0]).BuildingsTileset.ToString("D4"));
-                    NsbtxWriter.Contents b = File.Exists(bld) ? NsbtxWriter.Read(File.ReadAllBytes(bld)) : null;
+                    byte[] bld = ArchiveMembers.ReadOrNull(DirNames.BuildingTextures, new AreaData(packAreas[0]).BuildingsTileset);
+                    NsbtxWriter.Contents b = bld != null ? NsbtxWriter.Read(bld) : null;
                     buildings = b?.TextureBytes ?? 0; buildingPalettes = b?.PaletteBytes ?? 0;
                 }
                 catch { }   // without the building pack its size counts as zero
@@ -1145,12 +1137,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public string PutPicturesIntoTheRom(TexturePlan plan)
         {
             if (plan == null || _set == null) return "Nothing to add.";
-            string folder = GameDirs[DirNames.MapTextures].unpackedDir;
-            Dictionary<int, byte[]> packBytes = plan.Packs.ToDictionary(p => p.pack, p =>
-            {
-                string path = Path.Combine(folder, p.pack.ToString("D4"));
-                return File.Exists(path) ? File.ReadAllBytes(path) : null;
-            });
+            Dictionary<int, byte[]> packBytes = plan.Packs.ToDictionary(p => p.pack, p => ArchiveMembers.ReadOrNull(DirNames.MapTextures, p.pack));
             Dictionary<int, NsbtxWriter.Contents> contents = packBytes.ToDictionary(kv => kv.Key, kv => kv.Value == null ? null : NsbtxWriter.Read(kv.Value));
             HashSet<string> taken = new HashSet<string>(contents.Values.Where(c => c != null).SelectMany(c => c.Textures.Concat(c.Palettes.Keys)), StringComparer.OrdinalIgnoreCase);
             taken.UnionWith(_set.Tiles.SelectMany(t => t.Faces).SelectMany(f => new[] { f.Picture, f.Palette }).Where(n => !string.IsNullOrEmpty(n)));
@@ -1216,8 +1203,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                     NsbtxWriter.Result made = bytes != null ? NsbtxWriter.Extend(bytes, adding, replace) : null;
                     if (made == null || made.Whynot != null) made = NsbtxWriter.Build(adding);
                     if (made.Whynot != null) { Warning = made.Whynot; return made.Whynot; }
-                    int newPack = NarcAPI.Narc.MemberCount(folder);
-                    ArchiveMembers.Write(Path.Combine(folder, newPack.ToString("D4")), made.Bytes);
+                    int newPack = NarcAPI.Narc.MemberCount(GameDirs[DirNames.MapTextures].unpackedDir);
+                    ArchiveMembers.Write(ArchiveMembers.PathOf(DirNames.MapTextures, newPack), made.Bytes);
                     foreach (byte a in packAreas)
                     {
                         AreaData area = new AreaData(a);
@@ -1286,9 +1273,6 @@ namespace DSPRE.Avalonia.ViewModels.World
                         .Where(p => !string.IsNullOrEmpty(p)).Distinct();
         }
 
-        private static Dictionary<string, (byte[] rgba, int w, int h)> PicturesInPack(string path)
-            => File.Exists(path) ? PicturesInPack(File.ReadAllBytes(path)) : new Dictionary<string, (byte[] rgba, int w, int h)>(StringComparer.OrdinalIgnoreCase);
-
         // How a picture looks once it is in the game's format, so it compares like for like with a pack's.
         private static (byte[] rgba, int w, int h)? AsTheGameHasIt(DsTexture t)
         {
@@ -1326,11 +1310,10 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 AreaData area = new AreaData(_areaId);
-                string path = Path.Combine(GameDirs[DirNames.MapTextures].unpackedDir,
-                                           area.MapTileset.ToString("D4"));
-                if (!File.Exists(path)) return (pictures, palettes);
+                byte[] pack = ArchiveMembers.ReadOrNull(DirNames.MapTextures, area.MapTileset);
+                if (pack == null) return (pictures, palettes);
 
-                NSBTXLoader.LoadNsbtx(new MemoryStream(File.ReadAllBytes(path)), out List<NSBMDTexture> textures, out List<NSBMDPalette> colours);
+                NSBTXLoader.LoadNsbtx(new MemoryStream(pack), out List<NSBMDTexture> textures, out List<NSBMDPalette> colours);
                 foreach (NSBMDTexture t in textures ?? new List<global::LibNDSFormats.NSBMD.NSBMDTexture>())
                     if (!string.IsNullOrEmpty(t.Texname)) pictures.Add(t.Texname.TrimEnd('\0'));
                 foreach (NSBMDPalette p in colours ?? new List<global::LibNDSFormats.NSBMD.NSBMDPalette>())
@@ -1478,12 +1461,11 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 AreaData area = new AreaData(_areaId);
-                string path = Path.Combine(GameDirs[DirNames.MapTextures].unpackedDir,
-                                           area.MapTileset.ToString("D4"));
-                if (!File.Exists(path)) return known;
+                byte[] pack = ArchiveMembers.ReadOrNull(DirNames.MapTextures, area.MapTileset);
+                if (pack == null) return known;
 
                 NSBMD container = new global::LibNDSFormats.NSBMD.NSBMD();
-                container.Materials = NSBTXLoader.LoadNsbtx(new MemoryStream(File.ReadAllBytes(path)),
+                container.Materials = NSBTXLoader.LoadNsbtx(new MemoryStream(pack),
                                                             out container.Textures, out container.Palettes);
                 if (container.Materials == null) return known;
                 _areaTextures = container.Textures ?? new List<global::LibNDSFormats.NSBMD.NSBMDTexture>();
@@ -1516,7 +1498,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 try
                 {
-                    if (AnyPng.TryReadRgba(File.ReadAllBytes(kv.Value), out byte[] rgba, out int w, out int h, out _))
+                    if (AnyPng.TryReadRgbaFile(kv.Value, out byte[] rgba, out int w, out int h, out _))
                         known[kv.Key] = (rgba, w, h);
                 }
                 catch (Exception ex) { AppLogger.Error("MapTiles.SetPicture: " + ex.Message); }
@@ -1703,8 +1685,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                     extent = null;
                     try
                     {
-                        string path = Path.Combine(dir, b.ModelID.ToString("D4"));
-                        MapMesh mesh = File.Exists(path) ? MapMesh.Read(File.ReadAllBytes(path), out _) : null;
+                        byte[] model = ArchiveMembers.ReadOrNull(Path.Combine(dir, b.ModelID.ToString("D4")));
+                        MapMesh mesh = model != null ? MapMesh.Read(model, out _) : null;
                         if (mesh != null && mesh.Vertices.Count > 0)
                         {
                             float s = mesh.ModelScale == 0f ? 1f : mesh.ModelScale;
@@ -2001,8 +1983,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             string name = _lookPicture;
             try
             {
-                string pack = Path.Combine(GameDirs[DirNames.MapTextures].unpackedDir, new AreaData(_areaId).MapTileset.ToString("D4"));
-                NSBTXLoader.LoadNsbtx(new MemoryStream(File.ReadAllBytes(pack)), out List<NSBMDTexture> textures, out List<NSBMDPalette> palettes);
+                byte[] pack = ArchiveMembers.Read(DirNames.MapTextures, new AreaData(_areaId).MapTileset);
+                NSBTXLoader.LoadNsbtx(new MemoryStream(pack), out List<NSBMDTexture> textures, out List<NSBMDPalette> palettes);
                 NSBMDTexture target = textures?.FirstOrDefault(t => t.Texname == name);
                 if (target == null) return Fail($"{name} isn't in this area's textures. Add textures to ROM first.");
 
@@ -2015,7 +1997,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 List<DsTexture> frames = new List<DsTexture>();
                 for (int i = 0; i < framePaths.Count; i++)
                 {
-                    if (!AnyPng.TryReadRgba(File.ReadAllBytes(framePaths[i]), out byte[] rgba, out int w, out int h, out _))
+                    if (!AnyPng.TryReadRgbaFile(framePaths[i], out byte[] rgba, out int w, out int h, out _))
                         return Fail($"{Path.GetFileName(framePaths[i])} couldn't be read.");
                     if (w != target.Width || h != target.Height)
                         return Fail($"{Path.GetFileName(framePaths[i])} is {w}x{h}; {name} is {target.Width}x{target.Height}.");
@@ -2473,7 +2455,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (!AlsoSaved || !_saved.TryGetValue("bld", out string bld) || LeavesOut("bld")) return null;
             try
             {
-                byte[] newBuildings = File.ReadAllBytes(bld);
+                byte[] newBuildings = DSUtils.ReadFromFile(bld);
                 if (newBuildings.AsSpan().SequenceEqual(_map.BuildingsToByteArray())) return null;
                 return (newBuildings.Length / MapFile.BuildingHeaderSize, _map.Buildings.Count);
             }
@@ -2589,14 +2571,14 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 try
                 {
-                    if (_saved.TryGetValue("per", out string per)) { _map.ImportPermissions(File.ReadAllBytes(per)); savedMovement = true; brought.Add("permissions"); }
-                    if (_saved.TryGetValue("bgs", out string bgs)) { _map.ImportSoundPlates(File.ReadAllBytes(bgs)); brought.Add("BGS"); }
-                    if (_saved.TryGetValue("bdhc", out string bdhc) && !LeavesOut("bdhc")) { _map.ImportTerrain(File.ReadAllBytes(bdhc)); savedGround = true; brought.Add("BDHC"); }
+                    if (_saved.TryGetValue("per", out string per)) { _map.ImportPermissions(DSUtils.ReadFromFile(per)); savedMovement = true; brought.Add("permissions"); }
+                    if (_saved.TryGetValue("bgs", out string bgs)) { _map.ImportSoundPlates(DSUtils.ReadFromFile(bgs)); brought.Add("BGS"); }
+                    if (_saved.TryGetValue("bdhc", out string bdhc) && !LeavesOut("bdhc")) { _map.ImportTerrain(DSUtils.ReadFromFile(bdhc)); savedGround = true; brought.Add("BDHC"); }
                     if (_saved.TryGetValue("bld", out string bld) && !LeavesOut("bld"))
                     {
                         if (bringInBuildings)
                         {
-                            _map.ImportBuildings(File.ReadAllBytes(bld));
+                            _map.ImportBuildings(DSUtils.ReadFromFile(bld));
                             brought.Add($"{_map.Buildings.Count} buildings");
                         }
                     }

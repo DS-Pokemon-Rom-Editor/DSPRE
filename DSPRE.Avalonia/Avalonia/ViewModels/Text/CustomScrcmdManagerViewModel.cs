@@ -70,7 +70,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 return;
             }
             string rotom = RomInfo.HasRotomProject ? DSPRE.RotomTool.ProjectDatabaseFile() : null;
-            if (rotom != null && File.Exists(rotom))
+            if (rotom != null && PlainFiles.Exists(rotom))
             {
                 Folders.Add($"{RomInfo.ProjectName} (Rotom project)");
                 _files.Add((rotom, true));
@@ -96,21 +96,14 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 new[] { JsonFilter, DialogHelper.AllFilter });
             if (string.IsNullOrEmpty(picked)) return;
 
-            if (rotom && WhyNotRotomDatabase(picked) is string why)
+            if (rotom && DSPRE.RotomTool.WhyNotRotomDatabase(picked) is string why)
             {
                 await DialogHelper.ShowErrorAsync(why, "Custom script command manager");
                 return;
             }
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(targetPath));
-                if (rotom && File.Exists(targetPath))
-                {
-                    string backup = Path.Combine(DSPRE.RotomTool.ProjectRoot, ".rotom", "backups", "custom-database-" + DateTime.Now.ToString("yyyyMMddHHmmss"));
-                    Directory.CreateDirectory(backup);
-                    PlainFiles.Copy(targetPath, Path.Combine(backup, Path.GetFileName(targetPath)), overwrite: true);
-                }
-                PlainFiles.Copy(picked, targetPath, overwrite: true);
+                DSPRE.RotomTool.ReplaceDatabase(picked, targetPath, rotom);
             }
             catch (Exception ex)
             {
@@ -127,24 +120,6 @@ namespace DSPRE.Avalonia.ViewModels.Text
             {
                 // The app's command list is built from the legacy copy with the Rotom project's names laid over it.
                 await ReloadAndReparseScriptsAsync(rotom ? Path.Combine(DSPRE.ROMFiles.ScriptFile.CurrentRomDatabaseFolder(), "scrcmd_database.json") : targetPath);
-            }
-        }
-
-        // A Rotom project needs a v2 database: an object with a "commands" object in it.
-        private static string WhyNotRotomDatabase(string path)
-        {
-            try
-            {
-                using System.Text.Json.JsonDocument doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
-                return doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object
-                       && doc.RootElement.TryGetProperty("commands", out System.Text.Json.JsonElement commands)
-                       && commands.ValueKind == System.Text.Json.JsonValueKind.Object
-                    ? null
-                    : "That isn't a Rotom command database (it has no \"commands\" list), so the project's database was left as it is.";
-            }
-            catch (Exception ex)
-            {
-                return "That file couldn't be read as JSON, so the project's database was left as it is.\n" + ex.Message;
             }
         }
 
@@ -212,7 +187,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (!HasSelection || IsBusy) return;
             (string sourcePath, bool rotom) = Selected;
 
-            if (!File.Exists(sourcePath))
+            if (!PlainFiles.Exists(sourcePath))
             {
                 await DialogHelper.ShowErrorAsync($"Script command database not found:\n{sourcePath}", "Custom script command manager");
                 return;
@@ -245,7 +220,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public async Task OpenFolderAsync()
         {
             string folder = Path.GetDirectoryName(Selected.Path ?? "");
-            if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder))
+            if (string.IsNullOrEmpty(folder) || !PlainFiles.FolderExists(folder))
             {
                 await DialogHelper.ShowErrorAsync($"Folder not found:\n{folder}", "Custom script command manager");
                 return;

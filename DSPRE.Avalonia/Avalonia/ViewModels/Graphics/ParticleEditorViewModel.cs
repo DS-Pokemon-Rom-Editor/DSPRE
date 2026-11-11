@@ -280,7 +280,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             ok = false;
             byte[] file;
-            try { file = File.ReadAllBytes(path); }
+            try { file = PlainFiles.ReadBytes(path); }
             catch (Exception ex) { return StatusText = "That file couldn't be read: " + ex.Message; }
             if (!AnyPng.TryReadRgba(file, out byte[] rgba, out int w, out int h, out string whynot))
                 return StatusText = whynot ?? "That file isn't a readable PNG.";

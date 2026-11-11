@@ -204,7 +204,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             IDisposable members = Pending.Reading();
             IDisposable sheet = BattleGaugePieces.Staged(Pending.Read(HpBarImport.SheetTarget));
-            return new Data.DrawScopes(members, sheet);
+            return new DrawScopes(members, sheet);
         }
 
         /// <summary>Runs an import whose writes, bar pieces included, become one pending step. Returns its error or null.</summary>

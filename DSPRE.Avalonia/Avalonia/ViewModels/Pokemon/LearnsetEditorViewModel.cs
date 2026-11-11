@@ -136,7 +136,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void RefreshNames()
         {
             _moveNamesArr = RomInfo.GetAttackNames();
-            DSPRE.Avalonia.Data.ListSync.Apply(MoveNames, _moveNamesArr);
+            ListSync.Apply(MoveNames, _moveNamesArr);
             foreach (LearnsetEntryRow e in Entries) e.UpdateDisplay(_moveNamesArr);
         }
 

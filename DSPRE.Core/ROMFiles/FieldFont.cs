@@ -153,6 +153,9 @@ namespace DSPRE.ROMFiles
             _widths[glyph] = (byte)Math.Clamp(width, 0, CellSize);
         }
 
+        /// <summary>The loaded ROM's talking font, null until a preview loads it.</summary>
+        public static FieldFont Talk { get; set; }
+
         /// <summary>Reads the talking font out of the loaded ROM, or null when it cannot be found.</summary>
         public static FieldFont LoadTalkFont() => LoadFromArchive(TalkFontEntry);
 
@@ -263,6 +266,8 @@ namespace DSPRE.ROMFiles
     /// </summary>
     public static class FieldFontCharacters
     {
+        public const char MenuCursor = '‣';
+
         private static Dictionary<char, int> _glyphByChar;
         private static Dictionary<string, int> _glyphByCode;
 

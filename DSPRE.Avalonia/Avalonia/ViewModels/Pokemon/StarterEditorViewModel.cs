@@ -45,7 +45,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Only the field values are snapshotted; the byte patches (ASM/rival scripts/text) run once, on
         // Save, not per undo step. A record, so states compare by value.
         private sealed record Snapshot(int S1, int S2, int S3, int HeldItem, int Level);
-        private readonly DSPRE.Avalonia.UndoHistory<Snapshot> _history = new();
+        private readonly UndoHistory<Snapshot> _history = new();
         private System.DateTime _lastCaptureUtc = System.DateTime.MinValue;
         private const int CoalesceMs = 500;
 
@@ -332,8 +332,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void OnNamesChanged(object sender, System.EventArgs e)
         {
-            DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, RomInfo.GetPokemonNames());
-            DSPRE.Avalonia.Data.ListSync.Apply(ItemNames, RomInfo.GetItemNames());
+            ListSync.Apply(PokemonNames, RomInfo.GetPokemonNames());
+            ListSync.Apply(ItemNames, RomInfo.GetItemNames());
         }
 
         /// <summary>Unsubscribes from app-wide events; call when the editor window closes.</summary>

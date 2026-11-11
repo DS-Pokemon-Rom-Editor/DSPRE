@@ -56,7 +56,7 @@ namespace DSPRE.Avalonia.Views.Controls
 
 
         /// <summary>The game's own font, read out of the loaded ROM. </summary>
-        public static FieldFont Font { get; set; }
+        public static FieldFont Font { get => FieldFont.Talk; set => FieldFont.Talk = value; }
 
         private static bool RomFontReady => Font != null && FieldFontCharacters.Ready;
 
@@ -70,7 +70,7 @@ namespace DSPRE.Avalonia.Views.Controls
             {
                 if (_paletteRead || !AvaloniaEditorLauncher.IsRomLoaded) return _palette;
                 _paletteRead = true;
-                try { _palette = Data.GameTextScreens.TalkColours; }
+                try { _palette = GameTextScreens.TalkColours; }
                 catch (Exception ex) { AppLogger.WarnOnce("FieldMessageBoxView.Palette", ex); }
                 return _palette;
             }

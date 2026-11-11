@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using DSPRE.ROMFiles;
-using SpriteParts = (DSPRE.Avalonia.Data.DsBgScreen.Oam[] Cell, byte[] Tiles, System.Func<int, ushort[]> Colours);
+using SpriteParts = (DSPRE.Screens.DsBgScreen.Oam[] Cell, byte[] Tiles, System.Func<int, ushort[]> Colours);
 
 namespace DSPRE.Avalonia.Data
 {

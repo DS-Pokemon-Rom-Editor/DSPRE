@@ -89,6 +89,30 @@ namespace DSPRE.ROMFiles
             return (binPath, jsonPath);
         }
 
+        public static string SourceFile(int ID)
+        {
+            (string binPath, string jsonPath) = GetFilePaths(ID);
+            return File.Exists(jsonPath) ? jsonPath : binPath;
+        }
+
+        public static void Delete(int ID)
+        {
+            (string binPath, string jsonPath) = GetFilePaths(ID);
+            if (File.Exists(jsonPath)) PlainFiles.Remove(jsonPath);
+            ArchiveMembers.Delete(binPath);
+        }
+
+        public static void EnsureFolders()
+        {
+            string expanded = TextConverter.GetExpandedFolderPath();
+            if (!Directory.Exists(expanded))
+            {
+                Directory.CreateDirectory(expanded);
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TextArchives });
+            }
+            Directory.CreateDirectory(GameDirs[DirNames.TextArchives].unpackedDir);
+        }
+
         public static bool BuildRequiredBins() => BuildRequiredBins(out _);
 
         /// <param name="error">What stopped the build, naming the archive and line of any unknown control code.</param>

@@ -183,9 +183,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Effect labels, plus plain numbers for any id past them so every stored byte can show.
         private void SyncContestEffects(int need)
         {
-            List<string> labels = DSPRE.Avalonia.Data.LabelStore.Get("move_contest_effects").ToList();
+            List<string> labels = LabelStore.Get("move_contest_effects").ToList();
             for (int i = labels.Count; i <= need; i++) labels.Add(i.ToString());
-            DSPRE.Avalonia.Data.ListSync.Apply(ContestEffectNames, labels);
+            ListSync.Apply(ContestEffectNames, labels);
         }
 
         private string _description = string.Empty;
@@ -284,7 +284,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
         }
         public string DescriptionWarning => Overflow(_description, DescriptionWidth, DescriptionLines);
-        public string BagWarning => Overflow(_bagText, DSPRE.Avalonia.Data.MoveTextScreens.BagTextWidth, BagLines);
+        public string BagWarning => Overflow(_bagText, MoveTextScreens.BagTextWidth, BagLines);
         public bool HasDescriptionWarning => DescriptionWarning != null;
         public bool HasBagWarning => BagWarning != null;
 
@@ -310,7 +310,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         // ── In-game preview ───────────────────────────────────────────────────
-        private readonly DSPRE.Avalonia.Data.MoveTextScreens _screens = new();
+        private readonly MoveTextScreens _screens = new();
         private int _previewTab;
         /// <summary>0 summary, 1 battle, 2 relearner, 3 the bag's TM pocket.</summary>
         public int PreviewTab
@@ -324,8 +324,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void RefreshPreview()
         {
             if (_descBank == null) return;
-            MoveTextScreens.Screen screen = (DSPRE.Avalonia.Data.MoveTextScreens.Screen)Math.Clamp(_previewTab, 0, 3);
-            byte[] rgba = _screens.Render(screen, screen == DSPRE.Avalonia.Data.MoveTextScreens.Screen.Bag ? _bagText : _description, SystemFont);
+            MoveTextScreens.Screen screen = (MoveTextScreens.Screen)Math.Clamp(_previewTab, 0, 3);
+            byte[] rgba = _screens.Render(screen, screen == MoveTextScreens.Screen.Bag ? _bagText : _description, SystemFont);
             Preview = rgba == null ? null : DSPRE.Avalonia.ImageConverter.FromRgba(rgba, 256, 192);
             OnPropertyChanged(nameof(Preview));
         }
@@ -525,7 +525,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         // ── Undo / redo (ISupportsUndo) ────────────────────────────────────────
         // Snapshots are the move file's bytes; consecutive edits within CoalesceMs collapse into one step.
-        private readonly DSPRE.Avalonia.UndoHistory<byte[]> _history = new();
+        private readonly UndoHistory<byte[]> _history = new();
         private System.DateTime _lastCaptureUtc = System.DateTime.MinValue;
         private const int CoalesceMs = 500;
 
@@ -635,8 +635,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void ReloadSplitContest()
         {
-            DSPRE.Avalonia.Data.LabelStore.Sync(SplitNames,   "move_split");
-            DSPRE.Avalonia.Data.LabelStore.Sync(ContestNames, "move_contest_conditions");
+            LabelStore.Sync(SplitNames,   "move_split");
+            LabelStore.Sync(ContestNames, "move_contest_conditions");
             SyncContestEffects(_contestAppeal);
             AppEvents.LabelsChanged -= OnLabelsChanged; AppEvents.LabelsChanged += OnLabelsChanged;
             AppEvents.NamesChanged  -= OnNamesChanged;  AppEvents.NamesChanged  += OnNamesChanged;
@@ -672,7 +672,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 names.Insert(_pendingMove.Id, _pendingMove.DisplayName + " (not saved)");
             }
             _syncingList = true;
-            try { DSPRE.Avalonia.Data.ListSync.Apply(MoveNames, names); }
+            try { ListSync.Apply(MoveNames, names); }
             finally { _syncingList = false; }
             OnPropertyChanged(nameof(SelectedMoveIndex));
         }
@@ -760,7 +760,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 _history.MarkSaved();   // current state is now the on-disk baseline (undo can still go past it)
             }
             SetClean();
-            DSPRE.Avalonia.Data.MoveInfo.Forget();
+            MoveInfo.Forget();
             SaveNotice.Saved(UnsavedChangesDescription);
             RaiseUndoState();
         }
@@ -772,7 +772,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             error = null;
             if (!HgEngineProject.IsActive) return new MoveData(id);
             string built = Path.Combine(GameDirs[DirNames.MoveData].unpackedDir, id.ToString("D4"));
-            MoveData move = File.Exists(built) ? new MoveData(id) : new MoveData(new MemoryStream(new byte[16]));
+            MoveData move = PlainFiles.Exists(built) ? new MoveData(id) : new MoveData(new MemoryStream(new byte[16]));
             HgEngineMoveSource.TryLoad(id, move, out error);
             return move;
         }
@@ -838,7 +838,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (HgEngineProject.IsActive)
                 {
                     string builtDir = GameDirs[DirNames.MoveData].unpackedDir;
-                    MoveData BuiltOrEmpty(int id) => File.Exists(Path.Combine(builtDir, id.ToString("D4"))) ? new MoveData(id) : new MoveData(new MemoryStream(new byte[16]));
+                    MoveData BuiltOrEmpty(int id) => PlainFiles.Exists(Path.Combine(builtDir, id.ToString("D4"))) ? new MoveData(id) : new MoveData(new MemoryStream(new byte[16]));
                     if (!HgEngineMoveSource.TryLoadMany(Enumerable.Range(0, names.Length), BuiltOrEmpty, out moves, out skipped, out string loadError))
                     {
                         await DialogHelper.ShowErrorAsync($"Couldn't export:\n{loadError}", "Move data editor");

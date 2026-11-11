@@ -183,7 +183,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     Menu menu = Shown;
                     Rect rect = Area;
                     PressFrameRow[] rows = Frames.ToArray();
-                    (byte[] Rgba, int Width, int Height)[] drawn = await DSPRE.Avalonia.Data.PreviewFileGate.RunAsync(() =>
+                    (byte[] Rgba, int Width, int Height)[] drawn = await PreviewFileGate.RunAsync(() =>
                     {
                         using (_pending.Reading()) return rows.Select(f => Crop(menu.Picture, rect, f.Page)).ToArray();
                     });

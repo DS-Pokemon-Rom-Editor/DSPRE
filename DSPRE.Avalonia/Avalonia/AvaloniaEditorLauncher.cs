@@ -860,11 +860,11 @@ namespace DSPRE.Avalonia
         public static void OpenCellAnimationEditor(RomInfo.DirNames dir, int animation, int cells,
                                                    int sprites, int palette, int paletteRow, string what,
                                                    int sharedSheet = -1, int poketchApp = -1)
-            => OpenCellAnimationEditor(Data.ArchiveFiles.Mapped(dir), animation, cells, sprites, palette, paletteRow,
+            => OpenCellAnimationEditor(ArchiveFiles.Mapped(dir), animation, cells, sprites, palette, paletteRow,
                                        what, sharedSheet, poketchApp);
 
         /// <summary>The same, for an archive DSPRE does not map, which is read and saved in place.</summary>
-        public static void OpenCellAnimationEditor(Data.ArchiveFiles source, int animation, int cells,
+        public static void OpenCellAnimationEditor(ArchiveFiles source, int animation, int cells,
                                                    int sprites, int palette, int paletteRow, string what,
                                                    int sharedSheet = -1, int poketchApp = -1)
         {
@@ -915,7 +915,7 @@ namespace DSPRE.Avalonia
         {
             if (poketchApp < 0 || model is not ViewModels.Graphics.BottomScreenEditorViewModel vm)
                 return;
-            int at = System.Array.FindIndex(Data.PoketchApps.All, a => a.Id == poketchApp);
+            int at = System.Array.FindIndex(PoketchApps.All, a => a.Id == poketchApp);
             if (at >= 0) vm.SelectedApp = at + 1;
         }
 
@@ -945,11 +945,11 @@ namespace DSPRE.Avalonia
         {
             if (Refused("ParticleEditorView")) return;
             if (GameDirs.ContainsKey(archive)) DSUtils.TryUnpackNarcs(new List<DirNames> { archive });
-            OpenParticleEditor(Data.ArchiveFiles.Mapped(archive), entry, what, changed, orthographic);
+            OpenParticleEditor(ArchiveFiles.Mapped(archive), entry, what, changed, orthographic);
         }
 
         /// <summary>The same, for any archive, including ones DSPRE does not map, which are saved in place.</summary>
-        public static void OpenParticleEditor(Data.ArchiveFiles source, int entry, string what, System.Action<int> changed,
+        public static void OpenParticleEditor(ArchiveFiles source, int entry, string what, System.Action<int> changed,
                                               bool orthographic = false)
         {
             if (Refused("ParticleEditorView")) return;
@@ -1080,7 +1080,7 @@ namespace DSPRE.Avalonia
         }
 
         /// <summary>Opens the paint window on one drawing; <paramref name="closed"/> runs when it closes, so the caller can redraw.</summary>
-        public static void OpenPainter(Data.GraphicAssets.Archive archive, int member, System.Action closed = null, int palette = -1, int paletteBank = -1)
+        public static void OpenPainter(GraphicAssets.Archive archive, int member, System.Action closed = null, int palette = -1, int paletteBank = -1)
         {
             Views.Graphics.GraphicPainterView painter = new Views.Graphics.GraphicPainterView(new ViewModels.Graphics.GraphicPainterViewModel(archive, member, palette, paletteBank));
             if (closed != null) painter.Closed += (_, _) => closed();
@@ -1426,7 +1426,7 @@ namespace DSPRE.Avalonia
                 return;
             }
             int first = -1;
-            foreach (ScreenGraphicsLayouts.Entry e in Data.ScreenGraphicsLayouts.For(RomInfo.DirNames.PokedexGraphics))
+            foreach (ScreenGraphicsLayouts.Entry e in ScreenGraphicsLayouts.For(RomInfo.DirNames.PokedexGraphics))
                 if (e.Kind == "NSCR" && e.Drawing >= 0) { first = e.Index; break; }
             OpenGraphicAt(RomInfo.DirNames.PokedexGraphics, System.Math.Max(0, first), preferAssembled: true);
         }
@@ -1456,7 +1456,7 @@ namespace DSPRE.Avalonia
 
             try
             {
-                GraphicAssets.Archive a = Data.GraphicAssets.All.FirstOrDefault(x => x.Dir == archive);
+                GraphicAssets.Archive a = GraphicAssets.All.FirstOrDefault(x => x.Dir == archive);
                 if (a == null)
                 {
                     await DialogHelper.ShowInfoAsync("All graphics doesn't list that kind of graphic yet.", "All graphics");
@@ -1569,7 +1569,7 @@ namespace DSPRE.Avalonia
             {
                 string[] names = RomInfo.GetItemNames();
                 for (int item = 0; item < names.Length; item++)
-                    if (Data.GraphicAssets.DrawingForItem(item) == fileIndex) return item;
+                    if (GraphicAssets.DrawingForItem(item) == fileIndex) return item;
             }
             catch (System.Exception ex) { AppLogger.Warn("Item for drawing lookup: " + ex.Message); }
             return -1;
@@ -1673,7 +1673,7 @@ namespace DSPRE.Avalonia
             .Where(c => (c.Beta == null || BetaEditors.Allows(c.Beta)) && (c.Shown == null || c.Shown()));
 
         private static bool ScreenShown(string key) =>
-            IsRomLoaded && Data.GameTextScreens.Screens.FirstOrDefault(s => s.Key == key)?.Available == true;
+            IsRomLoaded && GameTextScreens.Screens.FirstOrDefault(s => s.Key == key)?.Available == true;
 
         public static List<CommandItem> BuildCommands() => new()
         {

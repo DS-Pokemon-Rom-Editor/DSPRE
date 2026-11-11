@@ -96,8 +96,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         { if (Equals(f, v)) return false; f = v; OnPropertyChanged(n); return true; }
 
         // Imported graphics wait here until Save; each undo state holds them with the rows.
-        private readonly Data.PendingArchiveWrites _pending = new();
-        private readonly Data.DungeonCutinGraphics _graphics;
+        private readonly PendingArchiveWrites _pending = new();
+        private readonly DungeonCutinGraphics _graphics;
 
         private const int FieldsPerRow = 15;
 
@@ -262,7 +262,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             DSPRE.RawImage raw;
             try
             {
-                using FileStream stream = File.OpenRead(pngPath);
+                using FileStream stream = PlainFiles.OpenRead(pngPath);
                 raw = ImageConverter.DecodeRawImage(stream);
             }
             catch (Exception ex) { return ex.Message; }
@@ -279,7 +279,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         // ── Constructor ───────────────────────────────────────────────────────
         public DungeonCutinEditorViewModel(List<string> headerNames)
         {
-            _graphics = new Data.DungeonCutinGraphics(_pending);
+            _graphics = new DungeonCutinGraphics(_pending);
             foreach (string h in headerNames)
                 Headers.Add(h.TrimEnd('\0'));
             LoadRows();
@@ -329,7 +329,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 using StringWriter writer = new StringWriter();
                 DungeonCutinCsv.Write(writer, Rows.Select(Values).ToArray());
-                await File.WriteAllTextAsync(path, writer.ToString());
+                string csv = writer.ToString();
+                await Task.Run(() => PlainFiles.WriteText(path, csv));
                 return null;
             }
             catch (Exception ex)

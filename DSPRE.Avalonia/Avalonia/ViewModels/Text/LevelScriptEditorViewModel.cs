@@ -72,12 +72,12 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public string NewVariableHex
         {
             get => "0x" + ((ushort)_newVariable).ToString("X4");
-            set { if (DSPRE.Avalonia.Data.HexText.TryParseUShort(value, out ushort v) && v >= FirstVariable && v <= LastVariable) NewVariable = v; else OnPropertyChanged(nameof(NewVariableHex)); }
+            set { if (HexText.TryParseUShort(value, out ushort v) && v >= FirstVariable && v <= LastVariable) NewVariable = v; else OnPropertyChanged(nameof(NewVariableHex)); }
         }
         public string NewValueHex
         {
             get => "0x" + ((ushort)_newValue).ToString("X4");
-            set { if (DSPRE.Avalonia.Data.HexText.TryParseUShort(value, out ushort v) && v <= LastVariable) NewValue = v; else OnPropertyChanged(nameof(NewValueHex)); }
+            set { if (HexText.TryParseUShort(value, out ushort v) && v <= LastVariable) NewValue = v; else OnPropertyChanged(nameof(NewValueHex)); }
         }
 
         /// <summary>On Platinum and HGSS a script number of 2000 or more may be a common script
@@ -328,7 +328,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             int levelScript = _selScript;
             StatusText = AvaloniaEditorLauncher.GoToScript(_file.BufferSet[_selTrigger].ScriptTriggered, () =>
             {
-                foreach (ushort id in DSPRE.Avalonia.Data.ProjectIndex.HeadersUsing(DSPRE.Avalonia.Data.RefKind.LevelScript, levelScript))
+                foreach (ushort id in ProjectIndex.HeadersUsing(RefKind.LevelScript, levelScript))
                 {
                     try { return MapHeader.GetMapHeader(id).ScriptFileID; }
                     catch (Exception ex) { AppLogger.Warn($"Level script {levelScript}: header {id} unreadable: {ex.Message}"); }

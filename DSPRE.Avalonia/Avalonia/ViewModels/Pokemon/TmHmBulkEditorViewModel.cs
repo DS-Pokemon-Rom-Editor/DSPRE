@@ -100,7 +100,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         // ── Undo / redo: every species' machine set ──
-        private DSPRE.Avalonia.ByteStateUndo _undo;
+        private ByteStateUndo _undo;
         private bool _pendingEdit;
         // Unsaved edits that predate the history, kept when another editor's save restarts it.
         private bool _carriedDirty;
@@ -126,7 +126,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void ResetUndo()
         {
             _pendingEdit = false;
-            _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo);
+            _undo = new ByteStateUndo(TakeState, ApplyState, RaiseUndo);
             RecountDirty();
             RaiseUndo();
         }

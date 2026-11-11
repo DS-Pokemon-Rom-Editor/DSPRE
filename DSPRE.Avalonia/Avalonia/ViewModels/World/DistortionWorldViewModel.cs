@@ -1285,7 +1285,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 if (!GameDirs.ContainsKey(DirNames.FieldEffectModels)) return null;
                 string path = System.IO.Path.Combine(GameDirs[DirNames.FieldEffectModels].unpackedDir, member.ToString("D4"));
-                return System.IO.File.Exists(path) ? System.IO.File.ReadAllBytes(path) : null;
+                return PlainFiles.ReadBytesOrNull(path);
             }
             catch (Exception ex) { AppLogger.WarnOnce("DistortionWorldViewModel.FieldEffectMember", ex); return null; }
         }
@@ -1303,9 +1303,9 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (GameDirs.ContainsKey(DirNames.FieldEffectModels))
                 {
                     string path = System.IO.Path.Combine(GameDirs[DirNames.FieldEffectModels].unpackedDir, member.ToString("D4"));
-                    if (System.IO.File.Exists(path))
+                    if (PlainFiles.Exists(path))
                     {
-                        using FileStream file = new System.IO.FileStream(path, System.IO.FileMode.Open, System.IO.FileAccess.Read);
+                        using FileStream file = PlainFiles.OpenRead(path);
                         NSBMD nsbmd = NSBMDLoader.LoadNSBMD(file);
                         if (nsbmd?.Models != null && nsbmd.Models.Length > 0)
                         {

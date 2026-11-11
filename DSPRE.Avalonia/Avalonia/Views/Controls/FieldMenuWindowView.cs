@@ -70,8 +70,7 @@ namespace DSPRE.Avalonia.Views.Controls
         /// <summary>What a menu adds to its widest entry before rounding up to whole tiles.</summary>
         public const int WidthPadding = 12;
 
-        /// <summary>The system font's cursor, character 0x011F.</summary>
-        public const char CursorCharacter = '‣';
+        public const char CursorCharacter = FieldFontCharacters.MenuCursor;
 
         // The system font palette's letter, shadow and paper, for when the ROM's cannot be read.
         public const uint LetterFallback = 0xFF5A5A52, ShadowFallback = 0xFFACBDBD, PaperFallback = 0xFFFFFFFF;

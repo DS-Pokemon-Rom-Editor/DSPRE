@@ -16,7 +16,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using AvaBitmap = Avalonia.Media.Imaging.Bitmap;
 using static DSPRE.RomInfo;
-using FormSpriteData = DSPRE.Avalonia.Data.AlternateFormSprites.Form;
+using FormSpriteData = DSPRE.Graphics.AlternateFormSprites.Form;
 using Avalonia.Media;
 
 namespace DSPRE.Avalonia.ViewModels.Pokemon
@@ -53,8 +53,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private sealed record SpriteState(byte[][] Raw, uint[] Normal, uint[] Shiny, bool[] NormalUsed, bool[] ShinyUsed, byte[] Pending);
 
         // The opposite gender's copied sprites and heights wait here until Save; the undo states carry them.
-        private DSPRE.Avalonia.Data.PendingArchiveWrites _pending = new();
-        private DSPRE.Avalonia.ByteStateUndo _undo;
+        private PendingArchiveWrites _pending = new();
+        private ByteStateUndo _undo;
         public bool CanUndo => _undo?.CanUndo == true;
         public bool CanRedo => _undo?.CanRedo == true;
         public void Undo() => _undo?.Undo();
@@ -78,7 +78,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
-        private void ResetUndo() { _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo); RaiseUndo(); }
+        private void ResetUndo() { _undo = new ByteStateUndo(TakeState, ApplyState, RaiseUndo); RaiseUndo(); }
 
         private void Edited(object group = null)
         {
@@ -476,7 +476,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             _currentFormData = HasAlternateForms ? GetAlternateFormsForCurrentSpecies() : Array.Empty<FormSpriteData>();
             // ListSync, not Clear()+Add(): a Reset during the ComboBox click that started this rebuild crashes.
-            DSPRE.Avalonia.Data.ListSync.Apply(VariantNames, _currentFormData.Select(f => f.Name).ToList());
+            ListSync.Apply(VariantNames, _currentFormData.Select(f => f.Name).ToList());
             // -1, not 0: LoadMon always assigns SelectedVariantIndex right after this, and it needs to
             // register as a real change even when the target index is 0, so the form actually loads.
             _selectedVariantIndex = -1;
@@ -554,16 +554,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             try
             {
-                string path = Path.Combine(RomInfo.GameDirs[DirNames.PersonalPokeData].unpackedDir, speciesId.ToString("D4"));
-                if (!File.Exists(path)) return 127;
-                using FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read);
-                return new SpeciesFile(fs).GenderRatioMaleToFemale;
+                return SpeciesFile.GenderRatioOf(speciesId);
             }
             catch (Exception ex) { AppLogger.WarnOnce("PokemonSpriteEditorViewModel.ReadGenderRatio", ex); return 127; }
         }
 
         // The tables live in AlternateFormSprites so All graphics reads the same ones.
-        private static FormSpriteData[] GetFormDataForCurrentGame() => DSPRE.Avalonia.Data.AlternateFormSprites.ForCurrentGame();
+        private static FormSpriteData[] GetFormDataForCurrentGame() => AlternateFormSprites.ForCurrentGame();
 
 
 
@@ -788,7 +785,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     bool isFemaleSlot = i == 0 || i == 2;
                     if ((isFemaleSlot && skipFemale) || (!isFemaleSlot && skipMale)) continue;
 
-                    byte[] pngBytes = File.ReadAllBytes(posePaths[i]);
+                    byte[] pngBytes = DSUtils.ReadFromFile(posePaths[i]);
                     if (!IndexedPng.TryRead(pngBytes, out byte[] indices, out uint[] pal, out int w, out int h) ||
                         w != SpriteWidth || h != SpriteHeight || pal.Length > 16)
                     {
@@ -839,7 +836,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             try
             {
-                byte[] fileBytes = File.ReadAllBytes(path);
+                byte[] fileBytes = DSUtils.ReadFromFile(path);
                 RawImage imported;
                 using (MemoryStream ms = new MemoryStream(fileBytes))
                     imported = ImageConverter.DecodeRawImage(ms);
@@ -940,7 +937,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             try
             {
-                byte[] fileBytes = File.ReadAllBytes(path);
+                byte[] fileBytes = DSUtils.ReadFromFile(path);
                 RawImage imported;
                 using (MemoryStream ms = new MemoryStream(fileBytes))
                     imported = ImageConverter.DecodeRawImage(ms);
@@ -1109,7 +1106,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             string path = await DialogHelper.OpenFileAsync(owner, title, new[] { DialogHelper.PngFilter, DialogHelper.AllFilter });
             if (string.IsNullOrEmpty(path)) return (null, null);
-            byte[] fileBytes = File.ReadAllBytes(path);
+            byte[] fileBytes = DSUtils.ReadFromFile(path);
             RawImage imported;
             using (MemoryStream ms = new MemoryStream(fileBytes))
                 imported = ImageConverter.DecodeRawImage(ms);
@@ -1681,10 +1678,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             int srcFront = _missingGenderIsFemale ? 3 : 2, dstFront = _missingGenderIsFemale ? 2 : 3;
             try
             {
-                ArchiveMembers.Write(poses[dstBack], File.ReadAllBytes(poses[srcBack]));
-                ArchiveMembers.Write(poses[dstFront], File.ReadAllBytes(poses[srcFront]));
-                EnsurePoseKey(poses, dstBack);
-                EnsurePoseKey(poses, dstFront);
+                ArchiveMembers.Write(poses[dstBack], DSUtils.ReadFromFile(poses[srcBack]));
+                ArchiveMembers.Write(poses[dstFront], DSUtils.ReadFromFile(poses[srcFront]));
+                HgEnginePokemonBattleSprites.EnsurePoseKey(poses, dstBack);
+                HgEnginePokemonBattleSprites.EnsurePoseKey(poses, dstFront);
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
@@ -1700,18 +1697,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             StatusText = $"Added {missingGender} sprites, copied from {sourceGender}." + heightNote;
             LoadMon(_currentId);
-        }
-
-        /// <summary>
-        /// A pose with art needs its .png.key, the seed the build scrambles it with, and a gender that was empty
-        /// may have none. Any seed works, so it takes the other gender's for the same pose.
-        /// </summary>
-        private static void EnsurePoseKey(string[] poses, int slot)
-        {
-            string key = poses[slot] + ".key";
-            if (File.Exists(key)) return;
-            string other = poses[slot ^ 1] + ".key";
-            if (File.Exists(other)) ArchiveMembers.Write(key, File.ReadAllBytes(other));
         }
 
 
@@ -1838,7 +1823,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     if (pal == null) continue;
                     byte[] png = IndexedPng.Write(_rawSprites[i], pal, SpriteWidth, SpriteHeight);
                     PlainFiles.WriteBytes(posePaths[i], png);
-                    EnsurePoseKey(posePaths, i);
+                    HgEnginePokemonBattleSprites.EnsurePoseKey(posePaths, i);
                 }
                 _undo?.MarkSaved();
                 _dirty = false;

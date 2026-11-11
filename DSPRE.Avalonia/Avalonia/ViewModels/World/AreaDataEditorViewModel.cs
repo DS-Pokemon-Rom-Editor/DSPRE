@@ -159,14 +159,14 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         /// <summary>The open game's light names, renamable per project under World labels.</summary>
-        public System.Collections.Generic.IReadOnlyList<string> LightTypeNames => Data.LabelStore.Get(Data.AreaLightTypes.LabelKey);
+        public System.Collections.Generic.IReadOnlyList<string> LightTypeNames => LabelStore.Get(AreaLightTypes.LabelKey);
         public int LightTypeIndex
         {
             get => _lightType >= 0 && _lightType < LightTypeNames.Count ? (int)_lightType : -1;
             set { if (value >= 0) LightType = value; }
         }
         /// <summary>What the chosen light type does in this game.</summary>
-        public string LightTypeNote => Data.AreaLightTypes.NoteFor((int)_lightType);
+        public string LightTypeNote => AreaLightTypes.NoteFor((int)_lightType);
 
         private int _areaTypeIndex;
         public int AreaTypeIndex { get => _areaTypeIndex; set { if (Set(ref _areaTypeIndex, value) && _area != null) { _area.AreaType = (byte)(value == 0 ? 0 : 1); if (!_suppress) Dirty(); } } }
@@ -176,7 +176,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty || _archive.IsDirty;
-        public string UnsavedChangesDescription => DSPRE.Avalonia.Data.StagedArchive.Join($"Area data {_selectedIndex}", _dirty, _archive.Describe("area data", "area data"));
+        public string UnsavedChangesDescription => StagedArchive.Join($"Area data {_selectedIndex}", _dirty, _archive.Describe("area data", "area data"));
         public void SaveChanges() => Save();
         public void DiscardChanges()
         {
@@ -339,7 +339,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             string path = await DialogHelper.OpenFileAsync(owner, "Import area data", AreaFiles);
             if (path == null) return;
             byte[] data;
-            try { data = File.ReadAllBytes(path); }
+            try { data = PlainFiles.ReadBytes(path); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
                 await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Area data editor");

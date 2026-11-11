@@ -10,11 +10,6 @@ using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
-    public enum TradeOriginLang
-    {
-        NONE = 0, JAPANESE = 1, ENGLISH = 2, FRENCH = 3,
-        ITALIAN = 4, GERMAN = 5, UNUSED = 6, SPANISH = 7, KOREAN = 8
-    }
     public class TradeEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -55,7 +50,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Trade edits live in the VM fields (only synced to _cur at save), and the nickname/OT names live in a
         // text archive, so the snapshot is composite: the synced trade-data bytes + the two text strings.
         private sealed class TradeSnapshot { public byte[] Data; public string OtName; public string Nickname; }
-        private readonly DSPRE.Avalonia.UndoHistory<TradeSnapshot> _history = new();
+        private readonly UndoHistory<TradeSnapshot> _history = new();
         private System.DateTime _lastCaptureUtc = System.DateTime.MinValue;
         private const int CoalesceMs = 500;
 
@@ -364,7 +359,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void ReloadLanguages()
         {
-            DSPRE.Avalonia.Data.LabelStore.Sync(LanguageNames, "trade_languages");
+            LabelStore.Sync(LanguageNames, "trade_languages");
             AppEvents.LabelsChanged -= OnLabelsChanged; AppEvents.LabelsChanged += OnLabelsChanged;
             AppEvents.NamesChanged  -= OnNamesChanged;  AppEvents.NamesChanged  += OnNamesChanged;
             AppEvents.PersonalDataSaved    -= OnPersonalDataSaved;    AppEvents.PersonalDataSaved    += OnPersonalDataSaved;
@@ -377,9 +372,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void OnNamesChanged(object sender, System.EventArgs e)
         {
             // Pokémon / ability / item names live in ROM text archives; refresh when the Text editor saves.
-            DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, RomInfo.GetPokemonNames());
-            DSPRE.Avalonia.Data.ListSync.Apply(AbilityNames, RomInfo.GetAbilityNames());
-            DSPRE.Avalonia.Data.ListSync.Apply(ItemNames,    RomInfo.GetItemNames());
+            ListSync.Apply(PokemonNames, RomInfo.GetPokemonNames());
+            ListSync.Apply(AbilityNames, RomInfo.GetAbilityNames());
+            ListSync.Apply(ItemNames,    RomInfo.GetItemNames());
             // Re-resolve the species / requested / ability / held-item combos' displayed text.
             Repoke(_selectedSpecies,   nameof(SelectedSpecies),   v => _selectedSpecies = v);
             Repoke(_selectedRequested, nameof(SelectedRequested), v => _selectedRequested = v);

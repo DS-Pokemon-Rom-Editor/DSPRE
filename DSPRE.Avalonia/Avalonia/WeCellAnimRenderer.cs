@@ -70,7 +70,7 @@ namespace DSPRE.Avalonia
             }
         }
 
-        public DSPRE.Avalonia.Data.CellSequence[] BuildSequences() => DSPRE.Avalonia.Data.CellActor.FromNanr(_anm);
+        public CellSequence[] BuildSequences() => CellActor.FromNanr(_anm);
 
         public AvaBitmap RenderCell(int cellIdx, int width = 256, int height = 256)
         {

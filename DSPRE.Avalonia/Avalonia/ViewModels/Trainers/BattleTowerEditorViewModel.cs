@@ -91,7 +91,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         // ── Undo / redo: both files, trainers and sets ──
         private sealed record TowerState(List<BattleTowerTrainer> Trainers, List<BattleTowerPokemonSet> Sets);
-        private DSPRE.Avalonia.ByteStateUndo _undo;
+        private ByteStateUndo _undo;
         public bool CanUndo => _undo?.CanUndo == true;
         public bool CanRedo => _undo?.CanRedo == true;
         public void Undo() => _undo?.Undo();
@@ -122,7 +122,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void ResetUndo()
         {
             if (_trainerFile == null || _setFile == null) return;
-            _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo);
+            _undo = new ByteStateUndo(TakeState, ApplyState, RaiseUndo);
             RaiseUndo();
         }
 
@@ -216,7 +216,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void RebuildForms()
         {
             string[] names = _setSpeciesIndex > 0 ? PokemonForms.NamesOf(_setSpeciesIndex) : null;
-            DSPRE.Avalonia.Data.ListSync.Apply(FormNames, names ?? new[] { "Normal" });
+            ListSync.Apply(FormNames, names ?? new[] { "Normal" });
             RaiseForms();
             // Rewriting the names drops the box's pick after this returns, so the pick is pushed again: blank, then the form.
             if (_formRepushPending) return;
@@ -297,15 +297,15 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (_trainerFile == null || _setFile == null) return;
             int trainer = _selectedTrainerIndex, set = _selectedSetIndex;
-            DSPRE.Avalonia.Data.ListSync.Apply(TrainerClassNames, GetTrainerClassNames());
-            DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, GetPokemonNames());
-            DSPRE.Avalonia.Data.ListSync.Apply(MoveNames, GetAttackNames());
-            DSPRE.Avalonia.Data.ListSync.Apply(ItemNames, GetItemNames());
+            ListSync.Apply(TrainerClassNames, GetTrainerClassNames());
+            ListSync.Apply(PokemonNames, GetPokemonNames());
+            ListSync.Apply(MoveNames, GetAttackNames());
+            ListSync.Apply(ItemNames, GetItemNames());
             _suppress = true;
-            DSPRE.Avalonia.Data.ListSync.Apply(TrainerLabels, _trainerFile.Trainers.Select((t, i) => $"[{i:D3}] {t}").ToList());
-            DSPRE.Avalonia.Data.ListSync.Apply(SetLabels, _setFile.Sets.Select((s, i) => SetRow(i)).ToList());
+            ListSync.Apply(TrainerLabels, _trainerFile.Trainers.Select((t, i) => $"[{i:D3}] {t}").ToList());
+            ListSync.Apply(SetLabels, _setFile.Sets.Select((s, i) => SetRow(i)).ToList());
             if (CurrentTrainer != null)
-                DSPRE.Avalonia.Data.ListSync.Apply(SetIdLabels, CurrentTrainer.SetIDs.Select(id => SetRow(id)).ToList());
+                ListSync.Apply(SetIdLabels, CurrentTrainer.SetIDs.Select(id => SetRow(id)).ToList());
             _suppress = false;
             OnPropertyChanged(nameof(AddSetPreviewLabel));
             // A list box drops its pick when the picked row's text is replaced, after this returns.
@@ -426,7 +426,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public void LocateTrainers()
         {
             string path = Filesystem.BattleTowerTrainers;
-            if (!string.IsNullOrEmpty(path) && System.IO.Directory.Exists(path))
+            if (!string.IsNullOrEmpty(path) && PlainFiles.FolderExists(path))
                 SystemShell.RevealInFileManager(path);
         }
 
@@ -548,7 +548,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public void LocateSets()
         {
             string path = Filesystem.BattleTowerPokemon;
-            if (!string.IsNullOrEmpty(path) && System.IO.Directory.Exists(path))
+            if (!string.IsNullOrEmpty(path) && PlainFiles.FolderExists(path))
                 SystemShell.RevealInFileManager(path);
         }
 

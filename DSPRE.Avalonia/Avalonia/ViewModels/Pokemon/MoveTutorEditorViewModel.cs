@@ -99,7 +99,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _savedPool = _data.PoolBytes();
             _savedMasks = _data.MaskBytes();
             StartUndo();
-            DSPRE.Avalonia.Data.ListSync.Apply(MoveNames, GetAttackNames());
+            ListSync.Apply(MoveNames, GetAttackNames());
             for (int i = 0; i < _data.Pool.Count; i++) Pool.Add(new PoolRow(this, i));
 
             string[] names = _data.FromSource ? GetPokemonNames() : GetPokemonNamesWithForms(508);
@@ -113,7 +113,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void RefreshNames()
         {
             if (_data == null) return;
-            DSPRE.Avalonia.Data.ListSync.Apply(MoveNames, GetAttackNames());
+            ListSync.Apply(MoveNames, GetAttackNames());
             string[] names = _data.FromSource ? GetPokemonNames() : GetPokemonNamesWithForms(508);
             int at = 0;
             for (int id = 1; id < names.Length && at < Species.Count; id++)

@@ -10,6 +10,9 @@ namespace DSPRE.Avalonia
 {
     internal static class ImageConverter
     {
+        public static AvaloniaBitmap ToBitmap(this BattleGroundRenderer.GroundImage image) =>
+            image?.Rgba == null ? null : FromRgba(image.Rgba, image.Width, image.Height);
+
         /// <summary>Builds a bitmap from RGBA bytes, swapped to the BGRA that RawImage holds.</summary>
         public static AvaloniaBitmap FromRgba(byte[] rgba, int width, int height)
         {
@@ -114,6 +117,12 @@ namespace DSPRE.Avalonia
             {
                 if (px[i] == keyB && px[i + 1] == keyG && px[i + 2] == keyR) px[i + 3] = 0;
             }
+        }
+
+        public static DSPRE.RawImage DecodeRawImageFile(string path)
+        {
+            using FileStream fs = System.IO.File.OpenRead(path);
+            return DecodeRawImage(fs);
         }
 
         /// <summary>Decodes a PNG or GIF stream to a <see cref="DSPRE.RawImage"/>; null on an unexpected pixel format.</summary>

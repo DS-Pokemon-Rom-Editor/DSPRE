@@ -126,12 +126,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_currentId <= 0 || _values == null || _values[_forme] == null) { SizePreview = null; return; }
             try
             {
-                ScreenPage page = DSPRE.Avalonia.Data.PokedexBook.SizePage(DexPageRecipes.For(RomInfo.GameFamily));
+                ScreenPage page = PokedexBook.SizePage(DexPageRecipes.For(RomInfo.GameFamily));
                 if (page == null) { SizePreview = null; return; }
                 if (_previewSample == null || _previewSample.Species != _currentId)
                 {
                     _previewSample = new DexSample(_currentId) { MetricsOverride = () => _values?[_forme] };
-                    _previewComposer = DSPRE.Avalonia.Data.PokedexBook.ComposerFor(_previewSample, PreviewFont);
+                    _previewComposer = PokedexBook.ComposerFor(_previewSample, PreviewFont);
                 }
                 string variant = page.Variants.Length > 1 && _previewFemale ? page.Variants[1] : page.Variants.FirstOrDefault();
                 // The scales and offsets draw the height comparison, which HGSS shows on the other screen.
@@ -152,7 +152,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>Opens the Pokédex graphics editor on this Pokémon's size page.</summary>
         public void OpenSizePage()
         {
-            ScreenPage page = DSPRE.Avalonia.Data.PokedexBook.SizePage(DexPageRecipes.For(RomInfo.GameFamily));
+            ScreenPage page = PokedexBook.SizePage(DexPageRecipes.For(RomInfo.GameFamily));
             AvaloniaEditorLauncher.OpenPokedexGraphics(_currentId, page?.Id);
         }
 

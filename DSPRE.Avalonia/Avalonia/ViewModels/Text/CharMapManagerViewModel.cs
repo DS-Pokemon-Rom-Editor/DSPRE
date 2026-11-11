@@ -189,7 +189,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         public async Task CreateMapCommandAsync()
         {
-            if (File.Exists(CharMapManager.CustomCharmapFilePath))
+            if (PlainFiles.Exists(CharMapManager.CustomCharmapFilePath))
             {
                 bool overwrite = await DialogHelper.AskYesNoAsync(
                     "A custom character map already exists. Overwrite it?", "Custom character map exists");
@@ -243,7 +243,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         public async Task OpenFileCommandAsync()
         {
-            if (!File.Exists(CharMapManager.CustomCharmapFilePath))
+            if (!PlainFiles.Exists(CharMapManager.CustomCharmapFilePath))
             {
                 await DialogHelper.ShowInfoAsync("No custom character map file exists to open.", "File not found");
                 return;
@@ -253,7 +253,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         public async Task RebaseCommandAsync()
         {
-            if (!File.Exists(CharMapManager.CustomCharmapFilePath))
+            if (!PlainFiles.Exists(CharMapManager.CustomCharmapFilePath))
             {
                 await DialogHelper.ShowInfoAsync("No custom character map exists to merge. Please create one first.",
                     "No custom character map");
@@ -355,7 +355,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         private void LoadCharMap()
         {
-            if (!File.Exists(CharMapManager.CustomCharmapFilePath))
+            if (!PlainFiles.Exists(CharMapManager.CustomCharmapFilePath))
             {
                 _currentMap = null;
                 HasMap = false;

@@ -400,7 +400,7 @@ namespace DSPRE.Avalonia.Views.World
             if (VM == null || sender is not Button { Tag: string tag } || !int.TryParse(tag, out int kind)) return;
             int number = VM.ShownScript(kind);
             string name = await DialogHelper.PromptTextAsync($"Name for script {number}:", "Rename shared script",
-                DSPRE.Avalonia.Data.CommonScriptLabels.Of(number) ?? "", TopLevel.GetTopLevel(this) as Window);
+                CommonScriptLabels.Of(number) ?? "", TopLevel.GetTopLevel(this) as Window);
             if (name != null) VM.RenameCommonScript(kind, name);
         }
         private void OpenHiddenItems_Click(object sender, RoutedEventArgs e) => VM?.OpenHiddenItemTable();

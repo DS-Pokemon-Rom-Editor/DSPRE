@@ -156,8 +156,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 // for a ds-rom project or "data" for a legacy one.
                 string romRoot = System.IO.Path.Combine(WorkDir, IsDsRomProject ? "files" : "data");
                 string path = System.IO.Path.Combine(romRoot, "data", "sound", fileName);
-                if (!System.IO.File.Exists(path)) { _sdatLoadError = $"Sound archive not found at:\n{path}"; return null; }
-                _sdat = SdatArchive.Parse(System.IO.File.ReadAllBytes(path));
+                if (!PlainFiles.Exists(path)) { _sdatLoadError = $"Sound archive not found at:\n{path}"; return null; }
+                _sdat = SdatArchive.Parse(PlainFiles.ReadBytes(path));
                 if (_sdat.Sequences.Count == 0) _sdatLoadError = $"The sound archive at {path} has no sequences DSPRE can read.";
             }
             catch (System.Exception ex) { _sdat = null; _sdatLoadError = ex.ToString(); }
@@ -376,7 +376,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             else
                 foreach (WazaSeqOp o in WazaSeqOpcodes.Table(_version)) OpcodeNames.Add(o.Name);
             OpcodeDisplayNames.Clear();
-            foreach (string n in OpcodeNames) OpcodeDisplayNames.Add(DSPRE.Avalonia.Data.BattleAnimSchema.OpcodeDisplay(n, !IsAnimation));
+            foreach (string n in OpcodeNames) OpcodeDisplayNames.Add(BattleAnimSchema.OpcodeDisplay(n, !IsAnimation));
             _nameToOp = null;   // opcode table changed → rebuild the text-parser's name→id map lazily
 
             BuildFileList();
@@ -407,7 +407,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             List<string> labels = _sourceOrder != null && _sourceById != null
                 ? _sourceOrder.Select(LabelFor).ToList()
                 : Enumerable.Range(0, FileItems.Count).Select(LabelFor).ToList();
-            DSPRE.Avalonia.Data.ListSync.Apply(FileItems, labels);
+            ListSync.Apply(FileItems, labels);
         }
 
         private void BuildFileList()
@@ -839,20 +839,20 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             foreach (ScriptCmdRow row in Rows)
             {
                 string raw = OpNameOf(row.OpId);
-                sb.Append(DSPRE.Avalonia.Data.BattleAnimSchema.CommandName(raw, !IsAnimation));
+                sb.Append(BattleAnimSchema.CommandName(raw, !IsAnimation));
                 for (int i = 0; i < row.Args.Count; i++)
                 {
                     sb.Append(' ');
                     int v = row.Args[i];
-                    string label = DSPRE.Avalonia.Data.BattleAnimSchema.ParamName(raw, i, !IsAnimation);
+                    string label = BattleAnimSchema.ParamName(raw, i, !IsAnimation);
                     // An enum parameter shows its friendly value token; a generic "Param N" label is dropped
                     // (bare number) since a made-up name would add no meaning.
-                    BattleAnimSchema.EnumOption[] opts = DSPRE.Avalonia.Data.BattleAnimSchema.EnumFor(raw, i);
+                    BattleAnimSchema.EnumOption[] opts = BattleAnimSchema.EnumFor(raw, i);
                     string valText = v.ToString(CultureInfo.InvariantCulture);
                     if (opts != null)
-                        foreach (BattleAnimSchema.EnumOption o in opts) if (o.Value == v) { valText = DSPRE.Avalonia.Data.BattleAnimSchema.Token(o.Label, true); break; }
+                        foreach (BattleAnimSchema.EnumOption o in opts) if (o.Value == v) { valText = BattleAnimSchema.Token(o.Label, true); break; }
                     if (label.StartsWith("Param ", StringComparison.Ordinal)) sb.Append(valText);
-                    else sb.Append(DSPRE.Avalonia.Data.BattleAnimSchema.ArgToken(raw, i, !IsAnimation)).Append('=').Append(valText);
+                    else sb.Append(BattleAnimSchema.ArgToken(raw, i, !IsAnimation)).Append('=').Append(valText);
                 }
                 sb.Append('\n');
             }
@@ -868,7 +868,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             for (int i = 0; i < OpcodeNames.Count; i++)
             {
                 d[OpcodeNames[i]] = i;   // index == opId
-                string cmd = DSPRE.Avalonia.Data.BattleAnimSchema.CommandName(OpcodeNames[i], !IsAnimation);
+                string cmd = BattleAnimSchema.CommandName(OpcodeNames[i], !IsAnimation);
                 if (!string.IsNullOrEmpty(cmd) && !d.ContainsKey(cmd)) d[cmd] = i;   // single-word name (first wins on collision)
             }
             return d;
@@ -887,12 +887,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private static bool TryResolveEnum(string rawOpName, int argIndex, string token, out int value)
         {
             value = 0;
-            BattleAnimSchema.EnumOption[] opts = DSPRE.Avalonia.Data.BattleAnimSchema.EnumFor(rawOpName, argIndex);
+            BattleAnimSchema.EnumOption[] opts = BattleAnimSchema.EnumFor(rawOpName, argIndex);
             if (opts == null) return false;
             foreach (BattleAnimSchema.EnumOption o in opts)
             {
                 if (string.Equals(o.Label, token, StringComparison.OrdinalIgnoreCase)) { value = o.Value; return true; }
-                if (string.Equals(DSPRE.Avalonia.Data.BattleAnimSchema.Token(o.Label, true), token, StringComparison.OrdinalIgnoreCase)) { value = o.Value; return true; }
+                if (string.Equals(BattleAnimSchema.Token(o.Label, true), token, StringComparison.OrdinalIgnoreCase)) { value = o.Value; return true; }
             }
             return false;
         }
@@ -911,9 +911,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (digits != null && int.TryParse(digits, out int n) && n >= 1) return n - 1;
             for (int i = 0; i < 32; i++)
             {
-                string pn = DSPRE.Avalonia.Data.BattleAnimSchema.ParamName(rawOpName, i, script);
+                string pn = BattleAnimSchema.ParamName(rawOpName, i, script);
                 if (pn.StartsWith("Param ", StringComparison.Ordinal)) break;
-                if (string.Equals(DSPRE.Avalonia.Data.BattleAnimSchema.ArgToken(rawOpName, i, script), label, StringComparison.OrdinalIgnoreCase)) return i;
+                if (string.Equals(BattleAnimSchema.ArgToken(rawOpName, i, script), label, StringComparison.OrdinalIgnoreCase)) return i;
             }
             return -1;
         }
@@ -1179,7 +1179,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 {
                     Command = item.Command, Arg = a, Value = v, Min = 0, Max = byteValue ? 255 : Math.Max(v, 999),
                     FramesPerStep = d1, MovesBar = movesBar,
-                    Name = DSPRE.Avalonia.Data.BattleAnimSchema.ParamLabel(row.OpName, a, row.Args),
+                    Name = BattleAnimSchema.ParamLabel(row.OpName, a, row.Args),
                 };
                 if (d1 == 1) break;
             }
@@ -1506,13 +1506,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
 
         // ── Configurable battle background (real ROM data) ──────────────────────────────────────────────────────
-        private DSPRE.Avalonia.Data.BattleBgRenderer _bgRenderer;
+        private BattleBgRenderer _bgRenderer;
         private System.Collections.Generic.List<string> _backgroundOptions;
         public System.Collections.Generic.List<string> BackgroundOptions => _backgroundOptions ??= BuildBackgroundOptions();
         private static System.Collections.Generic.List<string> BuildBackgroundOptions()
         {
             List<string> l = new System.Collections.Generic.List<string> { "No background" };
-            for (int i = 0; i < DSPRE.Avalonia.Data.BattleBgRenderer.BackdropCount; i++) l.Add($"Backdrop {i}");
+            for (int i = 0; i < BattleBgRenderer.BackdropCount; i++) l.Add($"Backdrop {i}");
             return l;
         }
         // Start on grass, not black: on black every move that swaps the backdrop looks brighter than in game.
@@ -1529,7 +1529,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
 
         // ── Configurable terrain ground platforms (real ROM data, battle/graphic/pl_batt_obj.narc) ──────────────
-        private DSPRE.Avalonia.Data.BattleGroundRenderer _groundRenderer;
+        private BattleGroundRenderer _groundRenderer;
         private System.Collections.Generic.List<string> _terrainOptions;
         /// <summary>Dropdown: "Placeholder" (the bundled platform PNGs) + each terrain (Gravel, Sand, Lawn,
         /// Pool, Rock, Cave, Snow, Water, Ice, Floor). Picking one renders the real in-game ground "tray" the Pokémon
@@ -1538,7 +1538,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private static System.Collections.Generic.List<string> BuildTerrainOptions()
         {
             List<string> l = new System.Collections.Generic.List<string> { "Placeholder platforms" };
-            l.AddRange(DSPRE.Avalonia.Data.BattleGroundRenderer.TerrainNames);
+            l.AddRange(BattleGroundRenderer.TerrainNames);
             return l;
         }
         private int _terrainIndex = 3;   // Lawn, the ordinary grass battle
@@ -1552,7 +1552,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 // Pick the matching backdrop for the terrain; the user can still change it. Index 0 leaves it alone.
                 if (_terrainIndex > 0)
                 {
-                    int bg = DSPRE.Avalonia.Data.BattleGroundRenderer.BackdropForTerrain(_terrainIndex - 1);
+                    int bg = BattleGroundRenderer.BackdropForTerrain(_terrainIndex - 1);
                     if (bg >= 0) BackgroundIndex = bg + 1;   // +1: option 0 is the bundled image
                 }
                 if (IsAnimation && _sceneLoaded && !IsCellPlaying) SceneComposite = _compositor.Render(null);
@@ -1570,7 +1570,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 try
                 {
-                    (BattleGroundRenderer.GroundImage player, BattleGroundRenderer.GroundImage opponent) = (_groundRenderer ??= new DSPRE.Avalonia.Data.BattleGroundRenderer()).Build(_terrainIndex - 1);
+                    (BattleGroundRenderer.GroundImage player, BattleGroundRenderer.GroundImage opponent) = (_groundRenderer ??= new BattleGroundRenderer()).Build(_terrainIndex - 1);
                     if (opponent?.Rgba != null) { _compositor.AddStatic(opponent.Rgba, opponent.Width, opponent.Height, opponent.Left, opponent.Top); placed = true; }
                     if (player?.Rgba != null) { _compositor.AddStatic(player.Rgba, player.Width, player.Height, player.Left, player.Top); placed = true; }
                 }
@@ -1592,8 +1592,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public bool ShadowHidden => ShowsMove && _hideShadowThisMove;
         public bool RealGaugesVisible => HasRealGauges && GaugesVisible;
         public bool PlaceholderGaugesVisible => !HasRealGauges && GaugesVisible;
-        public double PlayerGaugeImageLeft => Data.BattleGaugeComposer.CentreOf(Data.BattleGaugeComposer.Kind.PlayerSingle).X - 128;
-        public double PlayerHealthFillLeft => Data.BattleGaugeComposer.HealthFillLeft(Data.BattleGaugeComposer.Kind.PlayerSingle);
+        public double PlayerGaugeImageLeft => BattleGaugeComposer.CentreOf(BattleGaugeComposer.Kind.PlayerSingle).X - 128;
+        public double PlayerHealthFillLeft => BattleGaugeComposer.HealthFillLeft(BattleGaugeComposer.Kind.PlayerSingle);
 
         private int GetMoveFlagField(int moveId = -1)
         {
@@ -1663,7 +1663,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private static List<string> MessageBoxNameList()
         {
             List<string> names = new List<string> { "Off" };
-            names.AddRange(Data.WindowFrames.Names);
+            names.AddRange(WindowFrames.Names);
             return names;
         }
 
@@ -1703,7 +1703,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 // The name and level go into each bar's own picture, the way a battle writes them.
                 // Games whose letters cannot be read fall back to the plain bar.
-                BattleGroundRenderer r = _groundRenderer ??= new DSPRE.Avalonia.Data.BattleGroundRenderer();
+                BattleGroundRenderer r = _groundRenderer ??= new BattleGroundRenderer();
                 GaugePlayerImage = Data.GaugeTextImages.Bar(true, GaugeNameText, _gaugeLevel)
                                 ?? r.BuildGauge(true)?.ToBitmap();
                 GaugeOpponentImage = Data.GaugeTextImages.Bar(false, GaugeNameText, _gaugeLevel)
@@ -1729,7 +1729,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 try
                 {
-                    BattleBgRenderer.BgImage img = (_bgRenderer ??= new DSPRE.Avalonia.Data.BattleBgRenderer()).BuildBackdrop(_backgroundIndex - 1);
+                    BattleBgRenderer.BgImage img = (_bgRenderer ??= new BattleBgRenderer()).BuildBackdrop(_backgroundIndex - 1);
                     if (img?.Rgba != null) rgb = BgToBackdrop(img.Rgba, img.Width, img.Height);
                 }
                 catch (Exception ex) { AppLogger.WarnOnce("BattleScriptEditorViewModel.ApplyBackdrop", ex); rgb = null; }
@@ -2170,8 +2170,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // (variable-length opcodes); the user can trim them via the raw-args field.
         private void PadArgs() { int need = ArgCountOf?.Invoke(_opId, Args) ?? 0; while (Args.Count < need) Args.Add(0); }
         public string OpName => OpNameOf?.Invoke(_opId) ?? ("op" + _opId);
-        public string OpDisplay => DSPRE.Avalonia.Data.BattleAnimSchema.OpcodeDisplay(OpName, Script);
-        public string OpDoc => DSPRE.Avalonia.Data.BattleAnimSchema.OpcodeDoc(OpName, Script);
+        public string OpDisplay => BattleAnimSchema.OpcodeDisplay(OpName, Script);
+        public string OpDoc => BattleAnimSchema.OpcodeDoc(OpName, Script);
         public bool HasDoc => !string.IsNullOrEmpty(OpDoc);
         // Set the opcode during load without rebuilding/raising an edit (the caller rebuilds + keeps the loaded args).
         internal void _opIdSilent(int id) { _opId = id; Raise(nameof(OpId)); Raise(nameof(OpName)); Raise(nameof(OpDisplay)); Raise(nameof(ValuesSummary)); Raise(nameof(OpDoc)); Raise(nameof(HasDoc)); }
@@ -2189,7 +2189,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 for (int i = 0; i < Args.Count; i++)
                 {
                     if (i > 0) sb.Append("  ");
-                    sb.Append(DSPRE.Avalonia.Data.BattleAnimSchema.ParamLabel(OpName, i, Args, Script)).Append('=').Append(Args[i]);
+                    sb.Append(BattleAnimSchema.ParamLabel(OpName, i, Args, Script)).Append('=').Append(Args[i]);
                 }
                 return sb.ToString();
             }
@@ -2204,7 +2204,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 for (int i = 0; i < Args.Count; i++)
                 {
                     if (i > 0) sb.Append("  ");
-                    sb.Append(DSPRE.Avalonia.Data.BattleAnimSchema.ParamLabel(OpName, i, Args, Script)).Append('=').Append(Args[i]);
+                    sb.Append(BattleAnimSchema.ParamLabel(OpName, i, Args, Script)).Append('=').Append(Args[i]);
                 }
                 return sb.ToString();
             }
@@ -2235,8 +2235,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             Params.Clear();
             for (int i = 0; i < Args.Count; i++)
-                Params.Add(new ParamVM(DSPRE.Avalonia.Data.BattleAnimSchema.ParamLabel(OpName, i, Args, Script), Args[i], i, this,
-                                       DSPRE.Avalonia.Data.BattleAnimSchema.EnumFor(OpName, i)));
+                Params.Add(new ParamVM(BattleAnimSchema.ParamLabel(OpName, i, Args, Script), Args[i], i, this,
+                                       BattleAnimSchema.EnumFor(OpName, i)));
             Raise(nameof(Summary)); Raise(nameof(ValuesSummary)); Raise(nameof(HasValues)); Raise(nameof(RawArgs)); Raise(nameof(HasParams));
         }
         public bool HasParams => Args.Count > 0;
@@ -2271,7 +2271,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             }
             // A new routine number names its values differently.
             if (!Script && index == 0 && OpName == "CallFunc")
-                foreach (ParamVM p in Params) p.Name = DSPRE.Avalonia.Data.BattleAnimSchema.ParamLabel(OpName, p.Index, Args);
+                foreach (ParamVM p in Params) p.Name = BattleAnimSchema.ParamLabel(OpName, p.Index, Args);
             Raise(nameof(Summary)); Raise(nameof(ValuesSummary)); Raise(nameof(HasValues)); Raise(nameof(RawArgs));
             OnEdited?.Invoke(this);
         }
@@ -2317,7 +2317,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void Raise(string n) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
-        public ParamVM(string name, int value, int index, ScriptCmdRow row, DSPRE.Avalonia.Data.BattleAnimSchema.EnumOption[] options)
+        public ParamVM(string name, int value, int index, ScriptCmdRow row, BattleAnimSchema.EnumOption[] options)
         {
             Name = name; _value = value; _index = index; _row = row;
             if (options != null)

@@ -66,8 +66,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>What importing a cry actually does, and what sort of file it takes.</summary>
         public string CryImportHelp =>
             "Import a WAV as this Pokémon's cry.\n\n"
-            + DSPRE.Avalonia.Data.SoundArchive.HowItWorks + "\n\n"
-            + DSPRE.Avalonia.Data.CryFiles.AcceptedFormat + "\n\n"
+            + SoundArchive.HowItWorks + "\n\n"
+            + CryFiles.AcceptedFormat + "\n\n"
             + "It's compressed as the game compresses its cries, so the sound file stays about the same size. "
             + "That loses a little detail, so import from your own source each time instead of exporting and "
             + "importing the same cry again.\n\n"
@@ -300,7 +300,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // An unsaved new species keeps its row at the end.
             if (_pendingSpecies != null && _pendingListIndex >= 0 && _pendingListIndex < PokemonNames.Count)
                 decorated.Add(PokemonNames[_pendingListIndex]);
-            DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, decorated);
+            ListSync.Apply(PokemonNames, decorated);
             PersonalVM.RefreshNames(full);
             LearnsetVM?.RefreshNames();
             EvolutionsVM?.RefreshNames(full);
@@ -437,7 +437,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string[] refreshed = RomInfo.GetPokemonNames();
             string[] decorated = new string[refreshed.Length];
             for (int i = 0; i < refreshed.Length; i++) decorated[i] = $"{i:D3} {refreshed[i]}";
-            DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, decorated);
+            ListSync.Apply(PokemonNames, decorated);
             OnPropertyChanged(nameof(MaxMonIndex));
             AppEvents.RaiseNamesChanged();
 

@@ -286,8 +286,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
         public decimal AreaGroundAnimation { get => _area?.GroundAnimation ?? 0; set => EditArea(a => a.GroundAnimation = (ushort)value); }
         public decimal AreaLightType { get => _area?.LightType ?? 0; set { EditArea(a => a.LightType = (ushort)value); OnPropertyChanged(nameof(AreaLightNote)); } }
-        public IReadOnlyList<string> AreaLightNames => DSPRE.Avalonia.Data.LabelStore.Get(DSPRE.Avalonia.Data.AreaLightTypes.LabelKey);
-        public string AreaLightNote => _area == null ? "" : DSPRE.Avalonia.Data.AreaLightTypes.NoteFor(_area.LightType);
+        public IReadOnlyList<string> AreaLightNames => LabelStore.Get(AreaLightTypes.LabelKey);
+        public string AreaLightNote => _area == null ? "" : AreaLightTypes.NoteFor(_area.LightType);
         public bool AreaIndoor { get => _area?.AreaType == AreaData.TYPE_INDOOR; set => EditArea(a => a.AreaType = value ? AreaData.TYPE_INDOOR : AreaData.TYPE_OUTDOOR); }
 
         private void EditArea(Action<AreaData> change)
@@ -1386,7 +1386,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         // Added, removed and saved map files wait here until Save, and so does clearing the kept plates of a map
         // number that was added or removed, so Discard leaves a removed map's plates where they were.
-        private readonly DSPRE.Avalonia.Data.StagedArchive _archive = new(DirNames.Maps);
+        private readonly StagedArchive _archive = new(DirNames.Maps);
         private readonly HashSet<int> _platesToClear = new();
 
         private void ListMaps()
@@ -1403,7 +1403,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             _platesToClear.Clear();
         }
         public string UnsavedChangesDescription
-            => DSPRE.Avalonia.Data.StagedArchive.Join(IsHeaderView ? $"Header {_headerId} maps" : $"Map {_selectedMapIndex}", _dirty, _archive.Describe("map", "maps"));
+            => StagedArchive.Join(IsHeaderView ? $"Header {_headerId} maps" : $"Map {_selectedMapIndex}", _dirty, _archive.Describe("map", "maps"));
         public void SaveChanges() => Save();
         public void DiscardChanges()
         {
@@ -2613,12 +2613,10 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (GameFamily == GameFamilies.HGSS)
                     try { if (AreaForMap(_selectedMapIndex) is byte aid) models = new AreaData(aid).BuildingModels; }
                     catch { /* fall back to exterior */ }
-                string bdir = GameDirs[models].unpackedDir;
                 byte[] bldTex = null;
                 if (_buildingTilesetIndex > 0)
                 {
-                    string tp = Path.Combine(GameDirs[DirNames.BuildingTextures].unpackedDir, (_buildingTilesetIndex - 1).ToString("D4"));
-                    if (File.Exists(tp)) bldTex = File.ReadAllBytes(tp);
+                    bldTex = ArchiveMembers.ReadOrNull(DirNames.BuildingTextures, _buildingTilesetIndex - 1);
                 }
 
                 if (_map.Buildings != null)
@@ -2626,10 +2624,9 @@ namespace DSPRE.Avalonia.ViewModels.World
                     {
                         if (b.NSBMDFile == null)
                         {
-                            string mp = Path.Combine(bdir, b.ModelID.ToString("D4"));
-                            if (!File.Exists(mp)) continue;
-                            using FileStream fs = new FileStream(mp, FileMode.Open, FileAccess.Read);
-                            b.NSBMDFile = NSBMDLoader.LoadNSBMD(fs);
+                            byte[] model = ArchiveMembers.ReadOrNull(models, (int)b.ModelID);
+                            if (model == null) continue;
+                            b.NSBMDFile = NSBMDLoader.LoadNSBMD(new MemoryStream(model));
                         }
                         if (b.NSBMDFile?.Models == null || b.NSBMDFile.Models.Length == 0) continue;
 
@@ -2666,8 +2663,9 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             try
             {
-                if (!File.Exists(path)) return;
-                container.Materials = NSBTXLoader.LoadNsbtx(new MemoryStream(File.ReadAllBytes(path)), out container.Textures, out container.Palettes);
+                byte[] pack = ArchiveMembers.ReadOrNull(path);
+                if (pack == null) return;
+                container.Materials = NSBTXLoader.LoadNsbtx(new MemoryStream(pack), out container.Textures, out container.Palettes);
                 container.MatchTextures();
             }
             catch (Exception ex) { AppLogger.Error("Map tileset bind failed: " + ex.Message); }
@@ -2783,7 +2781,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             string path = await DialogHelper.OpenFileAsync(_owner, "Import map or model", new[] { bothFiles, mapFiles, modelFiles, allFiles });
             if (path == null) return false;
             byte[] data;
-            try { data = File.ReadAllBytes(path); }
+            try { data = DSUtils.ReadFromFile(path); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
                 await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Map editor");
@@ -2874,8 +2872,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private byte[] MapTextureData()
         {
             if (_mapTilesetIndex < 0) return null;
-            string tp = Path.Combine(GameDirs[DirNames.MapTextures].unpackedDir, _mapTilesetIndex.ToString("D4"));
-            return File.Exists(tp) ? File.ReadAllBytes(tp) : null;
+            return ArchiveMembers.ReadOrNull(DirNames.MapTextures, _mapTilesetIndex);
         }
         private string ModelName() => $"map_{_selectedMapIndex:D4}";
 
@@ -2893,14 +2890,14 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task ExportTexturedNsbmdAsync()
         {
             if (_map?.MapModelData == null) return;
-            string pack = Path.Combine(GameDirs[DirNames.MapTextures].unpackedDir, MapTilesetIndex.ToString("D4"));
-            if (!File.Exists(pack)) { await DialogHelper.ShowErrorAsync($"Map textures {MapTilesetIndex} couldn't be found.", "Map editor"); return; }
+            byte[] pack = ArchiveMembers.ReadOrNull(DirNames.MapTextures, MapTilesetIndex);
+            if (pack == null) { await DialogHelper.ShowErrorAsync($"Map textures {MapTilesetIndex} couldn't be found.", "Map editor"); return; }
             FilePickerFileType filter = new FilePickerFileType("Model (.nsbmd)") { Patterns = new[] { "*.nsbmd" } };
             string path = await DialogHelper.SaveFileAsync(_owner, "Export textured map model", new[] { filter }, ModelName() + "_textured.nsbmd");
             if (path == null) return;
             try
             {
-                PlainFiles.WriteBytes(path, NSBUtils.BuildNSBMDwithTextures(_map.MapModelData, File.ReadAllBytes(pack)));
+                PlainFiles.WriteBytes(path, NSBUtils.BuildNSBMDwithTextures(_map.MapModelData, pack));
                 SaveNotice.Exported(path);
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is ArgumentException)
@@ -2949,7 +2946,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             string path = await DialogHelper.OpenFileAsync(_owner, "Import terrain", new[] { new FilePickerFileType("Terrain (.bdhc)") { Patterns = new[] { "*.bdhc", "*.bin", "*.*" } } });
             if (path == null) return;
             // Kept plates belong to the terrain being replaced.
-            try { _map.ImportTerrain(File.ReadAllBytes(path)); _map.KeptPlates.Clear(); MarkDirty(); SaveNotice.Imported($"the terrain of map {_selectedMapIndex}", path); }
+            try { _map.ImportTerrain(DSUtils.ReadFromFile(path)); _map.KeptPlates.Clear(); MarkDirty(); SaveNotice.Imported($"the terrain of map {_selectedMapIndex}", path); }
             catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Map editor"); }
         }
         public async Task ExportTerrainAsync()
@@ -2967,7 +2964,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (_map == null) return;
             string path = await DialogHelper.OpenFileAsync(_owner, "Import sound plates", new[] { new FilePickerFileType("Sound plates (.bgs)") { Patterns = new[] { "*.bgs", "*.bin", "*.*" } } });
             if (path == null) return;
-            try { _map.ImportSoundPlates(File.ReadAllBytes(path)); MarkDirty(); SaveNotice.Imported($"the sound plates of map {_selectedMapIndex}", path); }
+            try { _map.ImportSoundPlates(DSUtils.ReadFromFile(path)); MarkDirty(); SaveNotice.Imported($"the sound plates of map {_selectedMapIndex}", path); }
             catch (Exception ex) { await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Map editor"); }
         }
         public async Task ExportSoundAsync()
@@ -2988,7 +2985,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (path == null) return;
             try
             {
-                _map.ImportPermissions(File.ReadAllBytes(path));
+                _map.ImportPermissions(DSUtils.ReadFromFile(path));
                 MarkDirty();
                 OnPropertyChanged(nameof(Collisions)); OnPropertyChanged(nameof(Types));
                 RebuildOverlay();
@@ -3014,7 +3011,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (path == null) return;
             try
             {
-                _map.ImportBuildings(File.ReadAllBytes(path));
+                _map.ImportBuildings(DSUtils.ReadFromFile(path));
                 RefreshBuildings(); RebuildPreview(); MarkDirty();
                 SaveNotice.Imported($"the buildings of map {_selectedMapIndex}", path);
             }

@@ -65,7 +65,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 }
             }
             catch (Exception e) when (e is IOException || e is InvalidOperationException || e is IndexOutOfRangeException) { }   // without the machine table no item names gain a move
-            DSPRE.Avalonia.Data.ListSync.Apply(ItemNames, names);
+            ListSync.Apply(ItemNames, names);
         }
 
         public sealed class EntryViewModel : INotifyPropertyChanged

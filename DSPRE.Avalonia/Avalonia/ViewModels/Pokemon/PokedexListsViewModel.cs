@@ -47,7 +47,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (!load) return;
             // The count patch is applied in the toolbox; the note goes once it lands.
             AppEvents.RomPatchStateChanged += OnRomPatchStateChanged;
-            DSPRE.Avalonia.Data.ListSync.Apply(SpeciesNames, GetPokemonNames());
+            ListSync.Apply(SpeciesNames, GetPokemonNames());
             if (!PokedexLists.TryLoad(out _lists, out string error)) { LoadError = error; return; }
             foreach (PokedexLists.ListInfo info in _lists.Lists.Where(i => i.Member != PokedexLists.Regional && i.Group != PokedexLists.Group.Unused))
                 ListChoices.Add(new ListChoice { Info = info, Text = info.Name });
@@ -61,7 +61,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public void RefreshNames()
         {
-            DSPRE.Avalonia.Data.ListSync.Apply(SpeciesNames, GetPokemonNames());
+            ListSync.Apply(SpeciesNames, GetPokemonNames());
             if (_lists == null) return;
             RefreshRegional(Math.Max(0, _regionalIndex));
             RefreshEntries(Math.Max(0, _entryIndex));
@@ -208,8 +208,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 (int, int) Types(int s)
                 {
                     string path = Path.Combine(folder, s.ToString("D4"));
-                    if (!File.Exists(path)) return (-1, -1);
-                    byte[] b = File.ReadAllBytes(path);
+                    if (!PlainFiles.Exists(path)) return (-1, -1);
+                    byte[] b = PlainFiles.ReadBytes(path);
                     return b.Length > 7 ? (b[6], b[7]) : (-1, -1);
                 }
                 _lists.Rebuild(GetPokemonNames(), Types);

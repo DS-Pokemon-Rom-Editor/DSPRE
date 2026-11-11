@@ -107,11 +107,11 @@ namespace DSPRE.Avalonia.Views.Graphics
             string path = await DialogHelper.OpenFileAsync(this, "Import PNG", new[] { Png });
             if (path == null) return;
 
-            (Data.GraphicAssets.Archive target, int at) = vm.ImportTarget;
+            (GraphicAssets.Archive target, int at) = vm.ImportTarget;
             string err, note;
-            Data.BattleGaugeComposer.Kind? bar = target?.Dir == RomInfo.DirNames.BattleObj ? Data.HpBarFit.KindOf(at) : null;
+            BattleGaugeComposer.Kind? bar = target?.Dir == RomInfo.DirNames.BattleObj ? HpBarFit.KindOf(at) : null;
             HpBarImportPrompt.Choice barChoice = HpBarImportPrompt.Choice.PictureOnly;
-            Data.HpBarFit.Plan plan = null;
+            HpBarFit.Plan plan = null;
             if (bar != null)
             {
                 (barChoice, plan) = await HpBarImportPrompt.AskAsync(this, target, at, bar.Value, path);
@@ -123,7 +123,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             }
             else
             {
-                (PngColourPrompt.Choice choice, Data.GraphicAssets.PngColourCheck check) = await PngColourPrompt.AskAsync(this, target, at, path, vm.ShownColours);
+                (PngColourPrompt.Choice choice, GraphicAssets.PngColourCheck check) = await PngColourPrompt.AskAsync(this, target, at, path, vm.ShownColours);
                 if (choice == PngColourPrompt.Choice.Cancel) return;
                 err = vm.Replace(path, choice, check, out note);
             }

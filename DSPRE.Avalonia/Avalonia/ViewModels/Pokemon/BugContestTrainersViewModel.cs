@@ -102,9 +102,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void RefreshNames()
         {
             if (!_setUp) return;   // a tab not shown yet reads its names when it sets up
-            DSPRE.Avalonia.Data.ListSync.Apply(SpeciesNames, GetPokemonNames());
+            ListSync.Apply(SpeciesNames, GetPokemonNames());
             _names = BugContestTrainerFile.OpponentNames();
-            DSPRE.Avalonia.Data.ListSync.Apply(OpponentNames, _names);
+            ListSync.Apply(OpponentNames, _names);
         }
 
         private void Load()
@@ -181,7 +181,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Locate()
         {
             string path = Filesystem.GetBugContestTrainerPath();
-            if (File.Exists(path)) SystemShell.RevealInFileManager(path);
+            if (PlainFiles.Exists(path)) SystemShell.RevealInFileManager(path);
         }
 
         /// <summary>One of an opponent's eight rows. Values the pickers can't show are kept until changed.</summary>

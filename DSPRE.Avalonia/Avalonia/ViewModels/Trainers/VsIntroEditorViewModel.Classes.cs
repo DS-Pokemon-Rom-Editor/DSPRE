@@ -6,7 +6,7 @@ using System.Linq;
 using DSPRE.Avalonia.Data;
 using DSPRE.ROMFiles;
 using static DSPRE.ROMFiles.VsIntroTables;
-using Kind = DSPRE.Avalonia.Data.GraphicAssets.Kind;
+using Kind = DSPRE.Graphics.GraphicAssets.Kind;
 
 namespace DSPRE.Avalonia.ViewModels.Trainers
 {

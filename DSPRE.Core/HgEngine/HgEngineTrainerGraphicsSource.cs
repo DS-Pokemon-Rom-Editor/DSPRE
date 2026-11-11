@@ -38,6 +38,12 @@ namespace DSPRE.HgEngine
             return data;
         }
 
+        public static bool Has(string sourcePath) => sourcePath != null && File.Exists(sourcePath);
+
+        public static string ReadText(string sourcePath) => File.ReadAllText(sourcePath);
+
+        public static byte[] ReadBytes(string sourcePath) => File.ReadAllBytes(sourcePath);
+
         /// <summary>Every sequence in an anim.json as (cell, duration) frames, or null when it can't be read.</summary>
         public static (int Bank, int Duration)[][] ReadAnimSequences(string animJsonPath)
         {

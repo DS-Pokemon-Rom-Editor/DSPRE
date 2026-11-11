@@ -34,7 +34,7 @@ namespace DSPRE.Avalonia.Views.Battle
             _setupDone = true;
             // The game's own letters and a border; the Text editor's chosen border is left alone when already loaded.
             FieldMessageBoxView.Font ??= FieldFont.LoadTalkFont();
-            FieldMessageBoxView.Frame ??= DSPRE.Avalonia.Data.WindowFrames.Load(0);
+            FieldMessageBoxView.Frame ??= WindowFrames.Load(0);
             vm.MeasureText = FieldMessageBoxView.Measure;
             vm.RefreshPreview();
             await vm.SetupAsync(this);

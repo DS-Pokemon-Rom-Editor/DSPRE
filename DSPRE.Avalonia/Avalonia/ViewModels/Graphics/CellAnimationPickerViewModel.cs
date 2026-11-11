@@ -227,36 +227,15 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public static List<CellAnimationFound> Everywhere()
         {
             List<CellAnimationFound> found = new List<CellAnimationFound>();
-            HashSet<string> mappedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (DirNames dir in GameDirs?.Keys.ToList() ?? new List<DirNames>())
             {
-                try { mappedFiles.Add(Path.GetFullPath(Path.Combine(WorkDir ?? "", GameDirs[dir].packedDir))); } catch { }   // a folder path that can't be resolved is not listed
                 // That slot holds map headers once the dynamic headers patch is applied, not graphics.
                 if (dir == DirNames.DynamicHeaders) continue;
                 found.AddRange(InArchive(dir));
             }
 
-            if (string.IsNullOrEmpty(DataPath) || !Directory.Exists(DataPath)) return found;
-            foreach (string path in Directory.EnumerateFiles(DataPath, "*", SearchOption.AllDirectories).OrderBy(p => p, StringComparer.Ordinal))
-            {
-                string full;
-                try { full = Path.GetFullPath(path); } catch (Exception ex) { AppLogger.WarnOnce("CellAnimationPickerViewModel.Everywhere", ex); continue; }
-                if (mappedFiles.Contains(full) || !StartsLikeANarc(full)) continue;
-                string name = ProjectPaths.RelativeKey(DataPath, full);
-                found.AddRange(InArchive(ArchiveFiles.Loose(full, name)));
-            }
+            foreach (ArchiveFiles loose in ArchiveFiles.Unmapped(DataPath)) found.AddRange(InArchive(loose));
             return found;
-        }
-
-        private static bool StartsLikeANarc(string path)
-        {
-            try
-            {
-                using FileStream s = File.OpenRead(path);
-                byte[] head = new byte[4];
-                return s.Read(head, 0, 4) == 4 && head[0] == 'N' && head[1] == 'A' && head[2] == 'R' && head[3] == 'C';
-            }
-            catch (Exception ex) { AppLogger.WarnOnce("CellAnimationPickerViewModel.StartsLikeANarc", ex); return false; }
         }
 
         /// <summary>Every animation in one archive, with the files each one draws from.</summary>
@@ -276,7 +255,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 try
                 {
-                    bytes[i] = NitroBgCodec.Inflate(narc.Get(i));
+                    bytes[i] = NitroBgCodec.Inflate(narc.Get(i), probing: true);
                     kinds[i] = GraphicAssets.Identify(bytes[i]);
                 }
                 catch (Exception ex) { AppLogger.WarnOnce("CellAnimationPickerViewModel.InArchive", ex); kinds[i] = GraphicAssets.Kind.Unknown; }

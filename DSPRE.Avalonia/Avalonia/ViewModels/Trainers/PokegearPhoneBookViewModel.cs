@@ -154,13 +154,13 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                         : PokegearPhoneBook.TitleReadsPastEnd((byte)t) ? "(undefined)" : "(blank)";
                 titles.Add($"{t}: {label}");
             }
-            DSPRE.Avalonia.Data.ListSync.Apply(TitleChoices, titles);
+            ListSync.Apply(TitleChoices, titles);
 
             string[] trainers = SafeNames(() => DSPRE.TrainerNames.GetAll());
-            DSPRE.Avalonia.Data.ListSync.Apply(TrainerChoices, trainers.Select((n, i) => i == 0 ? "0: (not a trainer)" : n).ToList());
-            DSPRE.Avalonia.Data.ListSync.Apply(MapChoices, HeaderLabels.Friendly());
+            ListSync.Apply(TrainerChoices, trainers.Select((n, i) => i == 0 ? "0: (not a trainer)" : n).ToList());
+            ListSync.Apply(MapChoices, HeaderLabels.Friendly());
             string[] items = SafeNames(() => GetItemNames());
-            DSPRE.Avalonia.Data.ListSync.Apply(ItemChoices, items.Select((n, i) => $"{i}: {n}").ToList());
+            ListSync.Apply(ItemChoices, items.Select((n, i) => $"{i}: {n}").ToList());
         }
 
         public void RefreshNames()

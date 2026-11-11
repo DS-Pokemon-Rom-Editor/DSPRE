@@ -80,14 +80,14 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             try
             {
                 string ndsPath = Path.Combine(HgEngineProject.RepoPathUnc, HgEngineProject.IsSafeBuildRomName(BuildRom) ? BuildRom : "test.nds");
-                DateTime? beforeWriteTimeUtc = File.Exists(ndsPath) ? File.GetLastWriteTimeUtc(ndsPath) : (DateTime?)null;
+                DateTime? beforeWriteTimeUtc = PlainFiles.WrittenAt(ndsPath);
 
                 bool ok = await Task.Run(() => HgEngineBuild.RunFullBuild(
                     _pendingLines.Enqueue,
                     out _, BuildRom));
 
-                bool ndsProduced = File.Exists(ndsPath) &&
-                    (beforeWriteTimeUtc == null || File.GetLastWriteTimeUtc(ndsPath) > beforeWriteTimeUtc);
+                bool ndsProduced = PlainFiles.WrittenAt(ndsPath) is DateTime written &&
+                    (beforeWriteTimeUtc == null || written > beforeWriteTimeUtc);
 
                 if (ok && ndsProduced)
                 {

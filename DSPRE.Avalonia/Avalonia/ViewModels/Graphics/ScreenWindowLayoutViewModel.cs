@@ -940,7 +940,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 {
                     if (_pending.Pending(dir).Count == 0) continue;
                     await Task.Run(() => DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { dir }));
-                    if (!System.IO.File.Exists(ArchiveMembers.PathOf(dir, _pending.Pending(dir)[0].Id)))
+                    if (!ArchiveMembers.Has(dir, _pending.Pending(dir)[0].Id))
                         throw new System.IO.IOException("The screen's graphics couldn't be unpacked.");
                 }
                 if (_panelTables != null && _panels.WhyNotWrite(_pending.Read(_panelTables)) is string why)

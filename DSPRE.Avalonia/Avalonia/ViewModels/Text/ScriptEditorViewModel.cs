@@ -433,7 +433,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (path == null ? ManagedSource != null : !ProjectPaths.Same(path, _currentPath)) return;
 
             string onDisk;
-            try { onDisk = System.IO.File.ReadAllText(_currentPath); }
+            try { onDisk = RotomTool.ReadSource(_currentPath); }
             catch (Exception ex) { AppLogger.WarnOnce("ScriptEditorViewModel.ReloadSavedElsewhereAsync", ex); return; }
             if (string.Equals(onDisk, ScriptText ?? "", StringComparison.Ordinal))
             {
@@ -480,7 +480,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
                 if (!HasRotomProject)
                 {
-                    EnsureDspreSourceRoot();
+                    RotomTool.EnsureSourceRoot();
 
                     StatusText = "Initializing Rotom project...";
                     RotomTool.Result init = await RotomTool.InitProjectAsync();
@@ -488,7 +488,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                     RefreshRotomProjectState();
                 }
 
-                if (LegacyScriptsExist())
+                if (RotomTool.HasLegacyScripts())
                 {
                     // convert decompiles each binary and only backs the .script up, so unbuilt edits must reach the binary first.
                     StatusText = "Building edited legacy scripts...";
@@ -573,7 +573,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 {
                     text = _currentPath != null && ProjectPaths.Same(path, _currentPath)
                         ? ScriptText ?? ""
-                        : System.IO.File.ReadAllText(path);
+                        : RotomTool.ReadSource(path);
                 }
                 catch (Exception ex)
                 {
@@ -641,7 +641,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                     if (ProjectPaths.Same(use.Path, _currentPath)) lines = (ScriptText ?? "").Replace("\r\n", "\n").Split('\n');
                     else
                     {
-                        try { lines = File.ReadAllLines(use.Path); }
+                        try { lines = RotomTool.ReadSource(use.Path).Replace("\r\n", "\n").Split('\n'); }
                         catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { lines = Array.Empty<string>(); }
                     }
                     files[use.Path] = lines;
@@ -1091,7 +1091,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             try
             {
                 // Stays in the editor until Save, so Discard can still take it back.
-                ScriptText = System.IO.File.ReadAllText(path);
+                ScriptText = RotomTool.ReadSource(path);
                 SaveNotice.Imported(ManagedSource?.RelPath ?? DisplayPath(_currentPath), path);
             }
             catch (Exception ex)
@@ -1180,16 +1180,10 @@ namespace DSPRE.Avalonia.ViewModels.Text
                   "Their sources don't build back to those bytes, so editing them here would change more than the edit.";
         }
 
-        // Binaries with no source after a decompile are the ones rotom could not read. An empty file
-        // holds no script (retail Diamond ships one), so it has nothing to decompile.
+        // Binaries with no source after a decompile are the ones rotom could not read.
         private string UndecompiledScripts()
         {
-            HashSet<int> sourced = new HashSet<int>(_scriptIdByPath.Values);
-            List<int> left = new List<int>();
-            foreach (string path in System.IO.Directory.EnumerateFiles(Filesystem.Scripts))
-                if (int.TryParse(Path.GetFileName(path), out int id) && !sourced.Contains(id) && new FileInfo(path).Length > 0)
-                    left.Add(id);
-            left.Sort();
+            List<int> left = RotomTool.BinariesWithoutSource(new HashSet<int>(_scriptIdByPath.Values));
             if (left.Count == 0) return null;
             if (left.Count == 1) return $"Script {left[0]} couldn't be decompiled and keeps its binary.";
             string ids = string.Join(", ", left.Take(10)) + (left.Count > 10 ? $" and {left.Count - 10} more" : "");
@@ -1203,35 +1197,12 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 throw new InvalidOperationException("rotom " + string.Join(" ", args) + " failed:\n" + RotomTool.FormatDetails(result));
         }
 
-        private void EnsureDspreSourceRoot()
-        {
-            System.IO.Directory.CreateDirectory(System.IO.Path.Combine(RotomTool.ProjectRoot, "expanded", "scripts"));
-        }
-
-        private bool LegacyScriptsExist()
-            => RotomTool.ScriptSourceRoots().Any(root =>
-                System.IO.Directory.Exists(root)
-                && System.IO.Directory.EnumerateFiles(root, "*.script", System.IO.SearchOption.AllDirectories).Any());
-
-        // Minimal rotom.toml parsing: avoids a TOML dependency but only handles a flat source_roots = ["..."] array. Replace with Tomlyn if the config schema grows.
         private void RefreshScriptList()
         {
             _sourceFiles.Clear();
             ScriptNames.Clear();
 
-            foreach (string root in RotomTool.ScriptSourceRoots().Distinct(StringComparer.OrdinalIgnoreCase))
-            {
-                if (!System.IO.Directory.Exists(root)) continue;
-                IEnumerable<string> files = System.IO.Directory
-                    .EnumerateFiles(root, "*", SearchOption.AllDirectories)
-                    .Where(path =>
-                    {
-                        string ext = Path.GetExtension(path);
-                        return ext.Equals(".rotom", StringComparison.OrdinalIgnoreCase)
-                            || ext.Equals(".json", StringComparison.OrdinalIgnoreCase);
-                    });
-                _sourceFiles.AddRange(files);
-            }
+            _sourceFiles.AddRange(RotomTool.SourceFiles());
 
             _sourceFiles.Sort(StringComparer.OrdinalIgnoreCase);
             _rotomFileCount = _sourceFiles.Count;
@@ -1331,7 +1302,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             string oldPath = _currentPath;
             _currentPath = _sourceFiles[_selectedIndex];
             _suppress = true;
-            ScriptText = System.IO.File.ReadAllText(_currentPath);
+            ScriptText = RotomTool.ReadSource(_currentPath);
             _suppress = false;
             SetClean();
             if (string.IsNullOrWhiteSpace(oldPath) || !ProjectPaths.Same(oldPath, _currentPath))
@@ -1637,7 +1608,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             if (string.IsNullOrWhiteSpace(path)) return "";
             if (_currentPath != null && ProjectPaths.Same(path, _currentPath)) return ScriptText ?? "";
-            try { return System.IO.File.Exists(path) ? System.IO.File.ReadAllText(path) : ""; }
+            try { return PlainFiles.Exists(path) ? RotomTool.ReadSource(path) : ""; }
             catch (Exception ex) { AppLogger.WarnOnce("ScriptEditorViewModel.ReadSourceForPath", ex); return ""; }
         }
 

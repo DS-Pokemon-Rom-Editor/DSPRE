@@ -221,23 +221,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// <summary>Unmapped archives that hold particle files.</summary>
         private void GatherLoose()
         {
-            if (string.IsNullOrEmpty(DataPath) || !Directory.Exists(DataPath)) return;
-            HashSet<string> mapped = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (KeyValuePair<DirNames, (string packedDir, string unpackedDir)> kv in GameDirs)
+            foreach (ArchiveFiles source in ArchiveFiles.Unmapped(DataPath))
             {
-                try { mapped.Add(Path.GetFullPath(kv.Value.packedDir)); } catch { }   // a folder path that can't be resolved is not listed
-            }
-            foreach (string path in Directory.EnumerateFiles(DataPath, "*", SearchOption.AllDirectories).OrderBy(p => p, StringComparer.Ordinal))
-            {
-                string full;
-                try { full = Path.GetFullPath(path); } catch (Exception ex) { AppLogger.WarnOnce("ParticleLibraryViewModel.GatherLoose", ex); continue; }
-                if (mapped.Contains(full)) continue;
-                byte[] head = new byte[4];
-                try { using FileStream fs = File.OpenRead(full); if (fs.Read(head, 0, 4) < 4) continue; } catch (Exception ex) { AppLogger.WarnOnce("ParticleLibraryViewModel.GatherLoose", ex); continue; }
-                if (head[0] != 'N' || head[1] != 'A' || head[2] != 'R' || head[3] != 'C') continue;
-
-                string relative = ProjectPaths.RelativeKey(DataPath, full);
-                ArchiveFiles source = ArchiveFiles.Loose(full, relative);
+                string relative = source.Name;
                 int count;
                 try { count = source.Count; } catch (Exception ex) { AppLogger.WarnOnce("ParticleLibraryViewModel.GatherLoose", ex); continue; }
                 for (int f = 0; f < count; f++)

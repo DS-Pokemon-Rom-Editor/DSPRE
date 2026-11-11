@@ -212,7 +212,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 FieldTextArchives.Screen screen = Screen;
                 string text = _selectedLineIndex >= 0 && _selectedLineIndex < Lines.Count ? Lines[_selectedLineIndex]?.Text : null;
                 if (string.IsNullOrEmpty(text) || screen == null) return new[] { "" };
-                List<FieldMessageFrame> frames = FieldMessageScript.Frames(FieldStringVars.Expand(text, Data.GameTextScreens.SampleWord),
+                List<FieldMessageFrame> frames = FieldMessageScript.Frames(FieldStringVars.Expand(text, GameTextScreens.SampleWord),
                                                                            MeasureText, screen.TilesWide * FieldMessageWindow.TileSize,
                                                                            screen.TilesHigh / 2, wrapWhenUnmarked: false);
                 return frames.Count > 0 ? frames[0].Lines : new[] { "" };
@@ -298,7 +298,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 string text = Lines[_selectedLineIndex]?.Text;
                 // The game fills in names and numbers, so the box shows sample words in their place.
                 if (!string.IsNullOrEmpty(text))
-                    _previewFrames.AddRange(FieldMessageScript.Frames(FieldStringVars.Expand(text, Data.GameTextScreens.SampleWord), MeasureText));
+                    _previewFrames.AddRange(FieldMessageScript.Frames(FieldStringVars.Expand(text, GameTextScreens.SampleWord), MeasureText));
             }
             RaisePreviewChanged();
             _ = RefreshScreenShotsAsync();
@@ -364,9 +364,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             foreach (int id in _removedArchives.Reverse())
             {
-                (string binPath, string jsonPath) = TextArchive.GetFilePaths(id);
-                if (File.Exists(jsonPath)) File.Delete(jsonPath);
-                ArchiveMembers.Delete(binPath);
+                TextArchive.Delete(id);
             }
             foreach ((int id, List<string> lines) in _addedArchives)
             {
@@ -375,17 +373,17 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 (string binPath, string jsonPath) = TextArchive.GetFilePaths(id);
                 TextConverter.JSONToBin(jsonPath, binPath, CharMapManager.GetCharMapPath());
                 // JSONToBin drops chatot's warnings; a JSON newer than its .bin is encoded again, with them, by the ROM build.
-                try { File.SetLastWriteTimeUtc(jsonPath, DateTime.UtcNow.AddSeconds(2)); }
+                try { PlainFiles.Touch(jsonPath, DateTime.UtcNow.AddSeconds(2)); }
                 catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { AppLogger.Warn($"Text archive {id}: {ex.Message}"); }
             }
             _removedArchives.Clear();
             _addedArchives.Clear();
             _savedArchiveCount = Filesystem.GetTextArchivesCount();
         }
-        public string UnsavedChangesDescription => DSPRE.Avalonia.Data.StagedArchive.Join(_current != null ? $"Text archive {_current.ID}" : "Text archive", _dirty,
-            DSPRE.Avalonia.Data.StagedArchive.Describe("text archive", "text archives",
-                _addedArchives.Keys.Select(id => (id, DSPRE.Avalonia.Data.PendingArchiveWrites.PendingKind.Added))
-                    .Concat(_removedArchives.Select(id => (id, DSPRE.Avalonia.Data.PendingArchiveWrites.PendingKind.Removed)))));
+        public string UnsavedChangesDescription => StagedArchive.Join(_current != null ? $"Text archive {_current.ID}" : "Text archive", _dirty,
+            StagedArchive.Describe("text archive", "text archives",
+                _addedArchives.Keys.Select(id => (id, PendingArchiveWrites.PendingKind.Added))
+                    .Concat(_removedArchives.Select(id => (id, PendingArchiveWrites.PendingKind.Removed)))));
 
         public void SaveChanges() => Save();
         // The edited lines live in the loaded archive, so dropping them means reading it again.
@@ -518,13 +516,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 string unpackedPath = GameDirs[DirNames.TextArchives].unpackedDir;
                 string expandedPath = TextConverter.GetExpandedFolderPath();
 
-                if (!Directory.Exists(expandedPath))
-                {
-                    Directory.CreateDirectory(expandedPath);
-                    DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.TextArchives });
-                }
-                if (!Directory.Exists(unpackedPath))
-                    Directory.CreateDirectory(unpackedPath);
+                TextArchive.EnsureFolders();
 
                 // JSON files are only (re)written when missing or older than the binary.
                 TextConverter.FolderToJSON(unpackedPath, expandedPath, CharMapManager.GetCharMapPath());
@@ -798,9 +790,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             if (_selectedArchiveIndex < 0) return null;
             string owned = (_managedSource ?? _generatedSource)?.FullPath;
-            if (!string.IsNullOrEmpty(owned) && File.Exists(owned)) return owned;
-            (string binPath, string jsonPath) = TextArchive.GetFilePaths(_selectedArchiveIndex);
-            return File.Exists(jsonPath) ? jsonPath : binPath;
+            if (!string.IsNullOrEmpty(owned) && PlainFiles.Exists(owned)) return owned;
+            return TextArchive.SourceFile(_selectedArchiveIndex);
         }
 
         public void ShowArchiveFile()
@@ -1010,13 +1001,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 }
                 else
                 {
-                    string temp = Path.Combine(Path.GetTempPath(), "dspre_text_" + Guid.NewGuid().ToString("N") + ".json");
-                    try
-                    {
-                        PlainFiles.WriteBytes(temp, json);
-                        TextConverter.JSONToBin(temp, path, CharMapManager.GetCharMapPath());
-                    }
-                    finally { if (File.Exists(temp)) File.Delete(temp); }
+                    TextConverter.JsonBytesToBin(json, path, CharMapManager.GetCharMapPath());
                 }
                 SaveNotice.Exported(path);
             }

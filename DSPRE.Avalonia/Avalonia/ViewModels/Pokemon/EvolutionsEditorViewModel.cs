@@ -91,7 +91,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (method < 0) return EvolutionParamMeaning.Ignored;
             if (hgEngine) return MeaningFromHgEngineName(hgNames != null && method < hgNames.Length ? hgNames[method] : null);
-            return (EvolutionParamMeaning)DSPRE.Avalonia.Data.LabelStore.GetAttr("evolution_methods", method);
+            return (EvolutionParamMeaning)LabelStore.GetAttr("evolution_methods", method);
         }
 
         private static EvolutionParamMeaning MeaningFromHgEngineName(string name)
@@ -246,7 +246,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             else
             {
-                DSPRE.Avalonia.Data.LabelStore.Sync(MethodNames, "evolution_methods");
+                LabelStore.Sync(MethodNames, "evolution_methods");
             }
 
             foreach (EvolutionRowViewModel row in EvoRows)
@@ -263,7 +263,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _rowPokemonNames = pokemonNames;
             List<string> targets = new List<string>();
             for (int i = 0; i <= _lastTarget && i < pokemonNames.Length; i++) targets.Add(pokemonNames[i]);
-            DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, targets);
+            ListSync.Apply(PokemonNames, targets);
             foreach (EvolutionRowViewModel row in EvoRows) row.SetNames(_itemNames, _moveNames, _rowPokemonNames);
         }
 
@@ -361,7 +361,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ── Undo / redo (ISupportsUndo) ────────────────────────────────────────
         // Snapshot = the per-row (method, param, target) values, lossless and independent of how Save()
         // compacts the file. Edit bursts within CoalesceMs collapse into one step.
-        private readonly DSPRE.Avalonia.UndoHistory<(int, int, int, int)[]> _history = new();
+        private readonly UndoHistory<(int, int, int, int)[]> _history = new();
         private DateTime _lastCaptureUtc = DateTime.MinValue;
         private const int CoalesceMs = 500;
 

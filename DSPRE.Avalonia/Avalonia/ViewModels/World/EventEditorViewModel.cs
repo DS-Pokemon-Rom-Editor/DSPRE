@@ -512,7 +512,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             try
             {
-                DSPRE.Avalonia.Data.ListSync.Apply(OwTrainerEntries,
+                ListSync.Apply(OwTrainerEntries,
                     new List<string>(TrainerNames.GetAll()));
             }
             catch (Exception ex)
@@ -1096,7 +1096,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         // ── Dirty tracking ───────────────────────────────────────────────────────────
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty || _archive.IsDirty;
-        public string UnsavedChangesDescription => DSPRE.Avalonia.Data.StagedArchive.Join($"Event file {_selectedIndex}", _dirty, _archive.Describe("event file", "event files"));
+        public string UnsavedChangesDescription => StagedArchive.Join($"Event file {_selectedIndex}", _dirty, _archive.Describe("event file", "event files"));
         public void SaveChanges() => Save();
         public void DiscardChanges()
         {
@@ -2534,7 +2534,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             string path = await DialogHelper.OpenFileAsync(_owner, "Import event file", new[] { filter });
             if (path == null) return;
             EventFile source;
-            try { using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read)) source = new EventFile(fs); }
+            try { using (FileStream fs = PlainFiles.OpenRead(path)) source = new EventFile(fs); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is ArgumentException)
             {
                 await DialogHelper.ShowErrorAsync($"Couldn't import:\n{ex.Message}", "Event editor");

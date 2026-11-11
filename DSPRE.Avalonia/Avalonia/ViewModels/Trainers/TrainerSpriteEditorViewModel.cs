@@ -255,6 +255,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             public System.Drawing.Color[][] Pal;
             public NcerFile Sprite;
             public string TilesPath, PalPath;
+            public int PalEntry;
 
             // A sheet import can change the cells and animations too; they wait here until saved.
             public byte[] Ncgr, Ncer, Nanr;
@@ -274,7 +275,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             SpritePart p = _parts[part];
             _activePart = part;
             _tile = p.Tile; _pal = p.Pal; _sprite = p.Sprite;
-            _tilesPath = p.TilesPath; _palPath = p.PalPath;
+            _tilesPath = p.TilesPath; _palPath = p.PalPath; _palEntry = p.PalEntry;
         }
         private int _activePaletteBank = -1;
 
@@ -663,7 +664,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             try
             {
                 SpritePart p = _parts[0];
-                return NanrFile.Read(p.Nanr ?? File.ReadAllBytes(EntryPath(TrainerGraphicsLayout.AnimationEntry(p.Entry))));
+                return NanrFile.Read(p.Nanr ?? Member(TrainerGraphicsLayout.AnimationEntry(p.Entry)));
             }
             catch (Exception ex)
             {
@@ -711,7 +712,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
         }
 
-        public bool HasAnimJsonFile => _animJsonPath != null && File.Exists(_animJsonPath);
+        public bool HasAnimJsonFile => HgEngineTrainerGraphicsSource.Has(_animJsonPath);
         /// <summary>True when there is an animation to show, from hg-engine's JSON or read from the ROM.</summary>
         public bool HasAnimation => HasAnimJsonFile || _animJsonCreated || (!CanEditAnimJson && !string.IsNullOrEmpty(AnimJsonText));
 
@@ -739,11 +740,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 SetAnimJsonTextSilent((_romAnim != null ? AnimationJsonOf(_romAnim) : RomAnimationJson(trClassID)) ?? "");
                 AnimJsonStatusText = "";
             }
-            else if (File.Exists(_animJsonPath))
+            else if (HgEngineTrainerGraphicsSource.Has(_animJsonPath))
             {
                 try
                 {
-                    SetAnimJsonTextSilent(File.ReadAllText(_animJsonPath));
+                    SetAnimJsonTextSilent(HgEngineTrainerGraphicsSource.ReadText(_animJsonPath));
                     AnimJsonStatusText = "";
                 }
                 catch (Exception ex)
@@ -1150,7 +1151,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (_set.NamingScreen || _entryIds.Count == 0) return;
             List<string> names = _set.Names(SpriteCount());
             List<string> labels = _entryIds.Select(i => $"[{_set.FileStem(i)}] {(i < names.Count ? names[i] : "")}").ToList();
-            DSPRE.Avalonia.Data.ListSync.Apply(ClassNames, labels);
+            ListSync.Apply(ClassNames, labels);
         }
 
         private int SpriteCount()
@@ -1172,12 +1173,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
                 int paletteFileID = TrainerGraphicsLayout.ColoursEntry(trClassID);
                 string paletteFilename = paletteFileID.ToString("D4");
-                _pal = ReadPaletteRows(File.ReadAllBytes(Path.Combine(dir, paletteFilename)));
+                _pal = ReadPaletteRows(Member(paletteFileID));
 
                 int tilesFileID = TrainerGraphicsLayout.DrawingEntry(trClassID);
                 string tilesFilename = tilesFileID.ToString("D4");
                 _tilesPath = Path.Combine(dir, tilesFilename);
-                _tile = ReadDrawing(File.ReadAllBytes(_tilesPath));
+                _tile = ReadDrawing(Member(tilesFileID));
 
                 _sprite = null; _cellsFromSource = false;
                 _sourcePngPath = null;
@@ -1186,9 +1187,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     if (HgEngineProject.IsActive)
                     {
                         string stem = HgEngineTrainerGraphicsSource.Stem(_set.IsBack, trClassID);
-                        if (_pal.Length > 0 && Data.TrainerSpriteSourcePng.TryApply(stem + ".png", _tile, _pal[0])) _sourcePngPath = stem + ".png";
+                        if (_pal.Length > 0 && TrainerSpriteSourcePng.TryApply(stem + ".png", _tile, _pal[0])) _sourcePngPath = stem + ".png";
                         string cellPath = stem + "_cell.json";
-                        if (File.Exists(cellPath))
+                        if (HgEngineTrainerGraphicsSource.Has(cellPath))
                         {
                             if (HgEngineTrainerGraphicsSource.TryReadCells(cellPath, out NcerFile cells, out string cellError))
                             {
@@ -1203,13 +1204,13 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     }
 
                     if (!_cellsFromSource)
-                        _sprite = ReadCells(File.ReadAllBytes(Path.Combine(dir, TrainerGraphicsLayout.CellsEntry(trClassID).ToString("D4"))));
+                        _sprite = ReadCells(Member(TrainerGraphicsLayout.CellsEntry(trClassID)));
                 }
 
                 _parts.Clear();
-                _parts.Add(new SpritePart { Entry = trClassID, Tile = _tile, Pal = _pal, Sprite = _sprite, TilesPath = _tilesPath, PalPath = Path.Combine(dir, paletteFilename) });
+                _parts.Add(new SpritePart { Entry = trClassID, Tile = _tile, Pal = _pal, Sprite = _sprite, TilesPath = _tilesPath, PalPath = Path.Combine(dir, paletteFilename), PalEntry = paletteFileID });
                 int linked = _set.IsBack && !_cellsFromSource && !HgEngineProject.IsActive ? DSPRE.ROMFiles.TrainerBackSprites.LinkedSet(trClassID) : -1;
-                if (linked >= 0 && File.Exists(Path.Combine(dir, TrainerGraphicsLayout.CellsEntry(linked).ToString("D4"))))
+                if (linked >= 0 && ArchiveMembers.Has(_set.Archive, TrainerGraphicsLayout.CellsEntry(linked)))
                 {
                     string Name(int entry) => entry.ToString("D4");
                     int lt = TrainerGraphicsLayout.DrawingEntry(linked), lp = TrainerGraphicsLayout.ColoursEntry(linked), lc = TrainerGraphicsLayout.CellsEntry(linked);
@@ -1217,10 +1218,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     _parts.Add(new SpritePart
                     {
                         Entry = linked, Label = "Single battles",
-                        Tile = ReadDrawing(File.ReadAllBytes(Path.Combine(dir, Name(lt)))),
-                        Pal = ReadPaletteRows(File.ReadAllBytes(Path.Combine(dir, Name(lp)))),
-                        Sprite = ReadCells(File.ReadAllBytes(Path.Combine(dir, Name(lc)))),
-                        TilesPath = Path.Combine(dir, Name(lt)), PalPath = Path.Combine(dir, Name(lp)),
+                        Tile = ReadDrawing(Member(lt)),
+                        Pal = ReadPaletteRows(Member(lp)),
+                        Sprite = ReadCells(Member(lc)),
+                        TilesPath = Path.Combine(dir, Name(lt)), PalPath = Path.Combine(dir, Name(lp)), PalEntry = lp,
                     });
                 }
                 Activate(0);
@@ -1257,7 +1258,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 OnPropertyChanged(nameof(CanUseAnimationSheets));
                 HasUnsavedChanges = false;
                 _paletteDirty = false;
-                _palPath = Path.Combine(dir, paletteFilename);
+                _palPath = Path.Combine(dir, paletteFilename); _palEntry = paletteFileID;
                 ResetSteps();
                 StopAnimPreview();
                 RebuildAnimCellChoices();
@@ -1471,6 +1472,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         // ── Palette colours ─────────────────────────────────────────────────────
         private string _palPath;
+        private int _palEntry;
         private bool _paletteDirty;
 
         /// <summary>The palette the swatches show, which follows the part of the sprite last painted.</summary>
@@ -1621,8 +1623,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             try
             {
                 DSPRE.RawImage import;
-                using (FileStream fs = File.OpenRead(filePath))
-                    import = ImageConverter.DecodeRawImage(fs);
+                import = ImageConverter.DecodeRawImageFile(filePath);
                 if (import == null) return "Image couldn't be decoded.";
 
                 return BankCount > 0 ? ImportPngComposited(import) : ImportPngFlat(import);
@@ -1813,22 +1814,22 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
                 int files = DSPRE.ROMFiles.NamingScreenIcons.SpriteTilesFile;
                 _packedTilesPath = File4(files);
-                byte[] packedTiles = File.ReadAllBytes(_packedTilesPath);
-                _packedTilesMarker = Data.GraphicAssets.SqueezeMarker(packedTiles);
+                byte[] packedTiles = Member(files);
+                _packedTilesMarker = GraphicAssets.SqueezeMarker(packedTiles);
                 _tilesPath = _packedTilesPath;
-                _tile = ReadDrawing(Data.GraphicAssets.Unsqueeze(packedTiles));
+                _tile = ReadDrawing(GraphicAssets.Unsqueeze(packedTiles));
                 int colours = DSPRE.ROMFiles.NamingScreenIcons.SpriteColoursFile;
-                _palPath = File4(colours);
-                _pal = ReadPaletteRows(File.ReadAllBytes(_palPath));
+                _palPath = File4(colours); _palEntry = colours;
+                _pal = ReadPaletteRows(Member(colours));
                 int cells = DSPRE.ROMFiles.NamingScreenIcons.SpriteCellsFile;
-                _sprite = ReadCells(Data.GraphicAssets.Unsqueeze(File.ReadAllBytes(File4(cells))));
+                _sprite = ReadCells(GraphicAssets.Unsqueeze(Member(cells)));
                 _cellsFromSource = false;
                 _sourcePngPath = null;
-                _namingAnimations = NanrFile.Read(Data.GraphicAssets.Unsqueeze(File.ReadAllBytes(File4(DSPRE.ROMFiles.NamingScreenIcons.SpriteAnimationsFile))));
+                _namingAnimations = NanrFile.Read(GraphicAssets.Unsqueeze(Member(DSPRE.ROMFiles.NamingScreenIcons.SpriteAnimationsFile)));
                 _bankMap = FramesOfAnimation(animation);
 
                 _parts.Clear();
-                _parts.Add(new SpritePart { Entry = animation, Tile = _tile, Pal = _pal, Sprite = _sprite, TilesPath = _tilesPath, PalPath = _palPath });
+                _parts.Add(new SpritePart { Entry = animation, Tile = _tile, Pal = _pal, Sprite = _sprite, TilesPath = _tilesPath, PalPath = _palPath, PalEntry = _palEntry });
                 Activate(0);
                 OnPropertyChanged(nameof(HasLinkedSets));
                 OnPropertyChanged(nameof(SelectedClassIndex));
@@ -1893,12 +1894,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _topBarBackground = null;
             try
             {
-                byte[] Read(int i) => Data.GraphicAssets.Unsqueeze(File.ReadAllBytes(Path.Combine(dir, i.ToString("D4"))));
+                byte[] Read(int i) => GraphicAssets.Unsqueeze(Member(i));
                 NitroBgCodec.BgImage bg = NitroBgCodec.Composite(
                     Read(DSPRE.ROMFiles.NamingScreenIcons.BackgroundTilesFile),
                     Read(DSPRE.ROMFiles.NamingScreenIcons.BackgroundColoursFile),
                     Read(DSPRE.ROMFiles.NamingScreenIcons.TopScreenMapFile), transparentZero: false);
-                if (bg != null && bg.Width == Data.DsBgScreen.Width && bg.Height >= TopBarHeight) _topBarBackground = bg.Rgba;
+                if (bg != null && bg.Width == DsBgScreen.Width && bg.Height >= TopBarHeight) _topBarBackground = bg.Rgba;
             }
             catch (Exception ex) { AppLogger.Error("Naming screen top bar: " + ex.Message); }
         }
@@ -1934,7 +1935,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void RebuildTopBar()
         {
             if (!_set.NamingScreen || _sprite == null) return;
-            int w = Data.DsBgScreen.Width, h = Data.DsBgScreen.Height;
+            int w = DsBgScreen.Width, h = DsBgScreen.Height;
             byte[] rgba = new byte[w * h * 4];
             if (_topBarBackground != null) Array.Copy(_topBarBackground, rgba, rgba.Length);
             else for (int i = 3; i < rgba.Length; i += 4) rgba[i] = 255;
@@ -1958,7 +1959,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 string ch = _sampleName[i].ToString();
                 // naming_screen.c blits each letter's cell from the left of its 12-pixel step, in a window at tile 10,3.
                 int x = DSPRE.ROMFiles.NamingScreenIcons.NameX + i * DSPRE.ROMFiles.NamingScreenIcons.LetterStep;
-                Data.DsBgScreen.DrawText(rgba, _topBarFont, ch, x, DSPRE.ROMFiles.NamingScreenIcons.NameY - 15, 0x294A, 0x5EF7);
+                DsBgScreen.DrawText(rgba, _topBarFont, ch, x, DSPRE.ROMFiles.NamingScreenIcons.NameY - 15, 0x294A, 0x5EF7);
             }
 
             byte[] bgra = new byte[w * TopBarHeight * 4];
@@ -1974,7 +1975,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (cell < 0 || cell >= _sprite.Cells.Count) return;
             RawImage raw = CellRenderer.Draw(_sprite, cell, _tile.ToBytes(), Bgr555(_pal), CanvasSize, CanvasSize);
-            int w = Data.DsBgScreen.Width, h = Data.DsBgScreen.Height;
+            int w = DsBgScreen.Width, h = DsBgScreen.Height;
             for (int py = 0; py < CanvasSize; py++)
                 for (int px = 0; px < CanvasSize; px++)
                 {
@@ -2006,9 +2007,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             int id = TrainerGraphicsLayout.ScanEntry(entry);
             if (id < 0) return null;
             string path = Path.Combine(RomInfo.GameDirs[_set.Archive].unpackedDir, id.ToString("D4"));
-            if (!File.Exists(path)) return null;
+            if (!ArchiveMembers.Has(_set.Archive, id)) return null;
 
-            byte[] file = File.ReadAllBytes(path);
+            byte[] file = Member(id);
             if (!(NitroBgCodec.ReadDrawingHeader(file) is NitroBgCodec.DrawingHeader head)) { error = "the two-frame copy of the sprite has no pixels"; return null; }
             int size = head.DataSize, dataOff = head.DataAt;
             int width = ScanFrame * 2, height = ScanFrame;
@@ -2124,10 +2125,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         // hg-engine builds the scan copy from NNN_enc.png, reading only its pixel numbers.
         private string WriteScanPng(int entry, string png)
         {
-            if (!File.Exists(png)) return null;
+            if (!HgEngineTrainerGraphicsSource.Has(png)) return null;
             ScanCopy scan = ReadScan(entry, out string error);
             if (scan == null) return error;
-            byte[] file = File.ReadAllBytes(png);
+            byte[] file = HgEngineTrainerGraphicsSource.ReadBytes(png);
             if (!IndexedPng.TryRead(file, out byte[] old, out uint[] colours, out int w, out int h)) return $"{Path.GetFileName(png)} isn't an indexed PNG.";
             if (w != ScanFrame * 2 || h != ScanFrame) return $"{Path.GetFileName(png)} is {w}x{h}, not the {ScanFrame * 2}x{ScanFrame} hg-engine builds the scan copy from.";
             byte[] indices = new byte[w * h];
@@ -2140,6 +2141,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         // ── Sprite sheets ─────────────────────────────────────────────────────
         public bool CanUseSheets => _tile != null && !_set.NamingScreen && !HgEngineProject.IsActive && !_cellsFromSource;
         public bool CanUseAnimationSheets => CanUseSheets && !IsFlatSheetMode;
+
+        private byte[] Member(int entry) => ArchiveMembers.Read(_set.Archive, entry);
 
         private string EntryPath(int entry) => Path.Combine(RomInfo.GameDirs[_set.Archive].unpackedDir, entry.ToString("D4"));
 
@@ -2157,25 +2160,25 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             return frames.Draw;
         }
 
-        private Data.TrainerSpriteFrames OpenFrames(int part)
+        private TrainerSpriteFrames OpenFrames(int part)
         {
             SpritePart p = _parts[part];
-            TrainerSpriteFrames frames = Data.TrainerSpriteFrames.Read(
-                p.Ncgr ?? File.ReadAllBytes(p.TilesPath),
-                p.Ncer ?? File.ReadAllBytes(EntryPath(TrainerGraphicsLayout.CellsEntry(p.Entry))),
-                p.Nanr ?? File.ReadAllBytes(EntryPath(TrainerGraphicsLayout.AnimationEntry(p.Entry))), out string why);
+            TrainerSpriteFrames frames = TrainerSpriteFrames.Read(
+                p.Ncgr ?? Member(TrainerGraphicsLayout.DrawingEntry(p.Entry)),
+                p.Ncer ?? Member(TrainerGraphicsLayout.CellsEntry(p.Entry)),
+                p.Nanr ?? Member(TrainerGraphicsLayout.AnimationEntry(p.Entry)), out string why);
             if (frames == null) throw new InvalidOperationException(why);
             frames.ReplaceTiles(p.Tile.Tiles);
             return frames;
         }
 
-        private Data.ISheetFrames OpenSheetFrames(int part) =>
+        private ISheetFrames OpenSheetFrames(int part) =>
             IsFlatSheetMode ? new FlatFrames((int[])_flatIndices.Clone(), _flatWidth, _flatHeight) : OpenFrames(part);
 
         private int SheetPartCount => IsFlatSheetMode ? 1 : Math.Max(1, _parts.Count);
 
         // Only the palettes the pieces use.
-        private uint[][] SheetPalettes(IEnumerable<Data.ISheetFrames> frames)
+        private uint[][] SheetPalettes(IEnumerable<ISheetFrames> frames)
         {
             int used = 1;
             foreach (ISheetFrames f in frames)
@@ -2200,19 +2203,19 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             try
             {
                 List<ISheetFrames> sets = Enumerable.Range(0, SheetPartCount).Select(OpenSheetFrames).ToList();
-                List<IReadOnlyList<TrainerSpriteSheet.Cell>> rows = sets.Select(f => (IReadOnlyList<Data.TrainerSpriteSheet.Cell>)Enumerable.Range(0, f.FrameCount)
-                    .Select(i => new Data.TrainerSpriteSheet.Cell(f.Draw(i))).ToList()).ToList();
-                (byte[] px, uint[] colours, int w, int h) = Data.TrainerSpriteSheet.Compose(rows, SheetPalettes(sets));
+                List<IReadOnlyList<TrainerSpriteSheet.Cell>> rows = sets.Select(f => (IReadOnlyList<TrainerSpriteSheet.Cell>)Enumerable.Range(0, f.FrameCount)
+                    .Select(i => new TrainerSpriteSheet.Cell(f.Draw(i))).ToList()).ToList();
+                (byte[] px, uint[] colours, int w, int h) = TrainerSpriteSheet.Compose(rows, SheetPalettes(sets));
                 PlainFiles.WriteBytes(path, IndexedPng.Write(px, colours, w, h));
 
-                TrainerSpriteSheet.FramesFile file = new Data.TrainerSpriteSheet.FramesFile();
+                TrainerSpriteSheet.FramesFile file = new TrainerSpriteSheet.FramesFile();
                 for (int p = 0; p < sets.Count; p++)
-                    file.Rows.Add(new Data.TrainerSpriteSheet.FramesRow
+                    file.Rows.Add(new TrainerSpriteSheet.FramesRow
                     {
                         Set = SheetLabel(p),
-                        Frames = Enumerable.Range(0, sets[p].FrameCount).Select(i => new Data.TrainerSpriteSheet.FrameJson { Frame = i, Blank = sets[p].IsBlank(i) }).ToList(),
+                        Frames = Enumerable.Range(0, sets[p].FrameCount).Select(i => new TrainerSpriteSheet.FrameJson { Frame = i, Blank = sets[p].IsBlank(i) }).ToList(),
                     });
-                PlainFiles.WriteText(Path.ChangeExtension(path, ".json"), Data.TrainerSpriteSheet.WriteFrames(file));
+                PlainFiles.WriteText(Path.ChangeExtension(path, ".json"), TrainerSpriteSheet.WriteFrames(file));
                 SaveNotice.Exported(path);
                 return null;
             }
@@ -2228,19 +2231,19 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 TrainerSpriteFrames frames = OpenFrames(_activePart);
                 IReadOnlyList<TrainerSpriteFrames.Step> steps = frames.StepsOf(animation);
                 if (steps.Count == 0) return $"This sprite has no animation {animation}.";
-                List<TrainerSpriteSheet.Cell> cells = steps.Select(st => new Data.TrainerSpriteSheet.Cell(frames.Draw(st.Frame))).ToList();
-                List<IReadOnlyList<TrainerSpriteSheet.Cell>> rows = cells.Chunk(AnimationSheetColumns).Select(r => (IReadOnlyList<Data.TrainerSpriteSheet.Cell>)r).ToList();
-                (byte[] px, uint[] colours, int w, int h) = Data.TrainerSpriteSheet.Compose(rows, SheetPalettes(new[] { frames }));
+                List<TrainerSpriteSheet.Cell> cells = steps.Select(st => new TrainerSpriteSheet.Cell(frames.Draw(st.Frame))).ToList();
+                List<IReadOnlyList<TrainerSpriteSheet.Cell>> rows = cells.Chunk(AnimationSheetColumns).Select(r => (IReadOnlyList<TrainerSpriteSheet.Cell>)r).ToList();
+                (byte[] px, uint[] colours, int w, int h) = TrainerSpriteSheet.Compose(rows, SheetPalettes(new[] { frames }));
                 PlainFiles.WriteBytes(path, IndexedPng.Write(px, colours, w, h));
 
                 bool shifts = frames.SequenceShifts(animation);
-                TrainerSpriteSheet.StepsFile file = new Data.TrainerSpriteSheet.StepsFile
+                TrainerSpriteSheet.StepsFile file = new TrainerSpriteSheet.StepsFile
                 {
                     Set = SheetLabel(_activePart),
                     Animation = animation,
-                    Steps = steps.Select(st => new Data.TrainerSpriteSheet.StepJson { Frame = st.Frame, Hold = st.Hold, X = shifts ? st.X : null, Y = shifts ? st.Y : null }).ToList(),
+                    Steps = steps.Select(st => new TrainerSpriteSheet.StepJson { Frame = st.Frame, Hold = st.Hold, X = shifts ? st.X : null, Y = shifts ? st.Y : null }).ToList(),
                 };
-                PlainFiles.WriteText(Path.ChangeExtension(path, ".json"), Data.TrainerSpriteSheet.WriteSteps(file));
+                PlainFiles.WriteText(Path.ChangeExtension(path, ".json"), TrainerSpriteSheet.WriteSteps(file));
                 SaveNotice.Exported(path);
                 return null;
             }
@@ -2271,15 +2274,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             why = null;
             try
             {
-                TrainerSpriteSheet.Read sheet = Data.TrainerSpriteSheet.Open(File.ReadAllBytes(pngPath), out why);
+                TrainerSpriteSheet.Read sheet = TrainerSpriteSheet.OpenFile(pngPath, out why);
                 if (sheet == null) return null;
-                Data.TrainerSpriteSheet.StepsFile steps = null;
-                string json = Path.ChangeExtension(pngPath, ".json");
-                if (animation && File.Exists(json))
-                {
-                    steps = Data.TrainerSpriteSheet.ReadSteps(File.ReadAllText(json), out string jsonWhy);
-                    if (steps == null) { why = $"{Path.GetFileName(json)} couldn't be read: {jsonWhy}"; return null; }
-                }
+                TrainerSpriteSheet.StepsFile steps = animation ? TrainerSpriteSheet.ReadStepsBeside(pngPath, out why) : null;
+                if (why != null) return null;
 
                 List<TrainerSheetImportViewModel.Target> targets = new List<TrainerSheetImportViewModel.Target>();
                 for (int p = 0; p < SheetPartCount; p++)
@@ -2308,7 +2306,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     case FlatFrames flat:
                         _flatIndices = flat.Indices;
                         break;
-                    case Data.TrainerSpriteFrames frames:
+                    case TrainerSpriteFrames frames:
                         SpritePart part = _parts[p];
                         (part.Ncgr, part.Ncer, part.Nanr) = frames.Write();
                         part.Tile = ReadDrawing(part.Ncgr);
@@ -2377,12 +2375,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         }
 
         /// <summary>Diamond and Pearl's two frames in one flat drawing, side by side or stacked.</summary>
-        private sealed class FlatFrames : Data.ISheetFrames
+        private sealed class FlatFrames : ISheetFrames
         {
             public int[] Indices { get; }
             private readonly int _w, _fw, _fh, _count;
             private readonly bool _across;
-            private const int N = Data.TrainerSpriteFrames.Canvas;
+            private const int N = TrainerSpriteFrames.Canvas;
 
             public FlatFrames(int[] indices, int w, int h)
             {
@@ -2456,7 +2454,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
                 if (_sourcePngPath != null)
                 {
-                    string sourceError = Data.TrainerSpriteSourcePng.Write(_sourcePngPath, _tile, _pal[0]);
+                    string sourceError = TrainerSpriteSourcePng.Write(_sourcePngPath, _tile, _pal[0]);
                     if (sourceError != null) { StatusText = "Couldn't save: " + sourceError; return sourceError; }
                 }
 
@@ -2469,7 +2467,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                         // The built archive is kept in step too, so other previews show the edit before a compile.
                         // The naming screen's drawing is stored packed, so it is packed again on the way out.
                         ArchiveMembers.Write(_tilesPath, _packedTilesPath != null
-                            ? Data.GraphicAssets.Squeeze(_tile.ToBytes(), _packedTilesMarker)
+                            ? GraphicAssets.Squeeze(_tile.ToBytes(), _packedTilesMarker)
                             : _tile.ToBytes());
                         if (_parts.Count > 0) WriteStagedSheetFiles(_parts[p]);
                         if (BankCount > 0 && !_set.NamingScreen)
@@ -2481,9 +2479,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                         }
                         if (_paletteDirty || _sourcePngPath != null)
                         {
-                            byte[] nclr = File.ReadAllBytes(_palPath);
+                            byte[] nclr = Member(_palEntry);
                             uint[] colours = _pal.SelectMany(bank => bank.Select(c => 0xFF000000u | ((uint)c.R << 16) | ((uint)c.G << 8) | c.B)).ToArray();
-                            string error = Data.GraphicAssets.PatchPalette(ref nclr, colours);
+                            string error = GraphicAssets.PatchPalette(ref nclr, colours);
                             if (error != null) { StatusText = "Couldn't save: " + error; return error; }
                             ArchiveMembers.Write(_palPath, nclr);
                         }

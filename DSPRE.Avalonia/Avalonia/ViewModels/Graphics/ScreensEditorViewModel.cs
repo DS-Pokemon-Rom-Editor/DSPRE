@@ -472,12 +472,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     {
                         string[] labels = menu.ButtonsOf(page);
                         IReadOnlyList<(int X, int Y, int Width, int Height)> windows = menu.OptionWindows(page);
-                        return () => TextScreenPreviews.TouchChoicesPicture(labels, page == 2, windows);
+                        return () => HgssTouchPictures.Choices(labels, page == 2, windows);
                     }
                     IReadOnlyList<(int X, int Y)> sprites = menu.SpriteSpots, names = menu.NameSpots;
                     FieldTouchMenuButtons.MenuExtras extras = menu.Extras;
                     int mode = page >= FirstModePage ? page - FirstModePage + HgssTouchScreen.SafariMode : 0;
-                    return () => TextScreenPreviews.TouchMenuPicture(sprites, names, mode, extras);
+                    return () => HgssTouchPictures.Menu(sprites, names, mode, extras);
                 })).ToArray());
         }
 

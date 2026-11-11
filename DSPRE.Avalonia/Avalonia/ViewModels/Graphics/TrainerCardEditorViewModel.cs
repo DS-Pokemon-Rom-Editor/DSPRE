@@ -178,7 +178,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string ImportRankPalette(string nclrPath)
         {
             byte[] bytes;
-            try { bytes = System.IO.File.ReadAllBytes(nclrPath); }
+            try { bytes = PlainFiles.ReadBytes(nclrPath); }
             catch (Exception ex) { return ex.Message; }
             return Imported(() => _graphics.ImportRankPaletteRaw(SelectedRankIndex, bytes));
         }
@@ -208,7 +208,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             error = null;
             try
             {
-                using FileStream stream = System.IO.File.OpenRead(path);
+                using FileStream stream = PlainFiles.OpenRead(path);
                 RawImage raw = ImageConverter.DecodeRawImage(stream);
                 if (raw == null) error = "Couldn't read this PNG.";
                 return raw;

@@ -317,7 +317,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         // Undo / redo: every row's two checkboxes
         // ----------------------------------------------------------------
 
-        private DSPRE.Avalonia.ByteStateUndo _undo;
+        private ByteStateUndo _undo;
         public bool CanUndo => _undo?.CanUndo == true;
         public bool CanRedo => _undo?.CanRedo == true;
         public void Undo() => _undo?.Undo();
@@ -338,6 +338,6 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             SetDirty();
         }
 
-        private void ResetUndo() { _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo); RaiseUndo(); }
+        private void ResetUndo() { _undo = new ByteStateUndo(TakeState, ApplyState, RaiseUndo); RaiseUndo(); }
     }
 }

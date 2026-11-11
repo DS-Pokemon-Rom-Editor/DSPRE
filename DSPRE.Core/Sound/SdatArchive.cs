@@ -1,0 +1,307 @@
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+
+namespace DSPRE.Sound
+{
+    /// <summary>One sequence (SSEQ) entry in an SDAT: which sub-file holds its bytecode, which bank plays it, and
+    /// the player settings the game applies when it starts the sequence.</summary>
+    public sealed class SdatSeqInfo
+    {
+        public int FileId;
+        public int BankNo;
+        public int Volume, ChannelPrio, PlayerPrio, PlayerNo;
+    }
+
+    /// <summary>One instrument bank (SBNK) entry: which sub-file holds it and up to 4 wave archives it draws
+    /// samples from.</summary>
+    public sealed class SdatBankInfo
+    {
+        public int FileId;
+        public int[] WaveArcNo = new int[4];   // NNS_SND_ARC_INVALID_WAVEARC_NO (0xffff) = unused slot
+    }
+
+    /// <summary>A sequence player: how many sequences it runs and which channels it may use (0 means any).</summary>
+    public sealed class SdatPlayerInfo
+    {
+        public int SeqMax;
+        public int AllocChannelMask;
+        public int HeapSize;
+    }
+
+    /// <summary>One item a sound group loads: type 0 sequence, 1 bank, 2 wave archive, 3 sequence archive.</summary>
+    public readonly record struct SdatGroupItem(int Type, int LoadFlags, int Index);
+
+    /// <summary>One wave archive (SWAR) entry: just which sub-file holds it.</summary>
+    public sealed class SdatWaveArcInfo
+    {
+        public int FileId;
+        public int Flags;
+    }
+
+    /// <summary>
+    /// Parses an SDAT: a 48-byte header pointing at SYMB (names, optional), INFO and FAT, then the sub-files. INFO has an
+    /// offset table per category, relative to the block; FAT has each sub-file's offset from the file start and size.
+    /// </summary>
+    public sealed class SdatArchive
+    {
+        private byte[] _d;
+        private int _fatOffset;
+
+        public List<SdatSeqInfo> Sequences { get; } = new List<SdatSeqInfo>();
+        public List<SdatBankInfo> Banks { get; } = new List<SdatBankInfo>();
+        public List<SdatWaveArcInfo> WaveArcs { get; } = new List<SdatWaveArcInfo>();
+        public List<SdatPlayerInfo> Players { get; } = new List<SdatPlayerInfo>();
+
+        // What each sound group loads, by group number.
+        public List<List<SdatGroupItem>> Groups { get; } = new List<List<SdatGroupItem>>();
+        public Dictionary<int, string> GroupNames { get; } = new Dictionary<int, string>();
+
+        // Sequence number to name, from SYMB, for the entries that have one.
+        public Dictionary<int, string> SeqNames { get; } = new Dictionary<int, string>();
+
+        // The same for banks and wave archives; a bank's name says whether it's a cry bank.
+        public Dictionary<int, string> BankNames { get; } = new Dictionary<int, string>();
+        public Dictionary<int, string> WaveArcNames { get; } = new Dictionary<int, string>();
+
+        public static SdatArchive Parse(byte[] d)
+        {
+            SdatArchive a = new SdatArchive();
+            const int HdrSize = 48;
+            if (d == null || d.Length < HdrSize) return a;
+            a._d = d;
+
+            int U16(int o) => d[o] | (d[o + 1] << 8);
+            uint U32(int o) => (uint)(d[o] | (d[o + 1] << 8) | (d[o + 2] << 16) | (d[o + 3] << 24));
+            string Sig4(int o) => System.Text.Encoding.ASCII.GetString(d, o, 4);
+
+            if (Sig4(0) != "SDAT") return a;
+
+            int symbOffset = (int)U32(16), symbSize = (int)U32(20);
+            int infoOffset = (int)U32(24), infoSize = (int)U32(28);
+            int fatOffset = (int)U32(32), fatSize = (int)U32(36);
+            if (infoOffset <= 0 || infoOffset + infoSize > d.Length) return a;
+            a._fatOffset = fatOffset;
+
+            // ── INFO block: an offset table per category, each entry relative to infoOffset ──
+            int seqTableOff = (int)U32(infoOffset + 8);
+            int bankTableOff = (int)U32(infoOffset + 16);
+            int waveArcTableOff = (int)U32(infoOffset + 20);
+            int playerTableOff = (int)U32(infoOffset + 24);
+            int groupTableOff = (int)U32(infoOffset + 28);
+
+            List<int> ReadOffsetTable(int relOff)
+            {
+                List<int> list = new List<int>();
+                if (relOff == 0) return list;
+                int tableAt = infoOffset + relOff;
+                if (tableAt + 4 > d.Length) return list;
+                int count = (int)U32(tableAt);
+                for (int i = 0; i < count; i++)
+                {
+                    int entryAt = tableAt + 4 + i * 4;
+                    if (entryAt + 4 > d.Length) break;
+                    list.Add((int)U32(entryAt));   // 0 = no entry at this index
+                }
+                return list;
+            }
+
+            List<int> seqOffs = ReadOffsetTable(seqTableOff);
+            for (int i = 0; i < seqOffs.Count; i++)
+            {
+                if (seqOffs[i] == 0) { a.Sequences.Add(null); continue; }
+                int at = infoOffset + seqOffs[i];
+                if (at + 12 > d.Length) { a.Sequences.Add(null); continue; }
+                a.Sequences.Add(new SdatSeqInfo
+                {
+                    FileId = (int)U32(at),
+                    BankNo = U16(at + 4),
+                    Volume = d[at + 6],
+                    ChannelPrio = d[at + 7],
+                    PlayerPrio = d[at + 8],
+                    PlayerNo = d[at + 9],
+                });
+            }
+
+            List<int> bankOffs = ReadOffsetTable(bankTableOff);
+            for (int i = 0; i < bankOffs.Count; i++)
+            {
+                if (bankOffs[i] == 0) { a.Banks.Add(null); continue; }
+                int at = infoOffset + bankOffs[i];
+                if (at + 12 > d.Length) { a.Banks.Add(null); continue; }
+                SdatBankInfo b = new SdatBankInfo { FileId = (int)U32(at) };
+                for (int w = 0; w < 4; w++) b.WaveArcNo[w] = U16(at + 4 + w * 2);
+                a.Banks.Add(b);
+            }
+
+            List<int> waveArcOffs = ReadOffsetTable(waveArcTableOff);
+            for (int i = 0; i < waveArcOffs.Count; i++)
+            {
+                if (waveArcOffs[i] == 0) { a.WaveArcs.Add(null); continue; }
+                int at = infoOffset + waveArcOffs[i];
+                if (at + 4 > d.Length) { a.WaveArcs.Add(null); continue; }
+                uint packed = U32(at);   // fileId:24, flags:8 (LSB-first bitfield)
+                a.WaveArcs.Add(new SdatWaveArcInfo { FileId = (int)(packed & 0xFFFFFF), Flags = (int)(packed >> 24) });
+            }
+
+            // Each record: sequence count u8, pad u8, allocatable channel mask u16, heap size u32.
+            List<int> playerOffs = ReadOffsetTable(playerTableOff);
+            for (int i = 0; i < playerOffs.Count; i++)
+            {
+                int at = infoOffset + playerOffs[i];
+                if (playerOffs[i] == 0 || at + 8 > d.Length) { a.Players.Add(null); continue; }
+                a.Players.Add(new SdatPlayerInfo { SeqMax = d[at], AllocChannelMask = U16(at + 2), HeapSize = (int)U32(at + 4) });
+            }
+
+            // Each record: item count u32, then per item type u8, load flags u8, padding u16, index u32.
+            List<int> groupOffs = ReadOffsetTable(groupTableOff);
+            for (int i = 0; i < groupOffs.Count; i++)
+            {
+                List<SdatGroupItem> items = new List<SdatGroupItem>();
+                int at = infoOffset + groupOffs[i];
+                if (groupOffs[i] != 0 && at + 4 <= d.Length)
+                {
+                    int n = (int)U32(at);
+                    for (int k = 0; k < n && at + 4 + k * 8 + 8 <= d.Length; k++)
+                    {
+                        int item = at + 4 + k * 8;
+                        items.Add(new SdatGroupItem(d[item], d[item + 1], (int)U32(item + 4)));
+                    }
+                }
+                a.Groups.Add(items);
+            }
+
+            // ── SYMB block (optional): INFO's tables again, pointing at C strings ──
+            if (symbOffset > 0 && symbOffset + symbSize <= d.Length && symbOffset + 40 <= d.Length)
+            {
+                void ReadNames(int tableRel, Dictionary<int, string> into)
+                {
+                    if (tableRel == 0) return;
+                    int tableAt = symbOffset + tableRel;
+                    if (tableAt + 4 > d.Length) return;
+                    int count = (int)U32(tableAt);
+                    for (int i = 0; i < count; i++)
+                    {
+                        int entryAt = tableAt + 4 + i * 4;
+                        if (entryAt + 4 > d.Length) break;
+                        int strRel = (int)U32(entryAt);
+                        if (strRel == 0) continue;
+                        int strAt = symbOffset + strRel;
+                        if (strAt >= d.Length) continue;
+                        int end = strAt;
+                        while (end < d.Length && d[end] != 0) end++;
+                        into[i] = System.Text.Encoding.ASCII.GetString(d, strAt, end - strAt);
+                    }
+                }
+
+                // Table order: sequences, sequence archives, banks, wave archives, then players and groups.
+                ReadNames((int)U32(symbOffset + 8), a.SeqNames);
+                ReadNames((int)U32(symbOffset + 16), a.BankNames);
+                ReadNames((int)U32(symbOffset + 20), a.WaveArcNames);
+                ReadNames((int)U32(symbOffset + 28), a.GroupNames);
+            }
+
+            return a;
+        }
+
+        /// <summary>
+        /// The whole archive with one sub-file replaced; the original is left alone. A file no bigger goes back in place; a
+        /// bigger one goes on the end, so no other offset moves.
+        /// </summary>
+        public byte[] ReplaceFile(int fileId, byte[] newBytes)
+        {
+            if (_d == null || _fatOffset <= 0 || newBytes == null) return null;
+
+            int countAt = _fatOffset + 8;
+            if (countAt + 4 > _d.Length) return null;
+            int count = _d[countAt] | (_d[countAt + 1] << 8) | (_d[countAt + 2] << 16) | (_d[countAt + 3] << 24);
+            if (fileId < 0 || fileId >= count) return null;
+
+            int entryAt = _fatOffset + 12 + fileId * 16;
+            if (entryAt + 8 > _d.Length) return null;
+            int oldOff = _d[entryAt] | (_d[entryAt + 1] << 8) | (_d[entryAt + 2] << 16) | (_d[entryAt + 3] << 24);
+            int oldSize = _d[entryAt + 4] | (_d[entryAt + 5] << 8) | (_d[entryAt + 6] << 16) | (_d[entryAt + 7] << 24);
+            if (oldOff < 0 || oldSize < 0 || oldOff + oldSize > _d.Length) return null;
+
+            byte[] o;
+            int newOff;
+            if (newBytes.Length <= oldSize)
+            {
+                o = (byte[])_d.Clone();
+                newOff = oldOff;
+                System.Array.Copy(newBytes, 0, o, newOff, newBytes.Length);
+                // Whatever the old file left behind is zeroed, so nothing stale is read as sound.
+                for (int i = newBytes.Length; i < oldSize; i++) o[newOff + i] = 0;
+            }
+            else
+            {
+                int pad = (4 - (_d.Length & 3)) & 3;         // keep the new file on a four-byte boundary
+                newOff = _d.Length + pad;
+                o = new byte[newOff + newBytes.Length];
+                System.Array.Copy(_d, o, _d.Length);
+                System.Array.Copy(newBytes, 0, o, newOff, newBytes.Length);
+            }
+
+            void Put32(int at, int v)
+            {
+                o[at] = (byte)v; o[at + 1] = (byte)(v >> 8); o[at + 2] = (byte)(v >> 16); o[at + 3] = (byte)(v >> 24);
+            }
+            Put32(entryAt, newOff);
+            Put32(entryAt + 4, newBytes.Length);
+
+            // The length at byte 8 and the FILE block's length both have to match the new size.
+            Put32(8, o.Length);
+            int fileBlockOffset = _d[40] | (_d[41] << 8) | (_d[42] << 16) | (_d[43] << 24);
+            if (fileBlockOffset > 0 && fileBlockOffset + 8 <= o.Length)
+                Put32(fileBlockOffset + 4, o.Length - fileBlockOffset);
+
+            return o;
+        }
+
+        /// <summary>Sub-file <paramref name="fileId"/>'s bytes (an SSEQ, SBNK or SWAR), or null when out of range.</summary>
+        public byte[] GetFileBytes(int fileId)
+        {
+            if (_d == null || _fatOffset <= 0) return null;
+            int countAt = _fatOffset + 8;
+            if (countAt + 4 > _d.Length) return null;
+            int count = _d[countAt] | (_d[countAt + 1] << 8) | (_d[countAt + 2] << 16) | (_d[countAt + 3] << 24);
+            if (fileId < 0 || fileId >= count) return null;
+
+            int entryAt = _fatOffset + 12 + fileId * 16;
+            if (entryAt + 8 > _d.Length) return null;
+            int off = _d[entryAt] | (_d[entryAt + 1] << 8) | (_d[entryAt + 2] << 16) | (_d[entryAt + 3] << 24);
+            int size = _d[entryAt + 4] | (_d[entryAt + 5] << 8) | (_d[entryAt + 6] << 16) | (_d[entryAt + 7] << 24);
+            if (off < 0 || size < 0 || off + size > _d.Length) return null;
+
+            byte[] bytes = new byte[size];
+            System.Array.Copy(_d, off, bytes, 0, size);
+            return bytes;
+        }
+
+        // Decoding a bank or wave archive is slow, so it's cached. Concurrent, because one move can play several sounds
+        // from one bank on the same frame, each on its own thread, as Thunder Punch does.
+        private readonly ConcurrentDictionary<int, List<SbnkInstrument>> _bankCache = new ConcurrentDictionary<int, List<SbnkInstrument>>();
+        private readonly ConcurrentDictionary<int, List<SwavSample>> _waveArcCache = new ConcurrentDictionary<int, List<SwavSample>>();
+
+        /// <summary>Bank <paramref name="bankNo"/>'s instruments, decoded once.</summary>
+        public List<SbnkInstrument> GetBankInstruments(int bankNo)
+        {
+            if (bankNo < 0 || bankNo >= Banks.Count || Banks[bankNo] == null) return null;
+            return _bankCache.GetOrAdd(bankNo, no =>
+            {
+                byte[] bytes = GetFileBytes(Banks[no].FileId);
+                return bytes != null ? SbnkBank.ParseBank(bytes) : new List<SbnkInstrument>();
+            });
+        }
+
+        /// <summary>Wave archive <paramref name="waveArcNo"/>'s waves, decoded once.</summary>
+        public List<SwavSample> GetWaveArchive(int waveArcNo)
+        {
+            if (waveArcNo == 0xFFFF || waveArcNo < 0 || waveArcNo >= WaveArcs.Count || WaveArcs[waveArcNo] == null) return null;
+            return _waveArcCache.GetOrAdd(waveArcNo, no =>
+            {
+                byte[] bytes = GetFileBytes(WaveArcs[no].FileId);
+                return bytes != null ? SwavSample.ParseArchive(bytes) : new List<SwavSample>();
+            });
+        }
+    }
+}

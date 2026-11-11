@@ -41,6 +41,9 @@
        its own namespace. Consumers see them as one surface, so the sections are global usings
        rather than a using line in every file. -->
   <ItemGroup>
+    <Using Include="DSPRE.Graphics" />
+    <Using Include="DSPRE.Screens" />
+    <Using Include="DSPRE.Sound" />
     <Using Include="DSPRE.Avalonia.ViewModels.Audio" />
     <Using Include="DSPRE.Avalonia.ViewModels.Battle" />
     <Using Include="DSPRE.Avalonia.ViewModels.Controls" />

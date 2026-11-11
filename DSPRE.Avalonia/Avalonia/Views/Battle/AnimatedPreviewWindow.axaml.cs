@@ -82,13 +82,13 @@ namespace DSPRE.Avalonia.Views.Battle
             // The game's own letters and borders, straight out of the ROM that is open, so edited ones show.
             FieldMessageBoxView.Font = FieldFont.LoadTalkFont();
             FieldMenuWindowView.Font = FieldFont.LoadSystemFont();
-            FieldMenuWindowView.Frame = DSPRE.Avalonia.Data.WindowFrames.LoadStandard();
-            FieldMenuWindowView.Colours = DSPRE.Avalonia.Data.WindowFrames.LoadSystemFontColours();
-            PoketchView.Screen = DSPRE.Avalonia.Data.PoketchScreen.Load();
+            FieldMenuWindowView.Frame = WindowFrames.LoadStandard();
+            FieldMenuWindowView.Colours = WindowFrames.LoadSystemFontColours();
+            PoketchView.Screen = PoketchScreen.Load();
             Poketch.PlaySound = id => PlayFieldSound(ScriptEffectKind.SoundEffect, id);
-            HgssTouchScreenView.Screen = DSPRE.Avalonia.Data.HgssTouchScreen.Load();
-            HgssTouchScreenView.Font = FieldFont.LoadFromArchive(DSPRE.Avalonia.Data.HgssTouchScreen.FontEntry) ?? FieldFont.LoadSystemFont();
-            HgssTouchScreenView.IconFont = FieldFont.LoadFromArchive(DSPRE.Avalonia.Data.HgssTouchScreen.IconFontEntry);
+            HgssTouchScreenView.Screen = HgssTouchScreen.Load();
+            HgssTouchScreenView.Font = FieldFont.LoadFromArchive(HgssTouchScreen.FontEntry) ?? FieldFont.LoadSystemFont();
+            HgssTouchScreenView.IconFont = FieldFont.LoadFromArchive(HgssTouchScreen.IconFontEntry);
             HgssTouchScreenView.Text = TouchMenuText;
             TouchMenu.PlaySound = id => PlayFieldSound(ScriptEffectKind.SoundEffect, id);
             TouchMenu.ChoiceTouched = index => _vm.TouchChoice(index);
@@ -96,10 +96,10 @@ namespace DSPRE.Avalonia.Views.Battle
             TouchMenu.AReleased = () => _vm.ReleaseA();
             if (_vm.BorderNames.Count == 0)
             {
-                foreach (string name in DSPRE.Avalonia.Data.WindowFrames.Names) _vm.BorderNames.Add(name);
+                foreach (string name in WindowFrames.Names) _vm.BorderNames.Add(name);
                 _vm.BorderChanged += (_, _) =>
                 {
-                    FieldMessageBoxView.Frame = DSPRE.Avalonia.Data.WindowFrames.Load(_vm.BorderIndex);
+                    FieldMessageBoxView.Frame = WindowFrames.Load(_vm.BorderIndex);
                     MessageBox.InvalidateVisual();
                 };
                 // The list filled after the box was bound, which leaves it showing nothing picked.
@@ -107,7 +107,7 @@ namespace DSPRE.Avalonia.Views.Battle
                 _vm.BorderIndex = -1;
                 _vm.BorderIndex = picked;
             }
-            FieldMessageBoxView.Frame = DSPRE.Avalonia.Data.WindowFrames.Load(_vm.BorderIndex);
+            FieldMessageBoxView.Frame = WindowFrames.Load(_vm.BorderIndex);
             _vm.MessageFontNote = FieldMessageBoxView.Font == null
                 ? "Stand-in letters: this ROM's font couldn't be read."
                 : null;

@@ -27,7 +27,7 @@ namespace DSPRE.Avalonia.Views.Items
         private void OpenInGraphics_Click(object sender, RoutedEventArgs e)
         {
             if (VM == null) return;
-            int drawing = Data.GraphicAssets.DrawingForItem(VM.SelectedItemIndex);
+            int drawing = GraphicAssets.DrawingForItem(VM.SelectedItemIndex);
             if (drawing < 0)
             {
                 _ = DialogHelper.ShowInfoAsync("This item doesn't name a drawing, so there is nothing to open.",

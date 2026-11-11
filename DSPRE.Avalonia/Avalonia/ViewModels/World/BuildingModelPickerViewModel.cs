@@ -62,7 +62,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             _modelDir = modelDir;
             _current = current;
-            try { _textures = texturePack != null && File.Exists(texturePack) ? File.ReadAllBytes(texturePack) : null; }
+            try { _textures = texturePack != null ? PlainFiles.ReadBytesOrNull(texturePack) : null; }
             catch (IOException) { _textures = null; }
         }
 
@@ -72,12 +72,12 @@ namespace DSPRE.Avalonia.ViewModels.World
             _all = await Task.Run(() =>
             {
                 List<Entry> list = new List<Entry>();
-                if (dir == null || !Directory.Exists(dir)) return list;
+                if (dir == null || !PlainFiles.FolderExists(dir)) return list;
                 int count = NarcAPI.Narc.MemberCount(dir);
                 for (int i = 0; i < count; i++)
                 {
                     string name = null;
-                    try { name = ModelAssets.NameInFile(File.ReadAllBytes(Path.Combine(dir, i.ToString("D4")))); }
+                    try { name = ModelAssets.NameInFile(PlainFiles.ReadBytes(Path.Combine(dir, i.ToString("D4")))); }
                     catch (IOException) { }   // a model that can't be read is listed without a name
                     list.Add(new Entry { Id = i, Name = name });
                 }
@@ -103,7 +103,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 try
                 {
-                    byte[] data = File.ReadAllBytes(Path.Combine(_modelDir, _selected.Id.ToString("D4")));
+                    byte[] data = PlainFiles.ReadBytes(Path.Combine(_modelDir, _selected.Id.ToString("D4")));
                     NSBMD nsbmd = NSBMDLoader.LoadNSBMD(new MemoryStream(data));
                     byte[] tex = _textures ?? NSBUtils.GetTexturesFromTexturedNSBMD(data);
                     bool painted = ModelAssets.Dress(nsbmd, tex);

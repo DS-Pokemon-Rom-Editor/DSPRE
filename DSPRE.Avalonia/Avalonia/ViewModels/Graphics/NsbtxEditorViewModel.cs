@@ -296,10 +296,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private readonly PendingArchiveWrites _pending = new();
         public bool HasUnsavedChanges => _pending.IsDirty;
         // A building pack's list entry follows its pack, so only the packs are named.
-        public string UnsavedChangesDescription => DSPRE.Avalonia.Data.StagedArchive.Join("Texture packs", false, string.Join(", ", new[]
+        public string UnsavedChangesDescription => StagedArchive.Join("Texture packs", false, string.Join(", ", new[]
         {
-            DSPRE.Avalonia.Data.StagedArchive.Describe("map texture pack", "map texture packs", _pending.Pending(DirNames.MapTextures)),
-            DSPRE.Avalonia.Data.StagedArchive.Describe("building texture pack", "building texture packs", _pending.Pending(DirNames.BuildingTextures)),
+            StagedArchive.Describe("map texture pack", "map texture packs", _pending.Pending(DirNames.MapTextures)),
+            StagedArchive.Describe("building texture pack", "building texture packs", _pending.Pending(DirNames.BuildingTextures)),
         }.Where(t => t.Length > 0)));
         public void SaveChanges()
         {
@@ -380,7 +380,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (path == null) return;
             try
             {
-                if (!IsTextureSet(File.ReadAllBytes(path)))
+                if (!IsTextureSet(PlainFiles.ReadBytes(path)))
                 {
                     await DialogHelper.ShowErrorAsync("That file isn't a texture set (BTX0).", "Map & building textures");
                     return;
@@ -400,7 +400,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (!await DialogHelper.AskYesNoAsync(question, "Import")) return;
             try
             {
-                byte[] pack = File.ReadAllBytes(path);
+                byte[] pack = PlainFiles.ReadBytes(path);
                 _pending.Change(step => step.Put(Archive, _packIndex, pack));
                 SaveNotice.Imported($"texture pack {_packIndex}", path);
             }

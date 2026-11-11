@@ -125,7 +125,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             try
             {
-                using (FileStream zipStream = File.Create(path))
+                using (FileStream zipStream = PlainFiles.Create(path))
                 using (ZipArchive zip = new ZipArchive(zipStream, ZipArchiveMode.Create))
                 {
                     foreach (ExportPickItem item in selected)

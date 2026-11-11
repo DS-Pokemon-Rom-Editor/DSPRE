@@ -12,6 +12,15 @@ namespace DSPRE.HgEngine
         private static Dictionary<int, string[]> _cache;
         private static string _cachedForRepo;
 
+        // A pose with art needs its .png.key; any seed works, so it takes the other gender's.
+        public static void EnsurePoseKey(string[] poses, int slot)
+        {
+            string key = poses[slot] + ".key";
+            if (System.IO.File.Exists(key)) return;
+            byte[] other = ArchiveMembers.ReadOrNull(poses[slot ^ 1] + ".key");
+            if (other != null) ArchiveMembers.Write(key, other);
+        }
+
         /// <summary>4 absolute paths in slot order (FemaleBack, MaleBack, FemaleFront, MaleFront), or null if this species has no pokegra.mk entry.</summary>
         public static string[] TryGetPosePaths(int speciesId)
         {

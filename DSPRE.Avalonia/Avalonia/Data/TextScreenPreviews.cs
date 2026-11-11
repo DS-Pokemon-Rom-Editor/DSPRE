@@ -86,8 +86,7 @@ namespace DSPRE.Avalonia.Data
                 if (menu.OnTouchScreen)
                 {
                     // HGSS's Poké Ball screen holds 2 to 8 entries.
-                    _touch ??= HgssTouchScreen.Load();
-                    byte[] choices = _touch?.RenderChoices(Font(HgssTouchScreen.FontEntry) ?? FieldFont.LoadSystemFont(), labels, false,
+                    byte[] choices = HgssTouchPictures.Screen()?.RenderChoices(HgssTouchPictures.Font(HgssTouchScreen.FontEntry) ?? FieldFont.LoadSystemFont(), labels, false,
                                                            Math.Clamp(menu.Cursor, 0, labels.Count - 1), true);
                     if (choices == null) continue;
                     shots.Add(new TextScreenShot
@@ -159,46 +158,17 @@ namespace DSPRE.Avalonia.Data
             HgssTouchScreen.MenuMessage, HgssTouchScreen.TalkMessage, HgssTouchScreen.CheckMessage,
             HgssTouchScreen.FishingMessage, HgssTouchScreen.NextMessage };
 
-        private static HgssTouchScreen _touch;
-
-        /// <summary>Draws the HGSS touch menu with sprites and names at the given spots.</summary>
-        internal static byte[] TouchMenuPicture(IReadOnlyList<(int X, int Y)> sprites, IReadOnlyList<(int X, int Y)> labels, int mode = 0, FieldTouchMenuButtons.MenuExtras extras = null)
-        {
-            lock (Gate)
-            {
-                ForThisRom();
-                _touch ??= HgssTouchScreen.Load();
-                if (_touch == null) return null;
-                FieldFont font = Font(HgssTouchScreen.FontEntry) ?? FieldFont.LoadSystemFont();
-                FieldFont iconFont = Font(HgssTouchScreen.IconFontEntry) ?? font;
-                int bank = RomInfo.FieldTouchMenuTextArchive;
-                string Text(int m) => FieldStringVars.Expand(ArchiveLine(bank, m), GameTextScreens.SampleWord);
-                return _touch.RenderMenu(font, iconFont, Text, new HgssTouchScreen.MenuLook { RegisteredItems = mode == 0, Sprites = sprites, Labels = labels, Mode = mode, Extras = extras });
-            }
-        }
-
-        /// <summary>Draws the HGSS Poké Ball screen with a yes/no menu, or a list with its text in the given windows.</summary>
-        internal static byte[] TouchChoicesPicture(IReadOnlyList<string> labels, bool yesNo, IReadOnlyList<(int X, int Y, int Width, int Height)> windows)
-        {
-            lock (Gate)
-            {
-                ForThisRom();
-                _touch ??= HgssTouchScreen.Load();
-                return _touch?.RenderChoices(Font(HgssTouchScreen.FontEntry) ?? FieldFont.LoadSystemFont(), labels, yesNo, 0, false, windows);
-            }
-        }
-
         private static void AddTouchMenu(List<TextScreenShot> shots, int bank, int line, string text)
         {
             if (bank != RomInfo.FieldTouchMenuTextArchive || Array.IndexOf(TouchMenuMessages, line) < 0) return;
-            _touch ??= HgssTouchScreen.Load();
-            if (_touch == null) return;
-            FieldFont font = Font(HgssTouchScreen.FontEntry) ?? FieldFont.LoadSystemFont();
-            FieldFont iconFont = Font(HgssTouchScreen.IconFontEntry) ?? font;
+            HgssTouchScreen touch = HgssTouchPictures.Screen();
+            if (touch == null) return;
+            FieldFont font = HgssTouchPictures.Font(HgssTouchScreen.FontEntry) ?? FieldFont.LoadSystemFont();
+            FieldFont iconFont = HgssTouchPictures.Font(HgssTouchScreen.IconFontEntry) ?? font;
             string Text(int m) => FieldStringVars.Expand(m == line ? text : ArchiveLine(bank, m),
                                                          GameTextScreens.SampleWord);
             int aLabel = Array.IndexOf(HgssTouchScreen.ALabelMessages, line) >= 0 ? line : HgssTouchScreen.CheckMessage;
-            byte[] rgba = _touch.RenderMenu(font, iconFont, Text, new HgssTouchScreen.MenuLook { ALabel = aLabel, RegisteredItems = true });
+            byte[] rgba = touch.RenderMenu(font, iconFont, Text, new HgssTouchScreen.MenuLook { ALabel = aLabel, RegisteredItems = true });
             if (rgba == null) return;
             shots.Add(new TextScreenShot
             {
@@ -285,7 +255,7 @@ namespace DSPRE.Avalonia.Data
         private static readonly Dictionary<int, FieldFont> Fonts = new();
 
         /// <summary>Reads everything again on the next preview, after the font archive was saved.</summary>
-        public static void ForgetFonts() { lock (Gate) _rom = null; }
+        public static void ForgetFonts() { lock (Gate) _rom = null; HgssTouchPictures.Forget(); }
 
         // Caches belong to one ROM; called under Gate.
         private static void ForThisRom()
@@ -296,7 +266,6 @@ namespace DSPRE.Avalonia.Data
             Fonts.Clear();
             _speciesByAbility = null;
             _battle = null;
-            _touch = null;
         }
 
         public static List<TextScreenShot> For(int bank, int line, string text, int stop = 0)
@@ -308,6 +277,7 @@ namespace DSPRE.Avalonia.Data
                 ForThisRom();
                 // Other lines may have been saved since the last check.
                 ArchiveLines.Clear();
+                HgssTouchPictures.ForgetText();
                 int species = line >= 1 && line < SpeciesCount() ? line : 0;
                 for (int b = 0; b < Books.Length; b++)
                 {
@@ -373,12 +343,22 @@ namespace DSPRE.Avalonia.Data
                 catch (Exception ex) { AppLogger.WarnOnce("TextScreenPreviews.FieldWindows", ex); }
                 foreach (GameTextScreens.Shot shot in GameTextScreens.For(bank, line, text, ArchiveLine, stop))
                     shots.Add(new TextScreenShot { Name = shot.Name, Picture = ImageConverter.FromRgba(shot.Rgba, 256, 192),
-                                                     Open = shot.Open ?? (() => AvaloniaEditorLauncher.OpenScreensEditor(shot.Key, bank, line)),
-                                                     EditorName = shot.Open == null ? "Screens" : null, Stops = shot.Stops,
+                                                     Open = OpenFor(shot, bank, line),
+                                                     EditorName = shot.Editor == GameTextScreens.ShotEditor.Screens ? "Screens" : null, Stops = shot.Stops,
                                                      MovesOnByItself = shot.MovesOnByItself });
             }
             return shots;
         }
+
+        private static Action OpenFor(GameTextScreens.Shot shot, int bank, int line) => shot.Editor switch
+        {
+            GameTextScreens.ShotEditor.NamingScreen => () => AvaloniaEditorLauncher.OpenNamingScreenEditor(),
+            GameTextScreens.ShotEditor.TrainerCard => AvaloniaEditorLauncher.OpenTrainerCardEditor,
+            GameTextScreens.ShotEditor.TitleScreen => () => AvaloniaEditorLauncher.OpenTitleScreenEditor(),
+            GameTextScreens.ShotEditor.PokegearPhoneBook => () => AvaloniaEditorLauncher.OpenPokegearPhoneBook(),
+            GameTextScreens.ShotEditor.Graphic => () => AvaloniaEditorLauncher.OpenGraphicAt(shot.Graphic.Dir, shot.Graphic.Member, preferAssembled: true),
+            _ => () => AvaloniaEditorLauncher.OpenScreensEditor(shot.Key, bank, line),
+        };
 
         private static long Footprint(byte[] with, byte[] without)
         {

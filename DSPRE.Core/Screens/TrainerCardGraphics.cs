@@ -1,0 +1,426 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using DSPRE.ROMFiles;
+using static DSPRE.RomInfo;
+
+namespace DSPRE.Screens
+{
+    /// <summary>Trainer card face design, 7 rank palettes, and male/female trainer-pose overlay.</summary>
+    public sealed class TrainerCardGraphics
+    {
+        public const int CardWidth = 256, CardHeight = 192;
+        public const int TrainerWidth = 256, TrainerHeight = 192;
+
+        private const int CardTileCols = 32, CardTileRows = 24;
+
+        // Limited by the drawing file's room and by the tile numbers each arrangement can store.
+        private static int TileCapacity(byte[] chr, params byte[][] screens)
+        {
+            int capacity = NitroBgCodec.TileRoom(chr);
+            foreach (byte[] scr in screens)
+                capacity = Math.Min(capacity, NitroBgCodec.EntryBytes(scr) == 1 ? 256 : 1024);
+            return capacity;
+        }
+
+        private readonly ScriptNarc _narc = new(DirNames.TrainerCardGraphics);
+        public bool Available => _narc.Available;
+
+        public static string[] RankNames => TrainerCardRankNames;
+
+        /// <summary>Imports wait here until the owner saves; drawing and exports read through them.</summary>
+        public PendingArchiveWrites Pending { get; } = new PendingArchiveWrites();
+
+        public bool HasChanges => Pending.IsDirty;
+
+        // A copy: Inflate can hand back the very array an import then changes in place.
+        private byte[] Current(int id) => (byte[])_narc.Get(id)?.Clone();
+
+        public void AcceptAll() => Pending.Save();
+        public void RevertAll() => Pending.Discard();
+
+        // ── Decode ───────────────────────────────────────────────────────────
+        /// <param name="clear">Colour 0 left see-through, so the case behind the card shows as in the game.</param>
+        public RawImage ComposeCardFront(int rankIndex, bool clear = false) => ComposeCard(rankIndex, true, clear);
+        public RawImage ComposeCardBack(int rankIndex, bool clear = false) => ComposeCard(rankIndex, false, clear);
+
+        private RawImage ComposeCard(int rankIndex, bool front, bool clear)
+        {
+            (int ncgr, int facaNscr, int backNscr, int[] rankPalettes) m = TrainerCardMembers;
+            int palId = m.rankPalettes[rankIndex];
+            int scrId = front ? m.facaNscr : m.backNscr;
+            return ComposeVia(m.ncgr, palId, scrId, transparentZero: clear);
+        }
+
+        public RawImage ComposeTrainer(bool male)
+        {
+            (int ncgr, int maleNscr, int femaleNscr) t = TrainerCardTrainerMembers;
+            (int ncgr, int facaNscr, int backNscr, int[] rankPalettes) m = TrainerCardMembers;
+            int scrId = male ? t.maleNscr : t.femaleNscr;
+            return ComposeVia(t.ncgr, m.rankPalettes[0], scrId, transparentZero: true);
+        }
+
+        private RawImage ComposeVia(int chrIdx, int palIdx, int scrIdx, bool transparentZero)
+        {
+            using IDisposable reading = Pending.Reading();
+            if (!Available) return null;
+            byte[] chr = NitroBgCodec.Inflate(_narc.Get(chrIdx));
+            byte[] pal = NitroBgCodec.Inflate(_narc.Get(palIdx));
+            byte[] scr = NitroBgCodec.Inflate(_narc.Get(scrIdx));
+            if (chr == null || pal == null || scr == null) return null;
+            try { return ToRawImage(NitroBgCodec.Composite(chr, pal, scr, transparentZero)); }
+            catch (Exception ex)
+            {
+                AppLogger.Error($"TrainerCardGraphics.ComposeVia(chrIdx={chrIdx}): {ex}");
+                return null;
+            }
+        }
+
+        // The screens are 32x32 tiles but the DS shows the top 24 rows, which is also what an import takes.
+        private static RawImage ToRawImage(NitroBgCodec.BgImage bg)
+        {
+            int height = Math.Min(bg.Height, CardHeight);
+            RawImage raw = new RawImage(bg.Width, height);
+            byte[] src = bg.Rgba, dst = raw.Bgra;
+            for (int i = 0; i + 3 < dst.Length && i + 3 < src.Length; i += 4)
+            { dst[i] = src[i + 2]; dst[i + 1] = src[i + 1]; dst[i + 2] = src[i]; dst[i + 3] = src[i + 3]; }
+            return raw;
+        }
+
+        // ── Card design (shared NCGR, rebuilds all 7 rank palettes) ──────────────────
+        // A card shows the rank palette's banks 1-3 (HeartGold 1-8) and 15 over the Normal palette, and the pose
+        // sits in banks 4-5: Normal's own in DP and Platinum, every rank's in HeartGold. Each import keeps to its slots.
+        private const int PoseFirstSlot = 65, PoseColourSlots = 31;
+
+        private static int[] CardSlots()
+        {
+            List<int> slots = new List<int>();
+            for (int i = 16; i < 64; i++) slots.Add(i);
+            if (GameFamily == GameFamilies.HGSS) for (int i = 96; i < 144; i++) slots.Add(i);
+            return slots.ToArray();
+        }
+
+        private static int[] PoseRanks(int rankCount) => GameFamily == GameFamilies.HGSS
+            ? System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Range(0, rankCount)) : new[] { 0 };
+
+        public string ImportCardFront(RawImage png, IReadOnlyCollection<int> ranks) => ImportCardDesign(png, front: true, ranks);
+        public string ImportCardBack(RawImage png, IReadOnlyCollection<int> ranks) => ImportCardDesign(png, front: false, ranks);
+
+        private string ImportCardDesign(RawImage png, bool front, IReadOnlyCollection<int> ranks)
+        {
+            if (!Available) return "This game doesn't have the trainer card archive.";
+            if (ranks == null || ranks.Count == 0) return "Pick at least one rank for the design's colours.";
+            if (png == null || png.IsEmpty) return "No image.";
+            if (png.Width != CardWidth || png.Height != CardHeight)
+                return $"That picture is {png.Width} by {png.Height}. It has to be {CardWidth} by {CardHeight}.";
+
+            (int ncgr, int facaNscr, int backNscr, int[] rankPalettes) m = TrainerCardMembers;
+            byte[] chrRaw = NitroBgCodec.Inflate(Current(m.ncgr));
+            byte[] facaRaw = NitroBgCodec.Inflate(Current(m.facaNscr));
+            byte[] backRaw = NitroBgCodec.Inflate(Current(m.backNscr));
+            if (chrRaw == null || facaRaw == null || backRaw == null)
+                return "The current card design couldn't be read.";
+
+            // The side not being replaced is read in the colours of a rank it will be written to.
+            int lookRank = System.Linq.Enumerable.First(ranks);
+            RawImage frontPng = front ? png : ComposeCardFront(lookRank);
+            RawImage backPng = front ? ComposeCardBack(lookRank) : png;
+            if (frontPng == null || backPng == null) return "The current card design couldn't be read.";
+
+            int capacity = TileCapacity(chrRaw, facaRaw, backRaw);
+            EncodedTiles frontTiles, backTiles;
+            try
+            {
+                frontTiles = QuantizeAndTile(frontPng, tileCols: CardTileCols, tileRows: CardTileRows,
+                    tileCapacity: capacity, maxColors: 256);
+                backTiles = QuantizeAndTile(backPng, tileCols: CardTileCols, tileRows: CardTileRows,
+                    tileCapacity: capacity, maxColors: 256);
+            }
+            catch (Exception ex) { return ex.Message; }
+
+            int[] slots = CardSlots();
+            int total = frontTiles.Colors.Count + backTiles.Colors.Count;
+            if (total > slots.Length)
+                return $"The front and back use {total} colours between them; the card has room for {slots.Length}.";
+
+            int backBase = frontTiles.Colors.Count;
+            (byte r, byte g, byte b)[] palette = new (byte r, byte g, byte b)[total];
+            for (int i = 0; i < frontTiles.Colors.Count; i++) palette[i] = frontTiles.Colors[i];
+            for (int i = 0; i < backTiles.Colors.Count; i++) palette[backBase + i] = backTiles.Colors[i];
+            int[] used = slots[..total];
+            Remap(frontTiles, v => used[v]);
+            Remap(backTiles, v => used[backBase + v]);
+
+            MergedTiles merged = MergeTilePools(frontTiles, backTiles, 0, capacity, reserveZero: false);
+            if (merged == null)
+                return $"The front and back need more than {capacity} different 8 by 8 tiles between them. Simplify the pictures.";
+
+            if (!WriteMapData(facaRaw, merged.FrontMapEntries) || !WriteMapData(backRaw, merged.BackMapEntries))
+                return "The card's arrangement files are too small for a whole card.";
+            WriteTileData(chrRaw, merged.TileData);
+
+            Dictionary<int, byte[]> palettes = new Dictionary<int, byte[]>();
+            foreach (int rank in ranks)
+                if (rank >= 0 && rank < m.rankPalettes.Length && NitroBgCodec.Inflate(Current(m.rankPalettes[rank])) is byte[] raw)
+                    palettes[m.rankPalettes[rank]] = raw;
+            try { foreach (byte[] raw in palettes.Values) WritePalette(raw, palette, used); }
+            catch (InvalidDataException ex) { return ex.Message; }
+
+            _narc.Put(m.ncgr, chrRaw);
+            _narc.Put(m.facaNscr, facaRaw);
+            _narc.Put(m.backNscr, backRaw);
+            foreach (KeyValuePair<int, byte[]> kv in palettes) _narc.Put(kv.Key, kv.Value);
+            return null;
+        }
+
+        // ── Trainer pose (shared NCGR, recolours the pose's slots in every rank's palette) ───────────
+        public string ImportTrainerMale(RawImage png) => ImportTrainer(png, male: true);
+        public string ImportTrainerFemale(RawImage png) => ImportTrainer(png, male: false);
+
+        private string ImportTrainer(RawImage png, bool male)
+        {
+            if (!Available) return "This game doesn't have the trainer card archive.";
+            if (png == null || png.IsEmpty) return "No image.";
+            if (png.Width != TrainerWidth || png.Height != TrainerHeight)
+                return $"That picture is {png.Width} by {png.Height}. It has to be {TrainerWidth} by {TrainerHeight}.";
+
+            (int ncgr, int maleNscr, int femaleNscr) t = TrainerCardTrainerMembers;
+            (int ncgr, int facaNscr, int backNscr, int[] rankPalettes) m = TrainerCardMembers;
+            byte[] chrRaw = NitroBgCodec.Inflate(Current(t.ncgr));
+            byte[] maleRaw = NitroBgCodec.Inflate(Current(t.maleNscr));
+            byte[] femaleRaw = NitroBgCodec.Inflate(Current(t.femaleNscr));
+            byte[] palRaw = NitroBgCodec.Inflate(Current(m.rankPalettes[0]));
+            if (chrRaw == null || maleRaw == null || femaleRaw == null || palRaw == null)
+                return "The current trainer pose couldn't be read.";
+
+            RawImage malePng = male ? png : ComposeTrainer(true);
+            RawImage femalePng = male ? ComposeTrainer(false) : png;
+            if (malePng == null || femalePng == null) return "The current trainer pose couldn't be read.";
+
+            int capacity = TileCapacity(chrRaw, maleRaw, femaleRaw);
+            EncodedTiles maleTiles, femaleTiles;
+            try
+            {
+                maleTiles = QuantizeAndTile(malePng, tileCols: TrainerWidth / 8, tileRows: TrainerHeight / 8,
+                    tileCapacity: capacity, maxColors: 255, reserveZero: true);
+                femaleTiles = QuantizeAndTile(femalePng, tileCols: TrainerWidth / 8, tileRows: TrainerHeight / 8,
+                    tileCapacity: capacity, maxColors: 255, reserveZero: true);
+            }
+            catch (Exception ex) { return ex.Message; }
+
+            int total = maleTiles.Colors.Count + femaleTiles.Colors.Count;
+            if (total > PoseColourSlots)
+                return $"The two poses use {total} colours between them; the pose has room for {PoseColourSlots}.";
+
+            // Each pose is numbered from index 1; both are shifted up into the pose's slots.
+            (byte r, byte g, byte b)[] palette = new (byte r, byte g, byte b)[total];
+            for (int i = 0; i < maleTiles.Colors.Count; i++) palette[i] = maleTiles.Colors[i];
+            for (int i = 0; i < femaleTiles.Colors.Count; i++) palette[maleTiles.Colors.Count + i] = femaleTiles.Colors[i];
+
+            MergedTiles merged = MergeTilePools(maleTiles, femaleTiles, PoseFirstSlot - 1 + maleTiles.Colors.Count, capacity,
+                reserveZero: true, firstShift: PoseFirstSlot - 1);
+            if (merged == null)
+                return $"The two poses need more than {capacity} different 8 by 8 tiles between them. Simplify the pictures.";
+
+            if (!WriteMapData(maleRaw, merged.FrontMapEntries) || !WriteMapData(femaleRaw, merged.BackMapEntries))
+                return "The trainer's arrangement files are too small for a whole pose.";
+            WriteTileData(chrRaw, merged.TileData);
+
+            // HeartGold shows the pose in each rank's colours; DP and Platinum always take Normal's.
+            Dictionary<int, byte[]> palettes = new Dictionary<int, byte[]> { [m.rankPalettes[0]] = palRaw };
+            foreach (int rank in PoseRanks(m.rankPalettes.Length))
+                if (rank > 0 && NitroBgCodec.Inflate(Current(m.rankPalettes[rank])) is byte[] other) palettes[m.rankPalettes[rank]] = other;
+            int[] poseSlots = System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Range(PoseFirstSlot, palette.Length));
+            try { foreach (byte[] raw in palettes.Values) WritePalette(raw, palette, poseSlots); }
+            catch (InvalidDataException ex) { return ex.Message; }
+
+            _narc.Put(t.ncgr, chrRaw);
+            _narc.Put(t.maleNscr, maleRaw);
+            _narc.Put(t.femaleNscr, femaleRaw);
+            foreach (KeyValuePair<int, byte[]> kv in palettes) _narc.Put(kv.Key, kv.Value);
+            return null;
+        }
+
+        // ── Raw rank palette (advanced) ─────────
+        public string ImportRankPaletteRaw(int rankIndex, byte[] nclrBytes)
+        {
+            if (!Available) return "This game doesn't have the trainer card archive.";
+            if (nclrBytes == null || nclrBytes.Length < 4 ||
+                nclrBytes[0] != (byte)'R' || nclrBytes[1] != (byte)'L' || nclrBytes[2] != (byte)'C' || nclrBytes[3] != (byte)'N')
+                return "That isn't a colour file.";
+            int id = TrainerCardMembers.rankPalettes[rankIndex];
+            _narc.Put(id, nclrBytes);
+            return null;
+        }
+
+        public byte[] ExportRankPaletteRaw(int rankIndex)
+        {
+            if (!Available) return null;
+            using IDisposable reading = Pending.Reading();
+            return NitroBgCodec.Inflate(_narc.Get(TrainerCardMembers.rankPalettes[rankIndex]));
+        }
+
+        // ── Shared quantize + tile-dedup encoding ─────────
+        private sealed class EncodedTiles
+        {
+            public List<(byte r, byte g, byte b)> Colors;
+            public byte[] TileData;
+            public ushort[] MapEntries;
+        }
+
+        private sealed class MergedTiles
+        {
+            public byte[] TileData;
+            public ushort[] FrontMapEntries;
+            public ushort[] BackMapEntries;
+        }
+
+        private static EncodedTiles QuantizeAndTile(RawImage png, int tileCols, int tileRows,
+            int tileCapacity, int maxColors, bool reserveZero = false)
+        {
+            int w = tileCols * 8, h = tileRows * 8;
+            Dictionary<int, byte> colorToIndex = new Dictionary<int, byte>();
+            List<(byte, byte, byte)> colors = new List<(byte, byte, byte)>();
+            byte[] raster = new byte[w * h];
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    int si = (y * png.Width + x) * 4;
+                    byte b = png.Bgra[si], g = png.Bgra[si + 1], r = png.Bgra[si + 2], a = png.Bgra[si + 3];
+                    byte v;
+                    if (reserveZero && a < 128)
+                    {
+                        v = 0;
+                    }
+                    else
+                    {
+                        int key = (r << 16) | (g << 8) | b;
+                        if (!colorToIndex.TryGetValue(key, out v))
+                        {
+                            if (colors.Count >= maxColors)
+                                throw new InvalidOperationException($"That picture uses more than {maxColors} colours.");
+                            v = (byte)(colors.Count + (reserveZero ? 1 : 0));
+                            colorToIndex[key] = v;
+                            colors.Add((r, g, b));
+                        }
+                    }
+                    raster[y * w + x] = v;
+                }
+
+            List<byte[]> tileList = new List<byte[]>();
+            Dictionary<string, int> tileLookup = new Dictionary<string, int>();
+            ushort[] mapEntries = new ushort[tileCols * tileRows];
+            for (int ty = 0; ty < tileRows; ty++)
+                for (int tx = 0; tx < tileCols; tx++)
+                {
+                    byte[] block = PackTile8bpp(raster, w, tx, ty);
+                    string key = Convert.ToBase64String(block);
+                    if (!tileLookup.TryGetValue(key, out int tileIndex))
+                    {
+                        if (tileList.Count >= tileCapacity)
+                            throw new InvalidOperationException(
+                                $"Image needs more than {tileCapacity} unique 8x8 tiles once deduplicated. Simplify the image (flatter colours, more repeated blocks).");
+                        tileIndex = tileList.Count;
+                        tileLookup[key] = tileIndex;
+                        tileList.Add(block);
+                    }
+                    mapEntries[ty * tileCols + tx] = (ushort)tileIndex;
+                }
+
+            byte[] tileData = new byte[tileCapacity * 64];
+            for (int i = 0; i < tileList.Count; i++)
+                Array.Copy(tileList[i], 0, tileData, i * 64, 64);
+
+            return new EncodedTiles { Colors = colors, TileData = tileData, MapEntries = mapEntries };
+        }
+
+        /// <summary>Merges two tile pools into one shared character bank, deduplicating identical
+        /// tiles. Returns null if capacity is exceeded. If reserveZero, index 0 never shifts.</summary>
+        private static MergedTiles MergeTilePools(EncodedTiles first, EncodedTiles second, int secondShift,
+            int tileCapacity, bool reserveZero, int firstShift = 0)
+        {
+            List<byte[]> tileList = new List<byte[]>();
+            Dictionary<string, int> tileLookup = new Dictionary<string, int>();
+
+            ushort[] AddPool(EncodedTiles pool, int shift)
+            {
+                int count = pool.MapEntries.Length;
+                ushort[] outEntries = new ushort[count];
+                for (int i = 0; i < count; i++)
+                {
+                    int oldIndex = pool.MapEntries[i];
+                    byte[] block = new byte[64];
+                    Array.Copy(pool.TileData, oldIndex * 64, block, 0, 64);
+                    if (shift != 0)
+                        for (int b = 0; b < 64; b++)
+                            if (!reserveZero || block[b] != 0) block[b] = (byte)(block[b] + shift);
+
+                    string key = Convert.ToBase64String(block);
+                    if (!tileLookup.TryGetValue(key, out int tileIndex))
+                    {
+                        if (tileList.Count >= tileCapacity) return null;
+                        tileIndex = tileList.Count;
+                        tileLookup[key] = tileIndex;
+                        tileList.Add(block);
+                    }
+                    outEntries[i] = (ushort)tileIndex;
+                }
+                return outEntries;
+            }
+
+            ushort[] frontEntries = AddPool(first, firstShift);
+            if (frontEntries == null) return null;
+            ushort[] backEntries = AddPool(second, secondShift);
+            if (backEntries == null) return null;
+
+            byte[] tileData = new byte[tileCapacity * 64];
+            for (int i = 0; i < tileList.Count; i++)
+                Array.Copy(tileList[i], 0, tileData, i * 64, 64);
+
+            return new MergedTiles { TileData = tileData, FrontMapEntries = frontEntries, BackMapEntries = backEntries };
+        }
+
+        private static byte[] PackTile8bpp(byte[] raster, int w, int tx, int ty)
+        {
+            byte[] block = new byte[64];
+            for (int py = 0; py < 8; py++)
+                for (int px = 0; px < 8; px++)
+                    block[py * 8 + px] = raster[(ty * 8 + py) * w + (tx * 8 + px)];
+            return block;
+        }
+
+        private static void WritePalette(byte[] palRaw, (byte r, byte g, byte b)[] palette, int[] slots)
+        {
+            if (NitroBgCodec.ColourCount(palRaw) < 0) throw new InvalidDataException("The colour file has no palette block.");
+            for (int i = 0; i < palette.Length && i < slots.Length; i++)
+            {
+                (byte r, byte g, byte b) = palette[i];
+                NitroBgCodec.PutColour(palRaw, slots[i], NitroBgCodec.ToBgr555(r, g, b));
+            }
+        }
+
+        // Moves quantized colour numbers onto the palette slots they will be written to.
+        private static void Remap(EncodedTiles tiles, Func<int, int> slotOf)
+        {
+            for (int i = 0; i < tiles.TileData.Length; i++)
+                if (tiles.TileData[i] < tiles.Colors.Count) tiles.TileData[i] = (byte)slotOf(tiles.TileData[i]);
+        }
+
+        private static void WriteTileData(byte[] memberRaw, byte[] tiles)
+        {
+            int tileBytesOffset = NitroBgCodec.ReadTileHeader(memberRaw).TilesAt;
+            Array.Copy(tiles, 0, memberRaw, tileBytesOffset, tiles.Length);
+        }
+
+        // Checks the file is long enough before writing any square.
+        private static bool WriteMapData(byte[] scrRaw, ushort[] mapEntries)
+        {
+            int mapDataOffset = NitroBgCodec.ReadScreenHeader(scrRaw).MapAt;
+            int entryBytes = NitroBgCodec.EntryBytes(scrRaw);
+            if (mapDataOffset + mapEntries.Length * entryBytes > scrRaw.Length) return false;
+            for (int i = 0; i < mapEntries.Length; i++)
+                if (!NitroBgCodec.PutEntry(scrRaw, mapDataOffset, i, entryBytes, mapEntries[i])) return false;
+            return true;
+        }
+    }
+}

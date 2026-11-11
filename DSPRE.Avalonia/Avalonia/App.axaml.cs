@@ -121,17 +121,17 @@ namespace DSPRE
                         () => _ = DSPRE.Avalonia.DialogHelper.ShowErrorAsync(msg, "Built by hg-engine"));
 
                 // Archive members saved from Core keep hg-engine's PNGs in step and reach open editors.
-                DSPRE.ArchiveMembers.Written += DSPRE.Avalonia.Data.BuiltPngSources.OnMemberWritten;
+                DSPRE.ArchiveMembers.Written += BuiltPngSources.OnMemberWritten;
                 // A patch or editor that rewrites the font palettes changes what message previews draw with.
                 DSPRE.ArchiveMembers.Written += (dir, _, _, _) => { if (dir == DSPRE.RomInfo.DirNames.Fonts) DSPRE.Avalonia.Views.Controls.FieldMessageBoxView.ForgetPalette(); };
                 // Previews cache fonts and number glyphs, so a font save clears them before editors redraw.
-                DSPRE.Avalonia.AppEvents.ArchiveMemberSaved += (_, dir) =>
+                AppEvents.ArchiveMemberSaved += (_, dir) =>
                 {
                     if (dir != DSPRE.RomInfo.DirNames.Fonts) return;
-                    DSPRE.Avalonia.Data.GameTextScreens.ForgetFonts();
+                    GameTextScreens.ForgetFonts();
                     DSPRE.Avalonia.Views.Controls.FieldMessageBoxView.ForgetPalette();
                     DSPRE.Avalonia.Data.TextScreenPreviews.ForgetFonts();
-                    DSPRE.Avalonia.Data.BattleGaugeTextRenderer.Reset();
+                    BattleGaugeTextRenderer.Reset();
                 };
 
                 DSPRE.Avalonia.CoreDialogs.Install();

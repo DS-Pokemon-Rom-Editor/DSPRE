@@ -1,0 +1,481 @@
+using DSPRE.Graphics;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using DSPRE.ROMFiles;
+using static DSPRE.RomInfo;
+
+namespace DSPRE
+{
+    /// <summary>One customisable dropdown category: its built-in default labels plus the data-type cap.</summary>
+    public sealed class LabelCategory
+    {
+        public string Key { get; init; }            // stable id, such as "evolution_methods"
+        public string DisplayName { get; init; }    // shown in the editor
+        public string Group { get; init; } = "General";   // which editor it belongs to (a tab in Dropdown labels)
+        public string Singular { get; init; } = "Entry";   // for generated labels beyond the defaults
+        public int Cap { get; init; } = 256;        // max entries the underlying field can hold (u8 = 256)
+        public IReadOnlyList<string> Defaults { get; init; } = Array.Empty<string>();
+        public GameFamilies[] Games { get; init; }   // null: every game
+
+        // An optional choice per entry, such as what an evolution method's parameter means; null AttrName for none.
+        public string AttrName { get; init; }
+        public IReadOnlyList<string> AttrOptions { get; init; }
+        public IReadOnlyList<int> AttrDefaults { get; init; }
+        public int AttrDefaultForNew { get; init; }   // attr value applied to a freshly-added entry
+        public bool HasAttr => !string.IsNullOrEmpty(AttrName) && AttrOptions != null && AttrOptions.Count > 0;
+    }
+
+    /// <summary>
+    /// Custom labels for fixed dropdown values, for hacks that reuse or add values. A label comes from the project
+    /// (dspreDir/dspre_labels.json), then the global file (labels.global.json), then the built-in default, then "Singular N".
+    /// </summary>
+    public static class LabelStore
+    {
+        private static readonly Dictionary<string, LabelCategory> Cats = new();
+        private static readonly Dictionary<string, Dictionary<int, string>> Global = new();
+        private static readonly Dictionary<string, Dictionary<int, string>> Project = new();
+        private static readonly Dictionary<string, Dictionary<int, int>> GlobalAttr = new();
+        private static readonly Dictionary<string, Dictionary<int, int>> ProjectAttr = new();
+        private static bool _builtinsRegistered;
+        private static bool _globalLoaded;
+        private static string _loadedProjectDir;
+
+        public static IReadOnlyCollection<LabelCategory> Categories { get { Ensure(); return Cats.Values; } }
+        public static LabelCategory GetCategory(string key) { Ensure(); return Cats.TryGetValue(key, out LabelCategory c) ? c : null; }
+
+        private static string GlobalPath => Path.Combine(AppPaths.DatabasePath, "labels.global.json");
+        private static string ProjectPath => string.IsNullOrEmpty(DspreDir) ? null : Path.Combine(DspreDir, "dspre_labels.json");
+
+        /// <summary>Lazily registers built-ins, loads the global file once, and (re)loads the project file
+        /// whenever the open ROM's working directory changes.</summary>
+        private static void Ensure()
+        {
+            if (!_builtinsRegistered) { RegisterBuiltins(); _builtinsRegistered = true; }
+            if (!_globalLoaded) { Load(GlobalPath, Global, GlobalAttr); _globalLoaded = true; }
+            string pdir = string.IsNullOrEmpty(DspreDir) ? null : DspreDir;
+            if (pdir != _loadedProjectDir) { Load(ProjectPath, Project, ProjectAttr); _loadedProjectDir = pdir; }
+        }
+
+        private static void Register(LabelCategory c) => Cats[c.Key] = c;
+
+        /// <summary>The routine names as the games' own source has them, before anybody renames one.</summary>
+        private static string[] BuildRoutineDefaults()
+        {
+            string[] names = new string[BattleAnimFuncs.TableSize];
+            for (int i = 0; i < names.Length; i++) names[i] = BattleAnimFuncs.Get(i)?.Name ?? ("Routine " + i);
+            return names;
+        }
+
+        // Built-in categories. Add a line here (+ swap the editor VM's source to LabelStore.Get) to make
+        // another hardcoded dropdown customisable.
+        private static void RegisterBuiltins()
+        {
+            void Reg(string key, string name, string group, string singular, string[] defaults, params GameFamilies[] games)
+                => Register(new LabelCategory { Key = key, DisplayName = name, Group = group, Singular = singular, Cap = 256, Defaults = defaults,
+                                                Games = games.Length > 0 ? games : null });
+
+            // The routines a move animation can call.
+            Reg("battle_anim_funcs", "Move animation routines", "Pokémon", "Routine",
+                BuildRoutineDefaults());
+
+            // Pokémon: combos bind by SelectedIndex == enum position (these enums are sequential).
+            // Evolution methods also carry a per-method "param meaning" attribute (what the parameter is).
+            Register(new LabelCategory
+            {
+                Key = "evolution_methods", DisplayName = "Evolution methods", Group = "Pokémon", Singular = "Method",
+                Cap = 256, Defaults = Enum.GetNames<EvolutionMethod>(),
+                AttrName = "Parameter", AttrOptions = Enum.GetNames<EvolutionParamMeaning>(),
+                AttrDefaults = EvoParamDefaults(),
+                AttrDefaultForNew = (int)EvolutionParamMeaning.CustomNumber,   // new methods default to a raw number
+            });
+            Reg("pokemon_growth_curves",  "Growth curves",     "Pokémon", "Curve",  Enum.GetNames<PokemonGrowthCurve>());
+            Reg("pokemon_egg_groups",     "Egg groups",        "Pokémon", "Group",  Enum.GetNames<PokemonEggGroup>());
+            Reg("pokemon_dex_colors",     "Pokédex colours",    "Pokémon", "Color",  Enum.GetNames<PokemonDexColor>());
+            // Items: combos bind by SelectedIndex == raw byte VALUE, so register VALUE-indexed defaults
+            // (NaturalGiftType is non-sequential: gaps become generated "Type N" labels you can rename).
+            // Hold effects and field-use funcs differ per game, so each game has its own category.
+            Reg("item_hold_effects",      "Item hold effects (Pt, HGSS)", "Items", "Effect", ItemLabels.HoldEffects(GameFamilies.Plat), GameFamilies.Plat, GameFamilies.HGSS);
+            Reg("item_hold_effects_dp",   "Item hold effects (DP)",  "Items", "Effect", ItemLabels.HoldEffects(GameFamilies.DP), GameFamilies.DP);
+            Reg("item_field_pockets",     "Item field pockets",      "Items", "Pocket", ByValue<FieldPocket>());
+            Reg("item_field_use",         "Item field use (HGSS)", "Items", "Func", ItemLabels.FieldUse(GameFamilies.HGSS), GameFamilies.HGSS);
+            Reg("item_field_use_pt",      "Item field use (Pt)", "Items", "Func",   ItemLabels.FieldUse(GameFamilies.Plat), GameFamilies.Plat);
+            Reg("item_field_use_dp",      "Item field use (DP)", "Items", "Func",   ItemLabels.FieldUse(GameFamilies.DP), GameFamilies.DP);
+            Reg("item_battle_use",        "Item battle use",   "Items", "Func",   ByValue<BattleUseFunc>());
+            Reg("item_natural_gift",      "Item Natural Gift types", "Items", "Type",   ByValue<NaturalGiftType>());
+            // Moves / trades
+            Reg("move_split",             "Move category", "Moves", "Split", Enum.GetNames<MoveData.MoveSplit>());
+            Reg("move_contest_conditions","Move contest conditions", "Moves", "Condition", Enum.GetNames<MoveData.ContestCondition>());
+            Reg("move_contest_effects",   "Move contest effects (DP, Pt)", "Moves", "Effect", new[]
+            {
+                "None", "Perform first next turn", "Perform last next turn", "+2 per repeat of the same Judge",
+                "+2 if the Judge's Voltage goes up", "Basic performance", "+3 if no one else chose the Judge",
+                "Can be used twice in a row", "Voltage added to the score", "+15 if all choose the same Judge",
+                "Lowers every Judge's Voltage", "Double score next turn", "Steals the previous Voltage",
+                "No Voltage up this turn", "Random order next turn", "Double score on the final act",
+                "Higher score at low Voltage", "+2 if performing first", "+2 if performing last",
+                "No Voltage down this turn", "+3 after two Voltage ups in a row", "Scores more the later it goes",
+                "+3 after a max Voltage", "+3 if rated the worst",
+            }, GameFamilies.DP, GameFamilies.Plat);
+            // Area light types: what each value of an area data record's light field loads, per game (AreaLightTypes).
+            Reg("area_light_dp",          "Area light types (DP)",   "World", "Light", AreaLightTypes.DiamondPearlLabels, GameFamilies.DP);
+            Reg("area_light_pt",          "Area light types (Pt)",   "World", "Light", AreaLightTypes.PlatinumLabels, GameFamilies.Plat);
+            Reg("area_light_hgss",        "Area light types (HGSS)", "World", "Light", AreaLightTypes.HeartGoldLabels, GameFamilies.HGSS);
+            Reg("trade_languages",        "Trade origin languages", "Trades", "Language", Enum.GetNames<TradeOriginLang>());
+
+            // Field cameras and weathers, per game: the header picks them by number and ROM hacks repurpose them.
+            void RegField(string key, string name, string singular, int cap, Dictionary<int, string> defaults, GameFamilies game) =>
+                Register(new LabelCategory { Key = key, DisplayName = name, Group = "World", Cap = cap, Defaults = Dense(defaults),
+                                             Singular = singular, Games = new[] { game } });
+            RegField("field_cameras_dp", "Cameras (DP)", "Camera", 256, DSPRE.Resources.PokeDatabase.CameraAngles.DPPtCameraDict, GameFamilies.DP);
+            RegField("field_cameras_pt", "Cameras (Pt)", "Camera", 256, DSPRE.Resources.PokeDatabase.CameraAngles.PtCameraDict, GameFamilies.Plat);
+            RegField("field_cameras_hgss", "Cameras (HGSS)", "Camera", 256, DSPRE.Resources.PokeDatabase.CameraAngles.HGSSCameraDict, GameFamilies.HGSS);
+            RegField("field_weather_dp", "Weather (DP)", "Weather", 256, DSPRE.Resources.PokeDatabase.Weather.DPWeatherDict, GameFamilies.DP);
+            RegField("field_weather_pt", "Weather (Pt)", "Weather", 256, DSPRE.Resources.PokeDatabase.Weather.PtWeatherDict, GameFamilies.Plat);
+            RegField("field_weather_hgss", "Weather (HGSS)", "Weather", 128, DSPRE.Resources.PokeDatabase.Weather.HGSSWeatherDict, GameFamilies.HGSS);
+
+            // Scripts outside a map's own file, by script number less 2000, per game. Projects rewrite these scripts,
+            // so none ship with a name; people name the ones they use.
+            void RegScripts(string key, string name, GameFamilies game) =>
+                Register(new LabelCategory { Key = key, DisplayName = name, Group = "Scripts", Singular = CommonScriptLabels.Unnamed,
+                                             Cap = 65536 - CommonScriptLabels.First, Defaults = Array.Empty<string>(), Games = new[] { game } });
+            RegScripts("common_scripts_dp", "Shared scripts (DP)", GameFamilies.DP);
+            RegScripts("common_scripts_pt", "Shared scripts (Pt)", GameFamilies.Plat);
+            RegScripts("common_scripts_hgss", "Shared scripts (HGSS)", GameFamilies.HGSS);
+
+            // Overworld sprite entries. The games hold no names for these, so they start as numbers
+            // and are worth naming per project: which entry is the player, which is a shop keeper.
+            Register(new LabelCategory
+            {
+                Key = "overworld_sprites", DisplayName = "Overworld sprites", Group = "World",
+                Singular = "OW entry", Cap = 4096, Defaults = Array.Empty<string>(),
+            });
+        }
+
+        private static string[] Dense(Dictionary<int, string> byValue)
+        {
+            int n = 0;
+            foreach (int k in byValue.Keys) n = Math.Max(n, k + 1);
+            string[] arr = new string[n];
+            foreach (KeyValuePair<int, string> kv in byValue) arr[kv.Key] = kv.Value;
+            return arr;
+        }
+
+        /// <summary>The open game's camera label category.</summary>
+        public static string CameraKey => CameraKeyFor(GameFamily);
+
+        public static string CameraKeyFor(GameFamilies family) => family switch
+        {
+            GameFamilies.DP => "field_cameras_dp", GameFamilies.Plat => "field_cameras_pt", _ => "field_cameras_hgss",
+        };
+
+        /// <summary>The open game's weather label category.</summary>
+        public static string WeatherKey => GameFamily switch
+        {
+            GameFamilies.DP => "field_weather_dp", GameFamilies.Plat => "field_weather_pt", _ => "field_weather_hgss",
+        };
+
+        /// <summary>Default "param meaning" per evolution method (method index to EvolutionParamMeaning value),
+        /// from EvolutionFile.evoDescriptions, the attribute defaults for the evolution_methods category.</summary>
+        private static int[] EvoParamDefaults()
+        {
+            string[] names = Enum.GetNames<EvolutionMethod>();
+            int[] arr = new int[names.Length];
+            for (int i = 0; i < names.Length; i++)
+                arr[i] = EvolutionFile.EvoDescriptions.TryGetValue((EvolutionMethod)i, out EvolutionParamMeaning meaning) ? (int)meaning : 0;
+            return arr;
+        }
+
+        /// <summary>An enum's default labels indexed by value, gaps left for "Singular i", for combos bound to the raw byte.</summary>
+        private static string[] ByValue<TEnum>() where TEnum : struct, Enum
+        {
+            TEnum[] vals = Enum.GetValues<TEnum>();
+            int max = 0;
+            foreach (TEnum v in vals) max = Math.Max(max, Convert.ToInt32(v));
+            string[] arr = new string[max + 1];
+            foreach (TEnum v in vals)
+            {
+                int i = Convert.ToInt32(v);
+                if (i >= 0 && i < arr.Length) arr[i] = v.ToString();
+            }
+            return arr;
+        }
+
+        /// <summary>The resolved labels for a category (defaults overlaid with global then project overrides,
+        /// extended to cover any added indices, capped at the data-type max).</summary>
+        public static IReadOnlyList<string> Get(string key)
+        {
+            Ensure();
+            if (!Cats.TryGetValue(key, out LabelCategory cat)) return Array.Empty<string>();
+            int count = cat.Defaults.Count;
+            if (Global.TryGetValue(key, out Dictionary<int, string> gl)) count = Math.Max(count, MaxIndex(gl) + 1);
+            if (Project.TryGetValue(key, out Dictionary<int, string> pj)) count = Math.Max(count, MaxIndex(pj) + 1);
+            count = Math.Min(Math.Max(count, 0), cat.Cap);
+            List<string> list = new List<string>(count);
+            for (int i = 0; i < count; i++) list.Add(Resolve(cat, key, i));
+            return list;
+        }
+
+        /// <summary>The label at a single index (same resolution as <see cref="Get"/>).</summary>
+        public static string GetLabel(string key, int index)
+        {
+            Ensure();
+            return Cats.TryGetValue(key, out LabelCategory cat) ? Resolve(cat, key, index) : index.ToString();
+        }
+
+        /// <summary>The built-in default at an index (ignores overrides), shown as a hint in the editor.</summary>
+        public static string GetDefault(string key, int index)
+        {
+            LabelCategory cat = GetCategory(key);
+            if (cat == null) return "";
+            return index < cat.Defaults.Count ? cat.Defaults[index] : $"{cat.Singular} {index}";
+        }
+
+        private static string Resolve(LabelCategory cat, string key, int i)
+        {
+            if (Project.TryGetValue(key, out Dictionary<int, string> pj) && pj.TryGetValue(i, out string pv) && !string.IsNullOrEmpty(pv)) return pv;
+            if (Global.TryGetValue(key, out Dictionary<int, string> gl) && gl.TryGetValue(i, out string gv) && !string.IsNullOrEmpty(gv)) return gv;
+            string d = i < cat.Defaults.Count ? cat.Defaults[i] : null;   // null = value-gap or beyond defaults
+            return string.IsNullOrEmpty(d) ? $"{cat.Singular} {i}" : d;
+        }
+
+        /// <summary>Current entry count for a category (defaults + any added indices).</summary>
+        public static int Count(string key) => Get(key).Count;
+
+        /// <summary>Refreshes a bound combo collection to a category's current labels, in place (keeps selection).</summary>
+        public static void Sync(ObservableCollection<string> target, string key) => ListSync.Apply(target, Get(key));
+
+        // ── Editing (call Save + AppEvents.RaiseLabelsChanged when done) ──────────────────
+        public static void SetLabel(string key, int index, string value, bool global)
+        {
+            Ensure();
+            Dictionary<string, Dictionary<int, string>> map = global ? Global : Project;
+            if (!map.TryGetValue(key, out Dictionary<int, string> d)) { d = new Dictionary<int, string>(); map[key] = d; }
+            // Blank, or the same as what this layer falls back to, keeps no entry. Added entries past the defaults
+            // stay even when unrenamed, because they are what extends the list.
+            bool withinDefaults = index < (GetCategory(key)?.Defaults.Count ?? 0);
+            if (string.IsNullOrWhiteSpace(value) || (withinDefaults && value.Trim() == FallbackLabel(key, index, global)))
+                d.Remove(index);
+            else d[index] = value.Trim();
+            if (d.Count == 0) map.Remove(key);
+        }
+
+        private static string FallbackLabel(string key, int index, bool global)
+        {
+            if (!global && Global.TryGetValue(key, out Dictionary<int, string> gl) && gl.TryGetValue(index, out string gv) && !string.IsNullOrEmpty(gv))
+                return gv;
+            return GetDefault(key, index);
+        }
+
+        public static void ResetCategory(string key, bool global)
+        {
+            (global ? Global : Project).Remove(key);
+            (global ? GlobalAttr : ProjectAttr).Remove(key);
+        }
+
+        /// <summary>The attribute value (an index into <see cref="LabelCategory.AttrOptions"/>) for an entry,
+        /// resolved from the project, then global, then the built-in default.</summary>
+        public static int GetAttr(string key, int index)
+        {
+            Ensure();
+            if (ProjectAttr.TryGetValue(key, out Dictionary<int, int> pj) && pj.TryGetValue(index, out int pv)) return pv;
+            if (GlobalAttr.TryGetValue(key, out Dictionary<int, int> gl) && gl.TryGetValue(index, out int gv)) return gv;
+            LabelCategory cat = GetCategory(key);
+            if (cat?.AttrDefaults != null && index >= 0 && index < cat.AttrDefaults.Count) return cat.AttrDefaults[index];
+            return 0;
+        }
+
+        public static void SetAttr(string key, int index, int value, bool global)
+        {
+            Ensure();
+            Dictionary<string, Dictionary<int, int>> map = global ? GlobalAttr : ProjectAttr;
+            if (!map.TryGetValue(key, out Dictionary<int, int> d)) { d = new Dictionary<int, int>(); map[key] = d; }
+            int fallback;
+            if (!global && GlobalAttr.TryGetValue(key, out Dictionary<int, int> gl) && gl.TryGetValue(index, out int gv)) fallback = gv;
+            else
+            {
+                LabelCategory cat = GetCategory(key);
+                fallback = cat?.AttrDefaults != null && index >= 0 && index < cat.AttrDefaults.Count ? cat.AttrDefaults[index] : -1;
+            }
+            if (value == fallback) d.Remove(index);
+            else d[index] = value;
+            if (d.Count == 0) map.Remove(key);
+        }
+
+        // ── Draft layer (Dropdown labels) ────────────────────────────────────────────────────
+        // Dropdown labels edits a draft no other editor sees; Commit saves it and raises LabelsChanged.
+        private static readonly Dictionary<(bool g, string k, int i), string> DraftLabels = new();
+        private static readonly Dictionary<(bool g, string k, int i), int> DraftAttrs = new();
+        private static readonly HashSet<(bool g, string k)> DraftResets = new();
+
+        public static bool HasDraft => DraftLabels.Count > 0 || DraftAttrs.Count > 0 || DraftResets.Count > 0;
+
+        public static void DraftSetLabel(string key, int idx, string value, bool global) { Ensure(); DraftLabels[(global, key, idx)] = value ?? ""; }
+        public static void DraftSetAttr(string key, int idx, int value, bool global) { Ensure(); DraftAttrs[(global, key, idx)] = value; }
+        public static void DraftReset(string key, bool global)
+        {
+            Ensure();
+            DraftResets.Add((global, key));
+            foreach ((bool g, string k, int i) k in DraftLabels.Keys.Where(k => k.g == global && k.k == key).ToList()) DraftLabels.Remove(k);
+            foreach ((bool g, string k, int i) k in DraftAttrs.Keys.Where(k => k.g == global && k.k == key).ToList()) DraftAttrs.Remove(k);
+        }
+
+        /// <summary>A label as Dropdown labels shows it: the saved value with the draft over it.</summary>
+        public static string GetDraftLabel(string key, int idx, bool global)
+        {
+            if (DraftLabels.TryGetValue((global, key, idx), out string v)) return string.IsNullOrEmpty(v) ? GetDefault(key, idx) : v;
+            if (DraftResets.Contains((global, key))) return GetDefault(key, idx);
+            return GetLabel(key, idx);
+        }
+
+        public static int GetDraftAttr(string key, int idx, bool global)
+        {
+            if (DraftAttrs.TryGetValue((global, key, idx), out int v)) return v;
+            if (DraftResets.Contains((global, key)))
+            {
+                LabelCategory c = GetCategory(key);
+                return c?.AttrDefaults != null && idx >= 0 && idx < c.AttrDefaults.Count ? c.AttrDefaults[idx] : 0;
+            }
+            return GetAttr(key, idx);
+        }
+
+        /// <summary>Entry count for the editor including any draft-added indices.</summary>
+        public static int DraftCount(string key, bool global)
+        {
+            int n = DraftResets.Contains((global, key)) ? (GetCategory(key)?.Defaults.Count ?? 0) : Count(key);
+            foreach ((bool g, string k, int i) k in DraftLabels.Keys) if (k.g == global && k.k == key) n = Math.Max(n, k.i + 1);
+            return Math.Min(n, GetCategory(key)?.Cap ?? 256);
+        }
+
+        /// <summary>Promotes the draft to the real store, persists the touched scopes, and signals editors.</summary>
+        /// <returns>null when saved, else why not; the draft is then kept so Save can be tried again.</returns>
+        public static string CommitDraft()
+        {
+            Ensure();
+            byte[] draft = DraftSnapshot();
+            foreach ((bool g, string k) r in DraftResets) ResetCategory(r.k, r.g);
+            foreach (KeyValuePair<(bool g, string k, int i), string> kv in DraftLabels) SetLabel(kv.Key.k, kv.Key.i, kv.Value, kv.Key.g);
+            foreach (KeyValuePair<(bool g, string k, int i), int> kv in DraftAttrs) SetAttr(kv.Key.k, kv.Key.i, kv.Value, kv.Key.g);
+            bool g = false, p = false;
+            void Note(bool global) { if (global) g = true; else p = true; }
+            foreach ((bool g, string k, int i) k in DraftLabels.Keys) Note(k.g);
+            foreach ((bool g, string k, int i) k in DraftAttrs.Keys) Note(k.g);
+            foreach ((bool g, string k) k in DraftResets) Note(k.g);
+            DiscardDraft();
+            string error = null;
+            if (p) error = Save(false);
+            if (g) error ??= Save(true);
+            if (error != null) RestoreDraft(draft);
+            return error;
+        }
+
+        public static void DiscardDraft() { DraftLabels.Clear(); DraftAttrs.Clear(); DraftResets.Clear(); }
+
+        // Undo in Dropdown labels: the whole draft as one value.
+        private sealed record DraftState(List<object[]> Labels, List<object[]> Attrs, List<object[]> Resets);
+
+        public static byte[] DraftSnapshot() => JsonSerializer.SerializeToUtf8Bytes(new DraftState(
+            DraftLabels.OrderBy(kv => (kv.Key.g, kv.Key.k, kv.Key.i)).Select(kv => new object[] { kv.Key.g, kv.Key.k, kv.Key.i, kv.Value }).ToList(),
+            DraftAttrs.OrderBy(kv => (kv.Key.g, kv.Key.k, kv.Key.i)).Select(kv => new object[] { kv.Key.g, kv.Key.k, kv.Key.i, kv.Value }).ToList(),
+            DraftResets.OrderBy(r => (r.g, r.k)).Select(r => new object[] { r.g, r.k }).ToList()));
+
+        public static void RestoreDraft(byte[] snapshot)
+        {
+            using JsonDocument doc = JsonDocument.Parse(snapshot);
+            DiscardDraft();
+            foreach (JsonElement e in doc.RootElement.GetProperty("Labels").EnumerateArray())
+                DraftLabels[(e[0].GetBoolean(), e[1].GetString(), e[2].GetInt32())] = e[3].GetString();
+            foreach (JsonElement e in doc.RootElement.GetProperty("Attrs").EnumerateArray())
+                DraftAttrs[(e[0].GetBoolean(), e[1].GetString(), e[2].GetInt32())] = e[3].GetInt32();
+            foreach (JsonElement e in doc.RootElement.GetProperty("Resets").EnumerateArray())
+                DraftResets.Add((e[0].GetBoolean(), e[1].GetString()));
+        }
+
+        /// <returns>null when written, else why not.</returns>
+        public static string Save(bool global)
+        {
+            Ensure();
+            string path = global ? GlobalPath : ProjectPath;
+            if (path == null) return null;
+            try
+            {
+                LabelFile file = new LabelFile
+                {
+                    Labels = StringKeyed(global ? Global : Project),
+                    Attrs  = StringKeyed(global ? GlobalAttr : ProjectAttr),
+                };
+                // Nothing overridden: leave no file behind.
+                if (file.Labels.Count == 0 && file.Attrs.Count == 0)
+                {
+                    if (File.Exists(path)) File.Delete(path);
+                    return null;
+                }
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                PlainFiles.WriteJson(path, file);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("LabelStore.Save: " + ex.Message);
+                return ex.Message;
+            }
+        }
+
+        private static Dictionary<string, Dictionary<string, T>> StringKeyed<T>(Dictionary<string, Dictionary<int, T>> src)
+        {
+            Dictionary<string, Dictionary<string, T>> outObj = new Dictionary<string, Dictionary<string, T>>();
+            foreach (KeyValuePair<string, Dictionary<int, T>> kv in src)
+                if (kv.Value.Count > 0)
+                    outObj[kv.Key] = kv.Value.OrderBy(e => e.Key).ToDictionary(e => e.Key.ToString(), e => e.Value);
+            return outObj;
+        }
+
+        private static int MaxIndex(Dictionary<int, string> d) => d.Count == 0 ? -1 : d.Keys.Max();
+
+        // JSON schema: { "labels": {cat:{idx:label}}, "attrs": {cat:{idx:int}} }. Old flat files
+        // (cat:{idx:label} at the root) are still read as labels for backward compatibility.
+        private sealed class LabelFile
+        {
+            public Dictionary<string, Dictionary<string, string>> Labels { get; set; }
+            public Dictionary<string, Dictionary<string, int>> Attrs { get; set; }
+        }
+
+        private static void Load(string path, Dictionary<string, Dictionary<int, string>> labels, Dictionary<string, Dictionary<int, int>> attrs)
+        {
+            labels.Clear(); attrs.Clear();
+            try
+            {
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
+                string json = File.ReadAllText(path);
+                LabelFile file = JsonSerializer.Deserialize<LabelFile>(json, ReadOptions);
+                if (file?.Labels != null)
+                {
+                    foreach (KeyValuePair<string, Dictionary<string, string>> kv in file.Labels) labels[CurrentKey(kv.Key)] = IntKeyed(kv.Value);
+                    if (file.Attrs != null) foreach (KeyValuePair<string, Dictionary<string, int>> kv in file.Attrs) attrs[CurrentKey(kv.Key)] = IntKeyed(kv.Value);
+                }
+                else   // old flat format: category, then index, then label
+                {
+                    Dictionary<string, Dictionary<string, string>> flat = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, string>>>(json);
+                    if (flat != null) foreach (KeyValuePair<string, Dictionary<string, string>> kv in flat) labels[CurrentKey(kv.Key)] = IntKeyed(kv.Value);
+                }
+            }
+            catch (Exception ex) { AppLogger.Error("LabelStore.Load: " + ex.Message); }
+        }
+
+        // Files saved before the names went PascalCase use camelCase keys.
+        private static readonly JsonSerializerOptions ReadOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+        // Label files saved by earlier beta builds use the old key.
+        private static string CurrentKey(string key) => key == "west_routines" ? "battle_anim_funcs" : key;
+
+        private static Dictionary<int, T> IntKeyed<T>(Dictionary<string, T> src)
+        {
+            Dictionary<int, T> d = new Dictionary<int, T>();
+            foreach (KeyValuePair<string, T> e in src) if (int.TryParse(e.Key, out int idx)) d[idx] = e.Value;
+            return d;
+        }
+    }
+}

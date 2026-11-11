@@ -38,7 +38,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (SpeciesNames.Count == 0) return;
             SafariZoneGroupViewModel[] groups = { GrassVM, SurfVM, OldRodVM, GoodRodVM, SuperRodVM };
             foreach (SafariZoneGroupViewModel g in groups) g?.BeginNameRefresh();
-            try { DSPRE.Avalonia.Data.ListSync.Apply(SpeciesNames, GetPokemonNames()); }
+            try { ListSync.Apply(SpeciesNames, GetPokemonNames()); }
             finally { foreach (SafariZoneGroupViewModel g in groups) g?.EndNameRefresh(); }
         }
 
@@ -90,7 +90,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         // ── Undo / redo: the loaded area, as its file stores it ─────────────────
-        private DSPRE.Avalonia.ByteStateUndo _undo;
+        private ByteStateUndo _undo;
         public bool CanUndo => _undo?.CanUndo == true;
         public bool CanRedo => _undo?.CanRedo == true;
         public void Undo() => _undo?.Undo();
@@ -120,7 +120,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_undo.IsDirty) SetDirty(); else SetClean();
         }
 
-        private void ResetUndo() { _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo); RaiseUndo(); }
+        private void ResetUndo() { _undo = new ByteStateUndo(TakeState, ApplyState, RaiseUndo); RaiseUndo(); }
 
         private void Edited()
         {

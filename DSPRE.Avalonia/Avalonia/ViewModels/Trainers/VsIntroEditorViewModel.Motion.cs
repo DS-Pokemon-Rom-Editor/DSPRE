@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using DSPRE.Avalonia.Data;
 using DSPRE.ROMFiles;
-using Kind = DSPRE.Avalonia.Data.GraphicAssets.Kind;
+using Kind = DSPRE.Graphics.GraphicAssets.Kind;
 
 namespace DSPRE.Avalonia.ViewModels.Trainers
 {

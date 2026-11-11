@@ -29,6 +29,28 @@ namespace DSPRE.HgEngine
         /// <summary>Whether base/ has been extracted and built into, so DSPRE can open it.</summary>
         public static bool HasBase(string checkout) => DSUtils.GetFolderType(BaseDir(checkout)) == 2;
 
+        // Why make can't run on the checkout yet, or null. needsRom: only rom.nds is missing.
+        public static string WhyNotBuildable(string checkout, out bool needsRom)
+        {
+            needsRom = false;
+            List<string> problems = Problems(checkout);
+            if (problems.Count > 0) return "This hg-engine folder can't be built yet:\n\n" + string.Join("\n\n", problems);
+            List<string> missing = MissingTools(checkout);
+            if (missing == null) return "DSPRE couldn't start the build shell for this folder.";
+            if (missing.Count > 0)
+                return "hg-engine's build needs these, and the build shell can't find them:\n\n" + string.Join(", ", missing)
+                       + "\n\nInstall them as hg-engine's README describes, then try again.";
+            needsRom = !File.Exists(RomPath(checkout));
+            return needsRom ? null : WrongRom(checkout);
+        }
+
+        public static string WrongRom(string checkout)
+        {
+            string code = ReadGameCode(RomPath(checkout));
+            return code == GameCode ? null
+                : $"This checkout's rom.nds is {code ?? "unreadable"}, but hg-engine builds from a HeartGold (USA) ROM ({GameCode}).";
+        }
+
         /// <summary>What would stop hg-engine's make before it starts, each with how to fix it. Empty when nothing does.</summary>
         public static List<string> Problems(string checkout)
         {

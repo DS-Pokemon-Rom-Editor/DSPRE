@@ -21,8 +21,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
-        private readonly Data.PendingArchiveWrites _pending;
-        private readonly Data.PendingArchiveWrites.Target _text;
+        private readonly PendingArchiveWrites _pending;
+        private readonly PendingArchiveWrites.Target _text;
         private readonly string[] _placeNames = Array.Empty<string>();
         private readonly string[] _speciesNames = Array.Empty<string>();
 
@@ -43,8 +43,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public FollowerTalkEditorViewModel(bool load)
         {
             if (!load) return;
-            _pending = new Data.PendingArchiveWrites();
-            _text = Data.PendingArchiveWrites.Text("follower-talk-text", FollowerTalkTextArchive, this);
+            _pending = new PendingArchiveWrites();
+            _text = PendingArchiveWrites.Text("follower-talk-text", FollowerTalkTextArchive, this);
             _placeNames = GetLocationNames().ToArray();
             _speciesNames = GetPokemonNames();
             Load();
@@ -75,7 +75,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 .Select(b => b?.Length == FollowerTalk.MoveSize ? new FollowerTalk.MoveData(b) : FollowerTalk.MoveData.New()).ToList();
             byte[] g = _pending.ReadMember(DirNames.FollowerSpeciesGroups, 0) ?? Array.Empty<byte>();
             _groups = g.Length >= FollowerTalk.SpeciesCount ? g : g.Concat(new byte[FollowerTalk.SpeciesCount - g.Length]).ToArray();
-            _lines = Data.PendingArchiveWrites.TextLines(_pending.Read(_text));
+            _lines = PendingArchiveWrites.TextLines(_pending.Read(_text));
             _uses = null;
         }
 
@@ -96,7 +96,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void StageLines()
         {
             _own = true;
-            try { _pending.Import(() => { _pending.Stage(_text, Data.PendingArchiveWrites.TextBytes(_lines)); return null; }); }
+            try { _pending.Import(() => { _pending.Stage(_text, PendingArchiveWrites.TextBytes(_lines)); return null; }); }
             finally { _own = false; }
             AfterEdit();
         }

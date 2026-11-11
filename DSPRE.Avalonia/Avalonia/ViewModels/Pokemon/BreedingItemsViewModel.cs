@@ -55,8 +55,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public void RefreshNames()
         {
-            DSPRE.Avalonia.Data.ListSync.Apply(SpeciesNames, GetPokemonNames());
-            DSPRE.Avalonia.Data.ListSync.Apply(ItemNames, GetItemNames());
+            ListSync.Apply(SpeciesNames, GetPokemonNames());
+            ListSync.Apply(ItemNames, GetItemNames());
         }
 
         public sealed class RowViewModel : INotifyPropertyChanged

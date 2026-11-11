@@ -74,7 +74,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         // ── Undo / redo: every row ──
-        private DSPRE.Avalonia.ByteStateUndo _undo;
+        private ByteStateUndo _undo;
         public bool CanUndo => _undo?.CanUndo == true;
         public bool CanRedo => _undo?.CanRedo == true;
         public void Undo() => _undo?.Undo();
@@ -121,12 +121,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void RefreshNames()
         {
             if (SpeciesNames.Count == 0) return;
-            DSPRE.Avalonia.Data.ListSync.Apply(SpeciesNames, GetPokemonNames());
-            DSPRE.Avalonia.Data.ListSync.Apply(MoveNames, GetAttackNames());
+            ListSync.Apply(SpeciesNames, GetPokemonNames());
+            ListSync.Apply(MoveNames, GetAttackNames());
             List<string> filter = new List<string> { "All species" };
             for (int i = 0; i < _learnsetCount; i++)
                 filter.Add(i < SpeciesNames.Count ? $"{i}: {SpeciesNames[i]}" : $"Species {i}");
-            DSPRE.Avalonia.Data.ListSync.Apply(SpeciesFilter, filter);
+            ListSync.Apply(SpeciesFilter, filter);
         }
 
         // hg-engine: each species' own LevelMoves in learnsets.json as loaded, to save only what changed.
@@ -157,7 +157,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             catch (Exception ex) { _loadError = ex.Message; AppLogger.Error("Bulk learnset load failed: " + ex.Message); }
             ApplyFilter();
             SetClean();
-            _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo);
+            _undo = new ByteStateUndo(TakeState, ApplyState, RaiseUndo);
             RaiseUndo();
             StatusText = $"{_all.Count} learnset rows across {_learnsetCount} species.";
         }

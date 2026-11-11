@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using DSPRE.HgEngine;
@@ -9,12 +10,35 @@ using static DSPRE.RomInfo;
 namespace DSPRE
 {
     /// <summary>
-    /// Writes files that are neither archive members nor code: exports, DSPRE's own data, project sources, backups and
-    /// temp files. A member or the project's arm9 or an overlay is refused, since those go through
-    /// <see cref="ArchiveMembers"/> and <see cref="DSUtils.WriteWholeFile"/>.
+    /// Reads and writes files that are neither archive members nor code: exports, DSPRE's own data,
+    /// project sources, backups and temp files. Writing a member, the project's arm9 or an overlay
+    /// is refused, since those go through <see cref="ArchiveMembers"/> and
+    /// <see cref="DSUtils.WriteWholeFile"/>.
     /// </summary>
     public static class PlainFiles
     {
+        public static bool Exists(string path) => File.Exists(path);
+
+        public static bool FolderExists(string path) => Directory.Exists(path);
+
+        public static byte[] ReadBytes(string path) => File.ReadAllBytes(path);
+
+        public static byte[] ReadBytesOrNull(string path) => File.Exists(path) ? File.ReadAllBytes(path) : null;
+
+        public static FileStream OpenRead(string path) => File.OpenRead(path);
+
+        public static long Length(string path) => new FileInfo(path).Length;
+
+        public static DateTime? WrittenAt(string path) => File.Exists(path) ? File.GetLastWriteTimeUtc(path) : null;
+
+        public static void Touch(string path, DateTime utc) => File.SetLastWriteTimeUtc(path, utc);
+
+        public static FileStream Create(string path)
+        {
+            Refuse(path);
+            return File.Create(path);
+        }
+
         public static void WriteBytes(string path, byte[] data)
         {
             Refuse(path);
@@ -61,6 +85,17 @@ namespace DSPRE
             File.Move(from, to, overwrite);
             ProjectWrites.Raise(from);
             ProjectWrites.Raise(to);
+        }
+
+        public static bool IsTaken(string path) =>
+            File.Exists(path) || (Directory.Exists(path) && Directory.EnumerateFileSystemEntries(path).Any());
+
+        public static void Remove(string path)
+        {
+            Refuse(path);
+            if (File.Exists(path)) File.Delete(path);
+            else if (Directory.Exists(path)) Directory.Delete(path, recursive: true);
+            ProjectWrites.Raise(path);
         }
 
         private static void Refuse(string path)

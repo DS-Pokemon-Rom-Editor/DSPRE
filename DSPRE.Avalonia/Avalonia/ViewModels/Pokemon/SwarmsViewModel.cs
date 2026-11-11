@@ -145,13 +145,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (DSPRE.HgEngine.HgEngineProject.IsActive)
                 {
                     // The next build uses Encounters.c; the built file only fills what an entry leaves out.
-                    EncounterFileHGSS source = File.Exists(path) ? new EncounterFileHGSS(new MemoryStream(File.ReadAllBytes(path))) : new EncounterFileHGSS();
+                    EncounterFileHGSS source = PlainFiles.Exists(path) ? new EncounterFileHGSS(new MemoryStream(PlainFiles.ReadBytes(path))) : new EncounterFileHGSS();
                     if (!DSPRE.HgEngine.HgEngineEncounterSource.TryLoad(file, source, out string sourceError)) throw new IOException(sourceError);
                     enc = source;
                 }
                 else
                 {
-                    byte[] bytes = File.ReadAllBytes(path);
+                    byte[] bytes = PlainFiles.ReadBytes(path);
                     enc = GameFamily == GameFamilies.HGSS
                         ? new EncounterFileHGSS(new MemoryStream(bytes)) : new EncounterFileDPPt(new MemoryStream(bytes));
                 }

@@ -140,7 +140,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (!IsAvailable) return;
 
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.EncounterExtended });
-            if (string.IsNullOrEmpty(Filesystem.EncounterExtended) || !Directory.Exists(Filesystem.EncounterExtended))
+            if (string.IsNullOrEmpty(Filesystem.EncounterExtended) || !PlainFiles.FolderExists(Filesystem.EncounterExtended))
             {
                 await DialogHelper.ShowErrorAsync($"arc/encdata_ex.narc is missing, so the {UnsavedChangesDescription} can't be shown.", ErrorTitle);
                 IsAvailable = false;
@@ -187,7 +187,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (SpeciesNames.Count == 0) return;
             _suppress = true;
-            try { Data.ListSync.Apply(SpeciesNames, GetPokemonNames()); }
+            try { ListSync.Apply(SpeciesNames, GetPokemonNames()); }
             finally { _suppress = false; }
             if (_file == null) return;
             int slot = _selectedSlotIndex;
@@ -316,7 +316,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (path == null) return;
 
             byte[] data;
-            try { data = File.ReadAllBytes(path); }
+            try { data = PlainFiles.ReadBytes(path); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {
                 CrashReporter.LogHandled(e);
@@ -332,7 +332,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Locate()
         {
             string path = Filesystem.EncounterExtended;
-            if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
+            if (!string.IsNullOrEmpty(path) && PlainFiles.FolderExists(path))
                 SystemShell.RevealInFileManager(path);
         }
     }

@@ -222,7 +222,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private readonly Dictionary<uint, byte[]> _originalFiles = new();
         private readonly Dictionary<uint, int[]> _originalRender = new();
         private readonly Dictionary<uint, OverworldSpriteProfileMetadataPatch> _knownPatches = new();
-        private DSPRE.Avalonia.ByteStateUndo _undo;
+        private ByteStateUndo _undo;
         public bool CanUndo => _undo?.CanUndo == true;
         public bool CanRedo => _undo?.CanRedo == true;
         public void Undo() => _undo?.Undo();
@@ -232,8 +232,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private static byte[] DiskFile(uint key)
         {
             if (!RomInfo.OverworldTable.TryGetValue(key, out (uint spriteID, ushort properties) entry)) return null;
-            string path = Path.Combine(RomInfo.GameDirs[DirNames.OWSprites].unpackedDir, entry.spriteID.ToString("D4"));
-            return File.Exists(path) ? File.ReadAllBytes(path) : null;
+            return ArchiveMembers.ReadOrNull(DirNames.OWSprites, (int)entry.spriteID);
         }
 
         private static int[] DiskRender(uint key) => OverworldSpriteTableExpansion.TryReadRenderState(key, out OverworldSpriteTableExpansion.OwRenderState s)
@@ -290,7 +289,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _originalFiles.Clear();
             _originalRender.Clear();
             _knownPatches.Clear();
-            _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo);
+            _undo = new ByteStateUndo(TakeState, ApplyState, RaiseUndo);
             RaiseUndo();
         }
 
@@ -399,12 +398,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 LoadOverworldProperties(key);
                 return;
             }
-            string path = Path.Combine(RomInfo.GameDirs[DirNames.OWSprites].unpackedDir, sprite.ToString("D4"));
 
             if (_modifiedFiles.TryGetValue(key, out byte[] mod))
                 _btxData = mod;
-            else if (File.Exists(path))
-                _btxData = File.ReadAllBytes(path);
+            else if (ArchiveMembers.Has(DirNames.OWSprites, (int)sprite))
+                _btxData = ArchiveMembers.Read(DirNames.OWSprites, (int)sprite);
             else
             {
                 _btxData = null;
@@ -580,7 +578,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             try
             {
-                byte[] picture = image ?? File.ReadAllBytes(ArchiveMembers.PathOf(DirNames.OWSprites, (int)templateMember));
+                byte[] picture = image ?? ArchiveMembers.Read(DirNames.OWSprites, (int)templateMember);
                 ArchiveMembers.ShiftUpFollowingCheckout(DirNames.OWSprites, gfx);
                 ArchiveMembers.Put(DirNames.OWSprites, gfx, picture);
             }
@@ -604,15 +602,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             stagedImage = null;
             error = null;
-            string templatePath = Path.Combine(RomInfo.GameDirs[DirNames.OWSprites].unpackedDir, templateMember.ToString("D4"));
-            if (!File.Exists(templatePath)) { error = "The template's texture file is missing."; return false; }
+            if (!ArchiveMembers.Has(DirNames.OWSprites, (int)templateMember)) { error = "The template's texture file is missing."; return false; }
             try
             {
-                byte[] templateData = File.ReadAllBytes(templatePath);
+                byte[] templateData = ArchiveMembers.Read(DirNames.OWSprites, (int)templateMember);
                 if (!Btx0Structure.TryInspect(templateData, out Btx0Structure targetStructure, out string targetError))
                 { error = "Template texture slot is unreadable: " + targetError; return false; }
 
-                byte[] sourceData = File.ReadAllBytes(rawBtxPath);
+                byte[] sourceData = DSUtils.ReadFromFile(rawBtxPath);
                 if (!Btx0Structure.TryInspect(sourceData, out Btx0Structure sourceStructure, out string sourceError))
                 { error = "That file isn't a texture DSPRE can read: " + sourceError; return false; }
 
@@ -638,14 +635,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             stagedImage = null;
             error = null;
-            string templatePath = Path.Combine(RomInfo.GameDirs[DirNames.OWSprites].unpackedDir, templateMember.ToString("D4"));
-            if (!File.Exists(templatePath)) { error = "The template's texture file is missing."; return false; }
+            if (!ArchiveMembers.Has(DirNames.OWSprites, (int)templateMember)) { error = "The template's texture file is missing."; return false; }
             try
             {
-                byte[] btxData = File.ReadAllBytes(templatePath);
+                byte[] btxData = ArchiveMembers.Read(DirNames.OWSprites, (int)templateMember);
                 RawImage import;
-                using (FileStream fs = File.OpenRead(pngPath))
-                    import = ImageConverter.DecodeRawImage(fs);
+                import = ImageConverter.DecodeRawImageFile(pngPath);
                 if (import == null) { error = "Image couldn't be decoded."; return false; }
                 RawImage current = BTX0.ReadRaw(btxData, 0);
                 if (current == null) { error = "Template texture slot is unreadable."; return false; }
@@ -672,21 +667,20 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 return false;
             }
 
-            string directory = RomInfo.GameDirs[DirNames.OWSprites].unpackedDir;
-            string templatePath = Path.Combine(directory, templateMember.ToString("D4"));
-            string clonePath = Path.Combine(directory, cloneEntry.spriteID.ToString("D4"));
-            if (!File.Exists(templatePath) || !File.Exists(clonePath))
+            byte[] templateBytes = ArchiveMembers.ReadOrNull(DirNames.OWSprites, (int)templateMember);
+            byte[] cloneBytes = ArchiveMembers.ReadOrNull(DirNames.OWSprites, (int)cloneEntry.spriteID);
+            if (templateBytes == null || cloneBytes == null)
             {
                 error = "The template's or the copied entry's texture file is missing.";
                 return false;
             }
 
-            if (!Btx0Structure.TryInspect(File.ReadAllBytes(templatePath), out Btx0Structure template, out string templateError))
+            if (!Btx0Structure.TryInspect(templateBytes, out Btx0Structure template, out string templateError))
             {
                 error = "The template isn't a texture DSPRE can read: " + templateError;
                 return false;
             }
-            if (!Btx0Structure.TryInspect(File.ReadAllBytes(clonePath), out Btx0Structure clone, out string cloneError))
+            if (!Btx0Structure.TryInspect(cloneBytes, out Btx0Structure clone, out string cloneError))
             {
                 error = "The entry to copy isn't a texture DSPRE can read: " + cloneError;
                 return false;
@@ -785,8 +779,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 RawImage import;
-                using (FileStream fs = File.OpenRead(filePath))
-                    import = ImageConverter.DecodeRawImage(fs);
+                import = ImageConverter.DecodeRawImageFile(filePath);
                 if (import == null) return "Image couldn't be decoded.";
                 RawImage current = BTX0.ReadRaw(_btxData, CurrentPaletteIndex);
                 if (current == null) return "This entry's texture file isn't a readable image (it may be a 3D model, not a flat texture).";
@@ -836,8 +829,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 RawImage import;
-                using (FileStream fs = File.OpenRead(filePath))
-                    import = ImageConverter.DecodeRawImage(fs);
+                import = ImageConverter.DecodeRawImageFile(filePath);
                 if (import == null)
                 {
                     error = "Image couldn't be decoded.";
@@ -855,7 +847,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
                 uint colorCount = CountColors(import);
                 uint targetKey = _owKeys[_selectedIndex];
-                string dir = RomInfo.GameDirs[DirNames.OWSprites].unpackedDir;
                 Dictionary<uint, Btx0Structure> structures = new Dictionary<uint, Btx0Structure>();
                 Dictionary<uint, int> sharedCounts = RomInfo.OverworldTable.Values
                     .GroupBy(v => v.spriteID)
@@ -865,8 +856,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     if (entry.Key == targetKey || entry.Value.spriteID == 0x3D3D) continue;
                     if (!structures.TryGetValue(entry.Value.spriteID, out Btx0Structure structure))
                     {
-                        string path = Path.Combine(dir, entry.Value.spriteID.ToString("D4"));
-                        if (!File.Exists(path) || !Btx0Structure.TryInspect(File.ReadAllBytes(path), out structure, out _))
+                        byte[] member = ArchiveMembers.ReadOrNull(DirNames.OWSprites, (int)entry.Value.spriteID);
+                        if (member == null || !Btx0Structure.TryInspect(member, out structure, out _))
                             continue;
                         structures.Add(entry.Value.spriteID, structure);
                     }
@@ -916,16 +907,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 RawImage import;
-                using (FileStream fs = File.OpenRead(filePath))
-                    import = ImageConverter.DecodeRawImage(fs);
+                import = ImageConverter.DecodeRawImageFile(filePath);
                 if (import == null) return "Image couldn't be decoded.";
 
-                string sourcePath = Path.Combine(
-                    RomInfo.GameDirs[DirNames.OWSprites].unpackedDir,
-                    sourceEntry.spriteID.ToString("D4"));
-                if (!File.Exists(sourcePath)) return "The selected profile's BTX file wasn't found.";
+                byte[] sourceData = ArchiveMembers.ReadOrNull(DirNames.OWSprites, (int)sourceEntry.spriteID);
+                if (sourceData == null) return "The selected profile's BTX file wasn't found.";
 
-                byte[] sourceData = File.ReadAllBytes(sourcePath);
                 if (!Btx0Structure.TryInspect(sourceData, out Btx0Structure structure, out string structureError))
                     return "DSPRE can't read the selected profile: " + structureError;
                 if (structure.SheetWidth != import.Width || structure.SheetHeight != import.Height)
@@ -1054,8 +1041,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private bool SaveEntry(uint key, byte[] data)
         {
             uint sprite = RomInfo.OverworldTable[key].spriteID;
-            string path = Path.Combine(RomInfo.GameDirs[DirNames.OWSprites].unpackedDir, sprite.ToString("D4"));
-            byte[] original = File.Exists(path) ? File.ReadAllBytes(path) : null;
+            byte[] original = ArchiveMembers.ReadOrNull(DirNames.OWSprites, (int)sprite);
             bool metadataApplied = false;
 
             if (_metadataPatches.TryGetValue(key, out OverworldSpriteProfileMetadataPatch patch))

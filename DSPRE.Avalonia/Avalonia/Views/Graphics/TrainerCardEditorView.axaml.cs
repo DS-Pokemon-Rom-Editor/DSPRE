@@ -116,7 +116,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         /// every rank's colours are one row.</summary>
         private void OpenInGraphics_Click(object sender, RoutedEventArgs e)
         {
-            int drawing = Data.GraphicUnits.TrainerCardDrawing();
+            int drawing = GraphicUnits.TrainerCardDrawing();
             if (drawing < 0)
             {
                 _ = DialogHelper.ShowInfoAsync("DSPRE doesn't know this game's trainer card layout.",

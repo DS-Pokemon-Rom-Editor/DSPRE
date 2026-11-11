@@ -20,9 +20,12 @@ namespace DSPRE.Avalonia.Views.Shell
     {
         private bool _closeConfirmed;
 
+        internal ProjectActions Project { get; }
+
         public MainWindowView()
         {
             InitializeComponent();
+            Project = new ProjectActions(this);
             // Coming back to DSPRE is when a teammate's push is most likely waiting.
             Activated += async (_, _) => { if (DataContext is MainWindowViewModel m) await m.Changes.FetchQuietlyAsync(); };
             Opened += (_, _) => { if (DataContext is MainWindowViewModel m) Shell.ChangesPanelWindow.Attach(this, m.Changes, ChangesOverlay); };
@@ -84,7 +87,7 @@ namespace DSPRE.Avalonia.Views.Shell
 
         /// <summary>Shows the loaded game's banner icon at the right end of the menu bar,
         /// with its DS-menu title as tooltip. Hidden when no ROM (or no readable banner).</summary>
-        private void RefreshGameIcon()
+        internal void RefreshGameIcon()
         {
             try
             {
@@ -162,9 +165,9 @@ namespace DSPRE.Avalonia.Views.Shell
         {
             NewWindowMenu.Items.Clear();
             MenuItem rom = new MenuItem { Header = "ROM…" };
-            rom.Click += async (_, _) => { if (await PickRomAsync() is string p) ProjectWindows.OpenInNewWindow(p); };
+            rom.Click += async (_, _) => { if (await Project.PickRomAsync() is string p) ProjectWindows.OpenInNewWindow(p); };
             MenuItem folder = new MenuItem { Header = "Extracted folder…" };
-            folder.Click += async (_, _) => { if (await PickFolderAsync() is string p) ProjectWindows.OpenInNewWindow(p); };
+            folder.Click += async (_, _) => { if (await Project.PickFolderAsync() is string p) ProjectWindows.OpenInNewWindow(p); };
             NewWindowMenu.Items.Add(rom);
             NewWindowMenu.Items.Add(folder);
             List<string> recents = SettingsManager.Settings?.RecentProjects;
@@ -182,7 +185,7 @@ namespace DSPRE.Avalonia.Views.Shell
         /// <summary>Asks about unsaved work in every editor; true when saved, discarded or clean. Editors
         /// close only once the new project is chosen.</summary>
         /// <param name="openingAnother">False when the program is closing, not opening another project.</param>
-        private async System.Threading.Tasks.Task<bool> ConfirmProjectCloseAsync(bool openingAnother = true)
+        internal async System.Threading.Tasks.Task<bool> ConfirmProjectCloseAsync(bool openingAnother = true)
         {
             IReadOnlyList<UnsavedChangesDialog.UnsavedEditorInfo> editors = OpenEditors.GetUnsavedEditors(this);
             if (editors.Count > 0)
@@ -223,20 +226,6 @@ namespace DSPRE.Avalonia.Views.Shell
             _romOperation = true;
             try { await operation(); }
             finally { _romOperation = false; }
-        }
-
-        /// <summary>Shows why a picked ROM or folder can't be opened, before anything of the open project closes.</summary>
-        private async System.Threading.Tasks.Task<bool> RefuseUnsupportedAsync(string path)
-        {
-            if (ProjectWindows.OpenElsewhere(path))
-            {
-                await DialogHelper.ShowInfoAsync("This project is already open in another DSPRE window.", "Open ROM");
-                return true;
-            }
-            string why = AvaloniaRomLoader.WhyUnsupported(path);
-            if (why == null) return false;
-            await DialogHelper.ShowErrorAsync(why, "Open ROM", this);
-            return true;
         }
 
         private static string CompactPath(string path)
@@ -307,441 +296,20 @@ namespace DSPRE.Avalonia.Views.Shell
         private async void OpenHgEngineFolder_Click(object sender, RoutedEventArgs e) => await OpenHgEngineFolderInteractiveAsync();
 
         /// <summary>Pick and open a .nds ROM (also used by the Welcome window).</summary>
-        public System.Threading.Tasks.Task OpenRomInteractiveAsync() => RunRomOperationAsync(OpenRomCoreAsync);
-
-        // The new project is picked and checked first, so a cancelled or refused open never costs the
-        // current project its unsaved edits.
-        private async System.Threading.Tasks.Task<string> PickRomAsync()
-        {
-            IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new global::Avalonia.Platform.Storage.FilePickerOpenOptions
-            {
-                Title = "Open ROM",
-                AllowMultiple = false,
-                FileTypeFilter = new[] { new global::Avalonia.Platform.Storage.FilePickerFileType("NDS ROM") { Patterns = new[] { "*.nds" } } }
-            });
-            return files != null && files.Count > 0 ? files[0].TryGetLocalPath() : null;
-        }
-
-        private async System.Threading.Tasks.Task<string> PickFolderAsync()
-        {
-            IReadOnlyList<IStorageFolder> folders = await StorageProvider.OpenFolderPickerAsync(new global::Avalonia.Platform.Storage.FolderPickerOpenOptions
-            {
-                Title = "Open extracted ROM folder", AllowMultiple = false
-            });
-            return folders != null && folders.Count > 0 ? folders[0].TryGetLocalPath() : null;
-        }
-
-        private async System.Threading.Tasks.Task OpenRomCoreAsync()
-        {
-            string path = await PickRomAsync();
-            if (string.IsNullOrEmpty(path) || await RefuseUnsupportedAsync(path)) return;
-            if (!await ConfirmWslProjectAsync(path)) return;
-
-            bool? reExtract = await CheckExtractedDataChoiceAsync(path);
-            if (reExtract == null) return;   // user aborted
-            if (!await ConfirmProjectCloseAsync()) return;
-            OpenEditors.CloseEditorWindows(this);
-            await LoadRomAsync(err0 => { bool ok = AvaloniaRomLoader.LoadFromFile(path, out string er, reExtract.Value); err0(er); return ok; }, sourcePath: path);
-        }
-
-        /// <summary>
-        /// If this .nds was extracted before, asks whether to reuse that folder or extract again. Returns false
-        /// to reuse, true to extract again, null to cancel.
-        /// </summary>
-        private async System.Threading.Tasks.Task<bool?> CheckExtractedDataChoiceAsync(string ndsPath)
-        {
-            int folderType = AvaloniaRomLoader.PeekFolderType(ndsPath);
-            if (folderType == -1) return false;   // nothing extracted yet, nothing to ask
-
-            string message = folderType == 0
-                ? "This ROM was extracted before. Use that folder?"
-                : "This ROM was extracted before, by a DSPRE older than 1.15.0. Use that folder?";
-            message += "\n\nExtracting again replaces it, and any edits in it are lost.";
-
-            DialogHelper.MsgResult choice = await DialogHelper.AskThreeWayAsync(message, "Extracted before",
-                "Use it", "Extract again");
-            if (choice == DialogHelper.MsgResult.Cancel) return null;
-            if (choice == DialogHelper.MsgResult.Yes) return false;
-
-            bool confirmReExtract = await DialogHelper.AskYesNoAsync(
-                "Extract the ROM again? Edits in the extracted folder are lost.", "Extract again?");
-            return confirmReExtract ? (bool?)true : null;
-        }
+        public System.Threading.Tasks.Task OpenRomInteractiveAsync() => RunRomOperationAsync(Project.OpenRomCoreAsync);
 
         /// <summary>Pick and open an extracted project folder (also used by the Welcome window).</summary>
-        public System.Threading.Tasks.Task OpenFolderInteractiveAsync() => RunRomOperationAsync(OpenFolderCoreAsync);
-
-        private async System.Threading.Tasks.Task OpenFolderCoreAsync()
-        {
-            string path = await PickFolderAsync();
-            if (string.IsNullOrEmpty(path)) return;
-
-            if (CheckoutFor(path) is string checkout)
-            {
-                await OpenHgEngineFolderCoreAsync(checkout);
-                return;
-            }
-
-            if (await RefuseUnsupportedAsync(path)) return;
-            if (!await ConfirmWslProjectAsync(path)) return;
-            if (!await ConfirmProjectCloseAsync()) return;
-            OpenEditors.CloseEditorWindows(this);
-            await LoadFolderAsync(path, recordRecent: true);
-        }
-
-        /// <summary>The checkout a folder opens as: an hg-engine checkout itself, or the one whose base/ tree it is.</summary>
-        private static string CheckoutFor(string path)
-        {
-            if (HgEngineProject.LooksLikeCheckout(path)) return path;
-            string parent = System.IO.Path.GetDirectoryName(path.TrimEnd('\\', '/'));
-            return HgEngineProject.LooksLikeCheckout(parent) && DSUtils.GetFolderType(path) == 2 ? parent : null;
-        }
+        public System.Threading.Tasks.Task OpenFolderInteractiveAsync() => RunRomOperationAsync(Project.OpenFolderCoreAsync);
 
         /// <summary>Pick and open an hg-engine checkout as the project.</summary>
         public System.Threading.Tasks.Task OpenHgEngineFolderInteractiveAsync() => RunRomOperationAsync(async () =>
         {
-            string path = await PickHgEngineFolderAsync();
-            if (path != null) await OpenHgEngineFolderCoreAsync(path);
+            string path = await Project.PickHgEngineFolderAsync();
+            if (path != null) await Project.OpenHgEngineFolderCoreAsync(path);
         });
 
-        /// <summary>Asks for an hg-engine checkout; null when none was chosen or the folder isn't one.</summary>
-        private async System.Threading.Tasks.Task<string> PickHgEngineFolderAsync()
-        {
-            IReadOnlyList<IStorageFolder> folders = await StorageProvider.OpenFolderPickerAsync(new global::Avalonia.Platform.Storage.FolderPickerOpenOptions
-            {
-                Title = "Open hg-engine folder", AllowMultiple = false
-            });
-            string path = folders != null && folders.Count > 0 ? folders[0].TryGetLocalPath() : null;
-            if (string.IsNullOrEmpty(path)) return null;
-            if (HgEngineProject.LooksLikeCheckout(path)) return path;
-            await DialogHelper.ShowErrorAsync("That folder isn't an hg-engine checkout (no Makefile, data/ and armips/ at its root).", "Open hg-engine folder", this);
-            return null;
-        }
-
-        /// <summary>
-        /// Opens an hg-engine checkout as the project: checks what its make would fail on, takes a rom.nds when it
-        /// has none, builds once when base/ doesn't exist yet, then opens base/ with DSPRE's folders in .dspre/.
-        /// </summary>
-        /// <param name="askToClose">False when the user has just chosen this folder over the project open now, so
-        /// only unsaved edits are asked about.</param>
-        private async System.Threading.Tasks.Task OpenHgEngineFolderCoreAsync(string checkout, bool askToClose = true)
-        {
-            checkout = checkout.TrimEnd('\\', '/');
-            const string title = "Open hg-engine folder";
-            if (!HgEngineFolder.IsDsRomCheckout(checkout))
-            {
-                await DialogHelper.ShowErrorAsync("This hg-engine checkout is older than its ds-rom build. Update it to the current hg-engine, then open it again.", title, this);
-                return;
-            }
-            if (!await ConfirmWslProjectAsync(checkout, hgEngine: true)) return;
-            HgEngineShell? stored = HgEngineProject.StoredShellFor(checkout);
-
-            HgEngineShell? shell = stored ?? await ViewModels.Tools.HgEngineLinkViewModel.AskShellAsync(checkout);
-            if (shell == null) return;
-            HgEngineProject.OpenFolder(checkout, shell.Value);
-            try
-            {
-                if (!HgEngineFolder.HasBase(checkout))
-                {
-                    if (!await EnsureBuildableAsync(checkout)) return;
-                    if (!await DialogHelper.AskYesNoAsync("This hg-engine folder hasn't been built yet. Build it now? DSPRE opens what the build extracts.", title)) return;
-                    if (!await new CompileRomView().BuildAsync(this)) return;
-                    if (!HgEngineFolder.HasBase(checkout))
-                    {
-                        await DialogHelper.ShowErrorAsync("The build finished but left no base/ folder to open.", title, this);
-                        return;
-                    }
-                }
-
-                bool close = askToClose
-                    ? await ConfirmProjectCloseAsync()
-                    : await UnsavedChangesDialog.ShowIfNeededAsync(this, OpenEditors.GetUnsavedEditors(this));
-                if (!close) return;
-                OpenEditors.CloseEditorWindows(this);
-                await LoadHgEngineBaseAsync(checkout, recordRecent: true);
-            }
-            // Every way out, including a cancel, leaves the link matching the project that is open.
-            finally { HgEngineProject.Refresh(); }
-            if (RomInfo.IsHgEngineBaseProject && HgEngineProject.IsActive) await OfferBaseEditsBackAsync();
-        }
-
-        /// <summary>
-        /// Checks what hg-engine's make needs just before DSPRE runs it, so a folder built elsewhere still opens.
-        /// Returns false after telling the user what's missing.
-        /// </summary>
-        private async System.Threading.Tasks.Task<bool> EnsureBuildableAsync(string checkout)
-        {
-            const string title = "Build with hg-engine";
-            List<string> problems = HgEngineFolder.Problems(checkout);
-            if (problems.Count > 0)
-            {
-                await DialogHelper.ShowErrorAsync("This hg-engine folder can't be built yet:\n\n" + string.Join("\n\n", problems), title, this);
-                return false;
-            }
-            List<string> missing = HgEngineFolder.MissingTools(checkout);
-            if (missing == null)
-            {
-                await DialogHelper.ShowErrorAsync("DSPRE couldn't start the build shell for this folder.", title, this);
-                return false;
-            }
-            if (missing.Count > 0)
-            {
-                await DialogHelper.ShowErrorAsync("hg-engine's build needs these, and the build shell can't find them:\n\n"
-                    + string.Join(", ", missing) + "\n\nInstall them as hg-engine's README describes, then try again.", title, this);
-                return false;
-            }
-            if (!System.IO.File.Exists(HgEngineFolder.RomPath(checkout)) && !await ProvideRomAsync(checkout)) return false;
-            string code = HgEngineFolder.ReadGameCode(HgEngineFolder.RomPath(checkout));
-            if (code == HgEngineFolder.GameCode) return true;
-            await DialogHelper.ShowErrorAsync($"This checkout's rom.nds is {code ?? "unreadable"}, but hg-engine builds from a HeartGold (USA) ROM ({HgEngineFolder.GameCode}).", title, this);
-            return false;
-        }
-
-        /// <summary>Offers the Linux version once per WSL project on Windows. False when the user declines.</summary>
-        private static async System.Threading.Tasks.Task<bool> ConfirmWslProjectAsync(string path, bool hgEngine = false)
-        {
-            if (!System.OperatingSystem.IsWindows() || !WslPaths.IsWslPath(path)) return true;
-            string key = path.TrimEnd('\\', '/');
-            List<string> shown = SettingsManager.Settings.WslNoticeShown;
-            if (shown.Exists(p => string.Equals(p, key, System.StringComparison.OrdinalIgnoreCase))) return true;
-
-            string message = hgEngine
-                ? "Opening a project inside WSL from Windows is slow. hg-engine already builds inside WSL, and the Linux version of DSPRE runs there at full speed. "
-                : "Opening a project inside WSL from Windows is slow. The Linux version of DSPRE runs inside WSL at full speed. ";
-            if (!await DialogHelper.AskYesNoAsync(message + WslLinuxAdvice, "This project is inside WSL")) return false;
-            shown.Add(key);
-            SettingsManager.Save();
-            return true;
-        }
-
-        private const string WslLinuxAdvice =
-            "In a WSL terminal:\n\n"
-            + "mkdir -p ~/dspre && cd ~/dspre\n"
-            + "curl -LO https://github.com/DS-Pokemon-Rom-Editor/DSPRE/releases/download/canary-avalonia/DSPRE-Avalonia-linux-x64-canary.tar.gz\n"
-            + "tar -xzf DSPRE-Avalonia-linux-x64-canary.tar.gz\n"
-            + "chmod +x DSPRE.Avalonia\n"
-            + "./DSPRE.Avalonia\n\n"
-            + "Continue here on Windows anyway?";
-
-        /// <summary>Asks for a HeartGold (USA) ROM and copies it into the checkout as rom.nds. False when none was given.</summary>
-        private async System.Threading.Tasks.Task<bool> ProvideRomAsync(string checkout)
-        {
-            if (!await DialogHelper.AskYesNoAsync("This hg-engine folder has no rom.nds yet. hg-engine builds from a HeartGold (USA) ROM. "
-                + "Choose one now? DSPRE copies it into the folder as rom.nds and leaves your file where it is.", "Open hg-engine folder"))
-                return false;
-            IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new global::Avalonia.Platform.Storage.FilePickerOpenOptions
-            {
-                Title = "Choose a HeartGold (USA) ROM", AllowMultiple = false,
-                FileTypeFilter = new[] { new global::Avalonia.Platform.Storage.FilePickerFileType("Nintendo DS ROM") { Patterns = new[] { "*.nds" } } },
-            });
-            string rom = files != null && files.Count > 0 ? files[0].TryGetLocalPath() : null;
-            if (string.IsNullOrEmpty(rom)) return false;
-            string error = HgEngineFolder.ProvideRom(checkout, rom);
-            if (error != null)
-            {
-                await DialogHelper.ShowErrorAsync(error, "Open hg-engine folder", this);
-                return false;
-            }
-            if (!HgEngineFolder.HasCleanRom(checkout))
-                await DialogHelper.ShowInfoAsync("This ROM isn't a clean HeartGold (USA) dump. hg-engine builds on top of whatever it already holds.", "Open hg-engine folder");
-            return true;
-        }
-
         /// <summary>Open a recent-projects entry: a .nds file or an extracted folder.</summary>
-        public System.Threading.Tasks.Task OpenRecentAsync(string path) => RunRomOperationAsync(() => OpenRecentCoreAsync(path));
-
-        private async System.Threading.Tasks.Task OpenRecentCoreAsync(string path)
-        {
-            if ((System.IO.File.Exists(path) || System.IO.Directory.Exists(path)) && await RefuseUnsupportedAsync(path)) return;
-
-            if (System.IO.File.Exists(path))
-            {
-                if (!await ConfirmWslProjectAsync(path)) return;
-                bool? reExtract = await CheckExtractedDataChoiceAsync(path);
-                if (reExtract == null) return;   // user aborted
-                if (!await ConfirmProjectCloseAsync()) return;
-                OpenEditors.CloseEditorWindows(this);
-                await LoadRomAsync(err0 => { bool ok = AvaloniaRomLoader.LoadFromFile(path, out string er, reExtract.Value); err0(er); return ok; }, sourcePath: path);
-            }
-            else if (System.IO.Directory.Exists(path) && CheckoutFor(path) is string checkout)
-            {
-                await OpenHgEngineFolderCoreAsync(checkout);
-            }
-            else if (System.IO.Directory.Exists(path))
-            {
-                if (!await ConfirmWslProjectAsync(path)) return;
-                if (!await ConfirmProjectCloseAsync()) return;
-                OpenEditors.CloseEditorWindows(this);
-                await LoadFolderAsync(path, recordRecent: true);
-            }
-            else
-            {
-                SettingsManager.RemoveRecentProject(path);
-                if (string.Equals(SettingsManager.Settings.OpenDefaultRom, path, System.StringComparison.OrdinalIgnoreCase))
-                {
-                    SettingsManager.Settings.OpenDefaultRom = "";
-                    SettingsManager.Save();
-                }
-                (DataContext as MainWindowViewModel)?.RefreshRecents();
-                await DialogHelper.ShowErrorAsync("This project no longer exists and was removed from the recent list:\n" + path, "Open recent");
-            }
-        }
-
-        // An archive replaced while DSPRE was closed would lose to its older unpacked folder at the next save.
-        private static async System.Threading.Tasks.Task SettleChangedArchivesAsync(MainWindowViewModel vm)
-        {
-            if (vm != null)
-            {
-                vm.BusyText = "Checking unpacked archives…";
-                vm.BusyHint = "";
-                vm.IsBusy = true;
-            }
-            try { await BusyOverlay.RunLockedAsync(() => NarcSync.Settle()); }
-            catch (System.Exception ex) { AppLogger.Error("Checking unpacked archives failed: " + ex.Message); }
-            finally { if (vm != null) vm.IsBusy = false; }
-        }
-
-        // Runs a ROM load off the UI thread (unpacking blocks), then refreshes the menus/title and reports errors.
-        // sourcePath: the picked .nds/folder, used only to detect a WSL path for the busy hint.
-        private async System.Threading.Tasks.Task LoadRomAsync(System.Func<System.Action<string>, bool> load, string sourcePath = null)
-        {
-            MainWindowViewModel vm = DataContext as MainWindowViewModel;
-            string openBefore = RomInfo.WorkDir, claimedBefore = ProjectWindows.HeldPath;
-            if (!ProjectWindows.TryClaim(sourcePath))
-            {
-                await DialogHelper.ShowInfoAsync("This project is already open in another DSPRE window.", "Open ROM");
-                return;
-            }
-            if (vm != null)
-            {
-                vm.BusyText = "Opening ROM…";
-                vm.BusyHint = WslPaths.IsWslPath(sourcePath)
-                    ? "Projects in WSL load slower"
-                    : "";
-                vm.IsBusy = true;
-            }
-            DSPRE.Tracking.ChangeTracker.Stop();
-            string error = null;
-            bool ok;
-            try
-            {
-                ok = await BusyOverlay.RunLockedAsync(() => load(e => error = e));
-            }
-            finally
-            {
-                if (vm != null) vm.IsBusy = false;
-            }
-            vm?.RefreshRomState();
-            if (!ok)
-            {
-                ProjectWindows.Release();
-                // A load that fails early leaves the previous project open, so it keeps its claim.
-                if (claimedBefore != null && openBefore != null && RomInfo.WorkDir == openBefore) ProjectWindows.TryClaim(claimedBefore);
-                if (vm != null) vm.StatusText = "ROM load failed.";
-                await DialogHelper.ShowErrorAsync(error ?? "Couldn't load the ROM.", "Open ROM");
-                if (vm != null) await vm.Changes.OnProjectLoadedAsync();
-                return;
-            }
-            if (vm != null) vm.StatusText = $"Loaded {RomInfo.ProjectName ?? "project"}";
-            ProjectSourceWatcher.Start();
-            await SettleChangedArchivesAsync(vm);
-
-            // Nothing else dismisses the welcome window, and a loaded project makes it redundant.
-            if (global::Avalonia.Application.Current?.ApplicationLifetime
-                is global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
-            {
-                foreach (WelcomeView w in System.Linq.Enumerable.ToList(
-                             System.Linq.Enumerable.OfType<WelcomeView>(desktop.Windows)))
-                    w.Close();
-            }
-
-            RefreshGameIcon();
-
-            // Whatever the last ROM needed switching on, this one has to earn for itself.
-            BetaEditors.ForgetWhatWasNeeded();
-            vm?.RefreshHgEngineState();
-
-            string offerFolder = RomInfo.IsHGE ? await HandleHgEngineDetectedAsync() : null;
-            if (offerFolder == "") offerFolder = await PickHgEngineFolderAsync();
-            // Switching straight away keeps this ROM's own setup prompts from coming up for a project being left.
-            if (!string.IsNullOrEmpty(offerFolder))
-            {
-                await OpenHgEngineFolderCoreAsync(offerFolder, askToClose: false);
-                return;
-            }
-            // The Maps workspace skipped its setup at boot (no ROM yet); run it now.
-            await Maps.EnsureSetupAsync();
-            if (vm != null) await vm.Changes.OnProjectLoadedAsync();
-            // First successful ROM load ever: ask once everything is loaded, so the tour starts straight away.
-            if (SettingsManager.Settings?.GuidedTourShown == false)
-            {
-                SettingsManager.Settings.GuidedTourShown = true;
-                SettingsManager.Save();
-                if (await DialogHelper.AskTwoWayAsync(
-                    "A short tour shows the main window and the editor menus. Tools > Guided tour shows it again later.",
-                    "New to DSPRE?", "Show me around", "Not now"))
-                    GuidedTour.Start(this);
-            }
-        }
-
-        /// <summary>
-        /// Leftover members in a/0/2/8 shift every hg-engine table without crashing (wrong icon colours,
-        /// hidden abilities, TM learnsets), so this warns on load.
-        /// </summary>
-        private async System.Threading.Tasks.Task WarnIfCodeTablesShiftedAsync()
-        {
-            try
-            {
-                HgEngineCodeAddons.Layout layout = await System.Threading.Tasks.Task.Run(() => HgEngineCodeAddons.Describe());
-                if (layout == null || layout.IsHealthy || layout.TableBlockStart < 0) return;
-
-                // The fix is a beta editor, so a real fault switches it on.
-                BetaEditors.AllowBecauseNeeded("HgeRomReviewView");
-                (DataContext as MainWindowViewModel)?.RefreshHgEngineState();
-
-                await DialogHelper.ShowInfoAsync(
-                    layout.Summary + "\n\nFile > hg-engine > hg-engine ROM review shows which member holds what, and "
-                    + "can repair the order. It has been switched on for this ROM because it is needed.",
-                    "hg-engine tables are out of place");
-            }
-            catch (System.Exception ex) { AppLogger.Error("WarnIfCodeTablesShiftedAsync: " + ex.Message); }
-        }
-
-        /// <summary>
-        /// Handles an hg-engine ROM on load. An hg-engine folder project is already set up. A ROM opened on its
-        /// own keeps the editors hg-engine owns disabled and offers its hg-engine folder instead: the checkout it sits in,
-        /// or an empty string when the user is to pick one, for the caller to open once this load has finished.
-        /// </summary>
-        private async System.Threading.Tasks.Task<string> HandleHgEngineDetectedAsync()
-        {
-            await WarnIfCodeTablesShiftedAsync();
-            if (RomInfo.IsHgEngineBaseProject) return null;
-
-            string beside = CheckoutBesideProject();
-            if (beside != null && HgEngineFolder.IsDsRomCheckout(beside))
-            {
-                bool openBeside = await DialogHelper.AskYesNoAsync(
-                    $"This ROM was built in the hg-engine folder {beside}. Opened as a ROM, the editors for data hg-engine "
-                    + "builds from its own source stay disabled.\n\nOpen the hg-engine folder instead?",
-                    "hg-engine ROM");
-                return openBeside ? beside : null;
-            }
-            bool pick = await DialogHelper.AskYesNoAsync(
-                "This is an hg-engine ROM. Opened as a ROM, the editors for data hg-engine builds from its own source stay "
-                + "disabled, and edits made here aren't in the hg-engine source.\n\nOpen its hg-engine folder instead?",
-                "hg-engine ROM");
-            return pick ? "" : null;
-        }
-
-        private static string CheckoutBesideProject()
-        {
-            try
-            {
-                string parent = System.IO.Directory.GetParent(RomInfo.WorkDir.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar))?.FullName;
-                return HgEngineProject.LooksLikeCheckout(parent) ? parent : null;
-            }
-            catch (System.Exception ex) { AppLogger.Error("CheckoutBesideProject: " + ex.Message); return null; }
-        }
+        public System.Threading.Tasks.Task OpenRecentAsync(string path) => RunRomOperationAsync(() => Project.OpenRecentCoreAsync(path));
 
         private void NoteOutsideScriptCompile(RotomTool.Result result, IReadOnlyList<string> paths)
         {
@@ -757,363 +325,16 @@ namespace DSPRE.Avalonia.Views.Shell
         /// <summary>Builds a playable .nds from the current project. Public so other embedded views
         /// (e.g. the Maps workspace's own "Save ROM" button) can trigger the exact same flow as the
         /// File menu, with the same busy overlay and result dialogs.</summary>
-        public System.Threading.Tasks.Task SaveRomAsync() => RunRomOperationAsync(SaveRomCoreAsync);
+        public System.Threading.Tasks.Task SaveRomAsync() => RunRomOperationAsync(Project.SaveRomCoreAsync);
 
-        private async System.Threading.Tasks.Task SaveRomCoreAsync()
-        {
-            if (!AvaloniaEditorLauncher.IsRomLoaded) return;
-            // Anything unsaved in an open editor would otherwise be missing from the build.
-            if (!await UnsavedChangesDialog.ShowIfNeededAsync(this, OpenEditors.GetUnsavedEditors(this))) return;
-            if (RomInfo.IsHgEngineBaseProject)
-            {
-                if (await BuildHgEngineFolderAsync(HgEngineProject.BuildRomName)) await OfferPatchCreditsAsync();
-                return;
-            }
-            IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
-            {
-                Title = "Save ROM",
-                DefaultExtension = "nds",
-                SuggestedFileName = (RomInfo.ProjectName ?? "rom") + ".nds",
-                FileTypeChoices = new[] { new FilePickerFileType("NDS ROM") { Patterns = new[] { "*.nds" } } }
-            });
-            string path = file?.TryGetLocalPath();
-            if (string.IsNullOrEmpty(path)) return;
-            if (await BuildRomAsync(path)) await OfferPatchCreditsAsync();
-        }
-
-        /// <summary>Once per project, after a save, offers credits for the patches it has applied or found.</summary>
-        private async System.Threading.Tasks.Task OfferPatchCreditsAsync()
-        {
-            if (!PatchToolboxLogic.CreditsOfferDue()) return;
-            List<string> keys;
-            try { keys = await System.Threading.Tasks.Task.Run(() => PatchToolboxLogic.AppliedCreditKeys(PatchToolboxLogic.GetPatchStatuses())); }
-            catch (System.Exception ex) { AppLogger.Warn("Patch credits check failed: " + ex.Message); return; }
-            if (keys.Count == 0) return;
-
-            (bool generate, bool stopAsking) = await DialogHelper.AskWithCheckAsync(
-                "This ROM has patches applied but no credits generated for them yet. Do you want DSPRE to generate template credits? " +
-                "You can also generate them any time from the ROM patch toolbox.",
-                "Patch credits", "Generate credits", "Not now", "Don't ask again", isChecked: true, owner: this);
-            if (generate || stopAsking) PatchToolboxLogic.MarkCreditsHandled();
-            if (generate) await DialogHelper.ShowCopyableTextAsync(PatchToolboxLogic.CreditsText(keys), "Credits", this);
-        }
-
-        /// <summary>Repacks the project into <paramref name="path"/>, reporting failure itself. True when built.</summary>
-        public async System.Threading.Tasks.Task<bool> BuildRomAsync(string path)
-        {
-            await OfferToClearArm9CompressionMarkAsync();
-            string error = null;
-            bool ok = await WriteProjectFilesAsync("Saving ROM…", "Repacking the project into a playable .nds file.",
-                () => DSUtils.RepackROM(path), e => error = e);
-            MainWindowViewModel vm = DataContext as MainWindowViewModel;
-            if (ok)
-            {
-                if (vm != null) vm.StatusText = "ROM built: " + path;
-                AppLogger.Info("ROM built successfully: " + path);
-                try { await System.Threading.Tasks.Task.Run(() => DSPRE.Tracking.TrackingSetup.RecordBuild(path)); }
-                catch (System.Exception ex) when (ex is System.IO.IOException || ex is System.UnauthorizedAccessException) { AppLogger.Warn("Track changes: the build couldn't be recorded: " + ex.Message); }
-                return true;
-            }
-            if (vm != null) vm.StatusText = "ROM build failed.";
-            if (error != null) await DialogHelper.ShowErrorAsync(error, "Save ROM", this);
-            return false;
-        }
-
-        /// <summary>
-        /// For an hg-engine folder project: writes the project's files into base/, then builds with make, so the
-        /// ROM is what hg-engine's own build makes of them. True when the ROM was built.
-        /// </summary>
-        private async System.Threading.Tasks.Task<bool> BuildHgEngineFolderAsync(string buildRom)
-        {
-            string error = null;
-            string checkout = HgEngineProject.RepoRootWindows;
-            if (!await EnsureBuildableAsync(checkout)) return false;
-            // Asked before anything is written: a DSPRE write to base/arm9.bin would hide a newer rom.nds from make.
-            bool reextracts = await System.Threading.Tasks.Task.Run(() => HgEngineBuild.TryCheckBaseReextract(out bool again) && again);
-            if (reextracts)
-            {
-                if (!await RebuildBaseFirstAsync(buildRom)) return false;
-            }
-            else if (!await OfferBaseEditsBackAsync()) return false;
-            bool ok = await WriteProjectFilesAsync("Building with hg-engine…", "Writing the project's files into base/ for make.",
-                () => { HgEngineBuildCache.Invalidate(checkout); return true; }, e => error = e);
-            if (!ok)
-            {
-                if (error != null) await DialogHelper.ShowErrorAsync(error, "Build", this);
-                return false;
-            }
-            Dictionary<RomInfo.DirNames, string> before = await System.Threading.Tasks.Task.Run(HgEngineFolder.SnapshotUnpackedArchives);
-            bool built = await new CompileRomView().BuildAsync(this, buildRom);
-            // What make rebuilt replaces DSPRE's copies, so open editors and the next save start from the build.
-            int refreshed = built ? (await System.Threading.Tasks.Task.Run(() => HgEngineFolder.RefreshRebuiltArchives(before))).Count : 0;
-            if (built) await RotomTool.RefreshHgEngineCommonScriptsAsync();
-            if (DataContext is MainWindowViewModel vm)
-                vm.StatusText = built ? "Built " + (buildRom ?? "test.nds") + " with make." + (refreshed > 0 ? $" {refreshed} archives reloaded from the build." : "")
-                    : "The hg-engine build failed.";
-            return built;
-        }
-
-        private System.Threading.Tasks.Task<bool> RebuildBaseFirstAsync(string buildRom) =>
-            HgEngineBaseRestore.RebuildFirstAsync(this, () => new CompileRomView().BuildAsync(this, buildRom), ReloadHgEngineBaseAsync,
-                () => OpenEditors.CloseEditorWindows(this));
-
-        private System.Threading.Tasks.Task<bool> OfferBaseEditsBackAsync() => HgEngineBaseRestore.OfferAsync(this, ReloadHgEngineBaseAsync);
-
-        /// <summary>Opens base/ again, so editors that read it before a write-back show what was written.</summary>
-        private async System.Threading.Tasks.Task<bool> ReloadHgEngineBaseAsync()
-        {
-            OpenEditors.CloseEditorWindows(this);
-            try { return await LoadHgEngineBaseAsync(HgEngineProject.RepoRootWindows, recordRecent: false); }
-            finally { HgEngineProject.Refresh(); }
-        }
-
-        /// <summary>Loads a checkout's base/ as the project. False when it didn't load.</summary>
-        private async System.Threading.Tasks.Task<bool> LoadHgEngineBaseAsync(string checkout, bool recordRecent)
-        {
-            bool loaded = await LoadFolderAsync(HgEngineFolder.BaseDir(checkout), recordRecent: false, sourcePath: checkout);
-            // Records the checkout, not base/, so reopening runs these checks again.
-            if (loaded && recordRecent) SettingsManager.RecordRecentProject(checkout);
-            return loaded;
-        }
-
-        /// <summary>Opens an extracted folder as the project. False when it didn't load.</summary>
-        private async System.Threading.Tasks.Task<bool> LoadFolderAsync(string folder, bool recordRecent, string sourcePath = null)
-        {
-            bool loaded = false;
-            await LoadRomAsync(err0 =>
-            {
-                loaded = AvaloniaRomLoader.LoadFromFolder(folder, out string er, recordRecent);
-                err0(er);
-                return loaded;
-            }, sourcePath: sourcePath ?? folder);
-            return loaded;
-        }
-
-        /// <summary>
-        /// Compiles changed scripts, rebuilds text and script binaries and repacks every unpacked archive into the
-        /// project, then runs <paramref name="finish"/>. Reports a script compile failure itself; any other failure
-        /// is handed to <paramref name="fail"/>.
-        /// </summary>
-        private async System.Threading.Tasks.Task<bool> WriteProjectFilesAsync(string busyText, string busyHint,
-            System.Func<bool> finish, System.Action<string> fail)
-        {
-            MainWindowViewModel vm = DataContext as MainWindowViewModel;
-            if (vm != null)
-            {
-                vm.BusyText = busyText;
-                vm.BusyHint = busyHint;
-                vm.IsBusy = true;
-            }
-            string error = null;
-            bool ok;
-            try
-            {
-                // Catches source edits made while DSPRE was closed.
-                if (RomInfo.HasRotomProject && RotomTool.IsAvailable)
-                {
-                    if (vm != null) vm.BusyHint = "Compiling changed scripts.";
-                    RotomTool.Result compiled = await RotomTool.CompileProjectAsync();
-                    if (!compiled.Success)
-                    {
-                        if (vm != null) { vm.IsBusy = false; vm.StatusText = "ROM build stopped: scripts didn't compile."; }
-                        await DialogHelper.ShowErrorAsync("These scripts didn't compile, so no ROM was written:\n\n"
-                                                     + string.Join("\n", RotomTool.FailureLines(compiled))
-                                                     + "\n\nFix them and save again.",
-                                                     "Save ROM", RotomTool.FormatDetails(compiled));
-                        return false;
-                    }
-                    if (vm != null) vm.BusyHint = busyHint;
-                }
-
-                // Every folder is packed over its archive below, so an archive changed outside DSPRE is settled first.
-                NarcSync.Outcome archives = await BusyOverlay.RunLockedAsync(() => NarcSync.Settle(saving: true));
-                string doing = busyText.TrimEnd('…');
-                if (!archives.Settled)
-                {
-                    if (vm != null) { vm.IsBusy = false; vm.StatusText = doing + " cancelled. Nothing was written."; }
-                    return false;
-                }
-                if (archives.Unpacked.Count > 0)
-                {
-                    if (vm != null) vm.IsBusy = false;
-                    bool saveNow = await DialogHelper.AskTwoWayAsync(
-                        "The newer archive was unpacked over its folder for:\n\n" + string.Join("\n", archives.Unpacked)
-                        + "\n\nYou can look it over in its editors first, or carry on now.",
-                        doing, "Carry on", "Review first");
-                    if (!saveNow)
-                    {
-                        if (vm != null) vm.StatusText = doing + " paused so the unpacked archives can be reviewed. Nothing was written.";
-                        return false;
-                    }
-                    if (vm != null) vm.IsBusy = true;
-                }
-
-                ok = await BusyOverlay.RunLockedAsync(() =>
-                {
-                    try
-                    {
-                        // Expanded text and script folders and every unpacked archive have to be written back
-                        // before building, or edits made only to the unpacked side would be missing.
-                        if (!TextArchive.BuildRequiredBins(out string textError)) { error = textError ?? "Rebuilding text archives failed."; return false; }
-                        if (!ScriptFile.BuildRequiredBins(out string scriptError)) { error = scriptError ?? "Rebuilding script files failed."; return false; }
-
-                        foreach (KeyValuePair<RomInfo.DirNames, (string packedDir, string unpackedDir)> kvp in RomInfo.GameDirs)
-                        {
-                            // hg-engine builds these from its own source, which is where DSPRE's edits to them go.
-                            if (HgEngineDomains.IsOwned(kvp.Key)) continue;
-
-                            DirectoryInfo di = new System.IO.DirectoryInfo(kvp.Value.unpackedDir);
-                            if (di.Exists)
-                                Narc.FromFolder(kvp.Value.unpackedDir).Save(kvp.Value.packedDir);
-                        }
-
-                        return finish();
-                    }
-                    catch (System.Exception ex) { error = ex.Message; return false; }
-                });
-            }
-            finally
-            {
-                if (vm != null) vm.IsBusy = false;
-            }
-            if (!ok) fail(error ?? "Building the ROM failed. See the log for details.");
-            return ok;
-        }
+        public System.Threading.Tasks.Task<bool> BuildRomAsync(string path) => Project.BuildRomAsync(path);
 
         private async void BuildAndRun_Click(object sender, RoutedEventArgs e) => await BuildAndRunAsync();
 
         /// <summary>Builds the ROM, optionally through hg-engine's make on a linked checkout, and opens it in the chosen emulator.</summary>
-        public System.Threading.Tasks.Task BuildAndRunAsync() => RunRomOperationAsync(BuildAndRunCoreAsync);
+        public System.Threading.Tasks.Task BuildAndRunAsync() => RunRomOperationAsync(Project.BuildAndRunCoreAsync);
 
-        private async System.Threading.Tasks.Task BuildAndRunCoreAsync()
-        {
-            if (!AvaloniaEditorLauncher.IsRomLoaded) return;
-            // Anything unsaved in an open editor would otherwise be missing from the build.
-            if (!await UnsavedChangesDialog.ShowIfNeededAsync(this, OpenEditors.GetUnsavedEditors(this))) return;
-
-            (EmulatorKind Kind, string Path)? emulator = Emulators.Preferred() ?? await EmulatorPickerView.AskAsync(this);
-            if (emulator == null) return;
-
-            string rom;
-            if (RomInfo.IsHgEngineBaseProject)
-            {
-                string name = HgEngineProject.BuildRomName;
-                if (name == null)
-                {
-                    name = await DialogHelper.PromptTextAsync(
-                        "File name for the ROM that Build and run makes. Emulators keep saves by ROM name, so keep it the same between runs.",
-                        "Build and run", "test.nds", this);
-                    if (name == null) return;
-                    if (!HgEngineProject.IsSafeBuildRomName(name))
-                    {
-                        await DialogHelper.ShowErrorAsync("Use a plain file name ending in .nds, made of letters, numbers, spaces, dots, dashes or underscores.", "Build and run", this);
-                        return;
-                    }
-                    HgEngineProject.SetBuildRomName(name);
-                }
-                if (!await BuildHgEngineFolderAsync(name)) return;
-                rom = System.IO.Path.Combine(HgEngineProject.RepoRootWindows, name);
-            }
-            else
-            {
-                rom = BuildAndRunRomPath();
-                if (!await BuildRomAsync(rom)) return;
-            }
-
-            if (!await OfferTestSaveAsync(emulator.Value.Kind, emulator.Value.Path, rom)) return;
-
-            string error = Emulators.Launch(emulator.Value.Kind, emulator.Value.Path, rom);
-            if (error != null) { await DialogHelper.ShowErrorAsync(error, "Build and run", this); return; }
-            if (DataContext is MainWindowViewModel vm) vm.StatusText = $"Running {System.IO.Path.GetFileName(rom)} in {Emulators.DisplayName(emulator.Value.Kind)}.";
-        }
-
-        // Asks whether to start from the project's chosen save; false when the run is cancelled.
-        private async System.Threading.Tasks.Task<bool> OfferTestSaveAsync(EmulatorKind kind, string emulatorPath, string rom)
-        {
-            string save = TestSaves.For(RomInfo.WorkDir);
-            if (string.IsNullOrEmpty(save)) return true;
-            if (!TestSaves.Supports(kind))
-            {
-                if (DataContext is MainWindowViewModel note)
-                    note.StatusText = $"Save not copied: {Emulators.DisplayName(kind)} keeps its own saves.";
-                return true;
-            }
-            DialogHelper.MsgResult answer = await DialogHelper.AskThreeWayAsync(
-                $"Start from {System.IO.Path.GetFileName(save)}?\n\nCarry on keeps the save the emulator already has for this ROM.",
-                "Build and run", "Start from it", "Carry on");
-            if (answer == DialogHelper.MsgResult.Cancel) return false;
-            if (answer != DialogHelper.MsgResult.Yes) return true;
-            try
-            {
-                TestSaves.Place(kind, emulatorPath, rom, save);
-                return true;
-            }
-            catch (System.Exception ex)
-            {
-                await DialogHelper.ShowErrorAsync("The save couldn't be put in place. " + ex.Message, "Build and run", this);
-                return false;
-            }
-        }
-
-        // A fixed name keeps the emulator's saves between runs.
-        private static string BuildAndRunRomPath()
-        {
-            string folder = SettingsManager.Settings?.ExportPath;
-            if (string.IsNullOrWhiteSpace(folder) || !System.IO.Directory.Exists(folder))
-                folder = System.IO.Path.GetDirectoryName(RomInfo.WorkDir.TrimEnd('\\', '/'));
-            return System.IO.Path.Combine(folder, (RomInfo.ProjectName ?? "rom") + " (DSPRE build).nds");
-        }
-
-        /// <summary>
-        /// A legacy project's arm9.bin is decompressed in place when an editor first needs it, but keeps the mark
-        /// that tells the game to decompress it again at boot, which stops the ROM working on hardware.
-        /// </summary>
-        private async System.Threading.Tasks.Task OfferToClearArm9CompressionMarkAsync()
-        {
-            try
-            {
-                if (RomInfo.IsDsRomProject || !ARM9.IsFlatButMarked()) return;
-                if (await DialogHelper.AskYesNoAsync(
-                        "This ROM's ARM9 is decompressed but still marked as compressed, so it won't run on a real DS.\n\n" +
-                        "Fix the mark?", "ARM9 compression mark", this))
-                    ARM9.ClearCompressionMark();
-            }
-            catch (System.Exception ex) when (ex is System.IO.IOException || ex is System.UnauthorizedAccessException)
-            {
-                AppLogger.Warn("ARM9 compression mark check failed: " + ex.Message);
-            }
-        }
-
-        private async void ConvertDsRom_Click(object sender, RoutedEventArgs e) => await RunRomOperationAsync(ConvertDsRomAsync);
-
-        private async System.Threading.Tasks.Task ConvertDsRomAsync()
-        {
-            if (!AvaloniaEditorLauncher.IsRomLoaded) return;
-            if (RomInfo.IsDsRomProject)
-            {
-                await DialogHelper.ShowInfoAsync("This project is already in ds-rom format.", "Convert to ds-rom");
-                return;
-            }
-            // Every path an open editor holds changes, so they close first and the project opens again after.
-            if (!await UnsavedChangesDialog.ShowIfNeededAsync(this, OpenEditors.GetUnsavedEditors(this))) return;
-            OpenEditors.CloseEditorWindows(this);
-            RotomLanguageServerClient.StopAll();
-
-            string folder = RomInfo.WorkDir.TrimEnd('\\', '/');
-            MainWindowViewModel vm = DataContext as MainWindowViewModel;
-            if (vm != null)
-            {
-                vm.BusyText = "Converting to ds-rom…";
-                vm.BusyHint = "Backs up the project first";
-                vm.IsBusy = true;
-            }
-            int result;
-            try { result = await BusyOverlay.RunLockedAsync(() => DSUtils.ConvertNdstoolToDsRom(folder)); }
-            finally { if (vm != null) vm.IsBusy = false; }
-
-            if (result != 1) return;
-            await LoadFolderAsync(folder, recordRecent: false);
-        }
+        private async void ConvertDsRom_Click(object sender, RoutedEventArgs e) => await RunRomOperationAsync(Project.ConvertDsRomAsync);
 
         private void PatchToolbox_Click(object sender, RoutedEventArgs e)
         {
@@ -1216,7 +437,6 @@ namespace DSPRE.Avalonia.Views.Shell
         private void NsbtxEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenNsbtxEditor();
 
-
         // The Screens item opens the editor; its arrow lists the screens.
         private void Screens_Click(object sender, RoutedEventArgs e)
         {
@@ -1248,9 +468,6 @@ namespace DSPRE.Avalonia.Views.Shell
         private void BattleSceneBrowser_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenBattleSceneBrowser();
 
-
-
-
         private void TilesetBuilder_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenTilesetBuilder();
 
@@ -1266,8 +483,6 @@ namespace DSPRE.Avalonia.Views.Shell
         private void DungeonCutinEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenDungeonCutinEditor();
 
-
-
         private void CellAnimations_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenCellAnimationPicker();
 
@@ -1276,7 +491,6 @@ namespace DSPRE.Avalonia.Views.Shell
 
         private void BallCapsules_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenBallCapsuleEditor();
-
 
         private void NamingScreenEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenNamingScreenEditor();
@@ -1454,16 +668,7 @@ namespace DSPRE.Avalonia.Views.Shell
         private void BattleTests_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenBattleTests();
 
-        private async void CompileRom_Click(object sender, RoutedEventArgs e) => await RunRomOperationAsync(CompileRomCoreAsync);
-
-        private async System.Threading.Tasks.Task CompileRomCoreAsync()
-        {
-            if (!HgEngineProject.IsActive) return;
-            // make builds from base/, so editors and DSPRE's unpacked copies are written there first, as Save ROM does.
-            if (!await UnsavedChangesDialog.ShowIfNeededAsync(this, OpenEditors.GetUnsavedEditors(this))) return;
-            if (RomInfo.IsHgEngineBaseProject) { await BuildHgEngineFolderAsync(null); return; }
-            await new CompileRomView().ShowAndRunAsync(this);
-        }
+        private async void CompileRom_Click(object sender, RoutedEventArgs e) => await RunRomOperationAsync(Project.CompileRomCoreAsync);
 
         private void ToggleTheme_Click(object sender, RoutedEventArgs e)
             => DSPRE.Avalonia.ThemeManager.Toggle();

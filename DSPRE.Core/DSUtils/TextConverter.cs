@@ -41,6 +41,17 @@ namespace DSPRE
             ChatotWrapper(inputFilePath, outputFilePath, charMapPath, "encode", false, true);
         }
 
+        public static void JsonBytesToBin(byte[] json, string outputFilePath, string charMapPath)
+        {
+            string temp = Path.Combine(Path.GetTempPath(), "dspre_text_" + Guid.NewGuid().ToString("N") + ".json");
+            try
+            {
+                PlainFiles.WriteBytes(temp, json);
+                JSONToBin(temp, outputFilePath, charMapPath);
+            }
+            finally { if (File.Exists(temp)) PlainFiles.Remove(temp); }
+        }
+
         public static void BinToPlainText(string inputFilePath, string outputFilePath, string charMapPath)
         {
             ChatotWrapper(outputFilePath, inputFilePath, charMapPath, "decode", false, false);

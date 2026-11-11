@@ -154,7 +154,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             for (int i = 0; i < files.Length; i++)
             {
                 FieldFont f;
-                try { f = FieldFont.Read(File.ReadAllBytes(files[i])); } catch (Exception ex) { AppLogger.WarnOnce("FontEditorViewModel.LoadFontList", ex); continue; }
+                try { f = FieldFont.Read(PlainFiles.ReadBytes(files[i])); } catch (Exception ex) { AppLogger.WarnOnce("FontEditorViewModel.LoadFontList", ex); continue; }
                 if (f == null) continue;      // the width tables in the same archive are not fonts
                 _fontEntries.Add(i);
                 // The games name these themselves; anything unnamed still says which entry it is.
@@ -458,7 +458,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 DSPRE.RawImage image;
-                using (FileStream stream = System.IO.File.OpenRead(path)) image = ImageConverter.DecodeRawImage(stream);
+                using (FileStream stream = PlainFiles.OpenRead(path)) image = ImageConverter.DecodeRawImage(stream);
                 if (image == null) return "That picture couldn't be read.";
                 if (image.Width != wantAcross || image.Height != wantDown)
                     return $"That picture is {image.Width} by {image.Height} and this wants "

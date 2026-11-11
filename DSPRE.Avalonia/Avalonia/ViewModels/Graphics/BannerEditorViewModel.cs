@@ -153,7 +153,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             try
             {
-                IconPreview = File.Exists(GameBanner.DsRomBitmapPath) ? new AvaloniaBitmap(GameBanner.DsRomBitmapPath) : null;
+                IconPreview = PlainFiles.Exists(GameBanner.DsRomBitmapPath) ? new AvaloniaBitmap(GameBanner.DsRomBitmapPath) : null;
             }
             catch (Exception ex)
             {
@@ -164,7 +164,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public async Task ExportIconAsync(Window owner)
         {
-            if (!File.Exists(GameBanner.DsRomBitmapPath))
+            if (!PlainFiles.Exists(GameBanner.DsRomBitmapPath))
             {
                 await DialogHelper.ShowErrorAsync("This project has no banner/bitmap.png to export.", "Game icon & banner");
                 return;
@@ -191,7 +191,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             RawImage raw;
             try
             {
-                using (FileStream fs = File.OpenRead(src))
+                using (FileStream fs = PlainFiles.OpenRead(src))
                     raw = ImageConverter.DecodeRawImage(fs);
             }
             catch (Exception ex)
@@ -222,9 +222,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             try
             {
-                if (RomInfo.IsDsRomProject || Directory.Exists(RomInfo.BannerPath))
+                if (RomInfo.IsDsRomProject || PlainFiles.FolderExists(RomInfo.BannerPath))
                 {
-                    AvaloniaBitmap icon = File.Exists(GameBanner.DsRomBitmapPath)
+                    AvaloniaBitmap icon = PlainFiles.Exists(GameBanner.DsRomBitmapPath)
                         ? new AvaloniaBitmap(GameBanner.DsRomBitmapPath)
                         : null;
                     string title = null;

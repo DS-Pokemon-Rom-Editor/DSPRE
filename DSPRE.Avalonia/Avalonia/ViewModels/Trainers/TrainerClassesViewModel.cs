@@ -176,7 +176,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         // ── Undo / redo: the loaded class's fields ──────────────────────────
         private sealed record ClassState(string Name, string WithArticle, decimal MusicMain, decimal MusicAlt, int Gender, int Prize, int BattleMusic);
-        private DSPRE.Avalonia.ByteStateUndo _undo;
+        private ByteStateUndo _undo;
         public bool CanUndo => _undo?.CanUndo == true;
         public bool CanRedo => _undo?.CanRedo == true;
         public void Undo() => _undo?.Undo();
@@ -197,7 +197,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (_dirty != dirty) { _dirty = dirty; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         }
 
-        private void ResetUndo() { _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo); RaiseUndo(); }
+        private void ResetUndo() { _undo = new ByteStateUndo(TakeState, ApplyState, RaiseUndo); RaiseUndo(); }
 
         private void SetClean()
         {
@@ -226,7 +226,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public bool ShowMetadata => _metadataFields != null;
 
         private int _battleMusic;
-        public int BattleMusic { get => _battleMusic; set { if (Set(ref _battleMusic, value)) { DSPRE.Avalonia.Data.MusicPreview.StopIfStartedBy((this, 2)); OnPropertyChanged(nameof(BattleMusicIndex)); MarkDirty(); } } }
+        public int BattleMusic { get => _battleMusic; set { if (Set(ref _battleMusic, value)) { MusicPreview.StopIfStartedBy((this, 2)); OnPropertyChanged(nameof(BattleMusicIndex)); MarkDirty(); } } }
 
         private string _introSummary = "";
         public string IntroSummary { get => _introSummary; private set => Set(ref _introSummary, value); }
@@ -264,7 +264,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             && TrainerClassMetadataPatch.SupportsCurrentRom;
         private string _ciIntroSummary = "";
         public string CiIntroSummary { get => _ciIntroSummary; private set => Set(ref _ciIntroSummary, value); }
-        private DSPRE.Avalonia.Data.VsIntroNames _introNames;
+        private VsIntroNames _introNames;
 
         private void LoadPtIntro(int index)
         {
@@ -274,7 +274,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             OnPropertyChanged(nameof(ShowPtIntro));
             OnPropertyChanged(nameof(OffersClassIntroPatch));
             if (!ShowPtIntro) return;
-            _introNames ??= DSPRE.Avalonia.Data.VsIntroNames.Read();
+            _introNames ??= VsIntroNames.Read();
             ClassIntroPatch.Row row = rows[index];
             string summary = ClassIntroPatch.StyleNames[(int)row.Style];
             // Diamond and Pearl cut the face from a class's battle sprite and name no trainer.
@@ -324,7 +324,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         }
 
         private decimal _musicMain;
-        public decimal MusicMain { get => _musicMain; set { if (Set(ref _musicMain, value)) { DSPRE.Avalonia.Data.MusicPreview.StopIfStartedBy((this, 0)); OnPropertyChanged(nameof(MusicMainIndex)); MarkDirty(); } } }
+        public decimal MusicMain { get => _musicMain; set { if (Set(ref _musicMain, value)) { MusicPreview.StopIfStartedBy((this, 0)); OnPropertyChanged(nameof(MusicMainIndex)); MarkDirty(); } } }
 
         /// <summary>The game's music tracks by name, for the three music pickers.</summary>
         public DSPRE.Avalonia.ViewModels.World.MappedCombo MusicNames { get; } = new DSPRE.Avalonia.ViewModels.World.MappedCombo();
@@ -333,7 +333,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public int BattleMusicIndex { get => MusicNames.IndexOf(_battleMusic); set { if (value >= 0) BattleMusic = MusicNames.KeyAt(value); } }
 
         private decimal _musicAlt;
-        public decimal MusicAlt { get => _musicAlt; set { if (Set(ref _musicAlt, value)) { DSPRE.Avalonia.Data.MusicPreview.StopIfStartedBy((this, 1)); OnPropertyChanged(nameof(MusicAltIndex)); MarkDirty(); } } }
+        public decimal MusicAlt { get => _musicAlt; set { if (Set(ref _musicAlt, value)) { MusicPreview.StopIfStartedBy((this, 1)); OnPropertyChanged(nameof(MusicAltIndex)); MarkDirty(); } } }
 
         private bool _musicEnabled;
         public bool MusicEnabled { get => _musicEnabled; private set => Set(ref _musicEnabled, value); }
@@ -395,22 +395,22 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private bool _raisingNames;
 
-        public void Attach() { AppEvents.NamesChanged += OnNamesChanged; DSPRE.Avalonia.Data.MusicPreview.Changed += OnMusicChanged; }
+        public void Attach() { AppEvents.NamesChanged += OnNamesChanged; MusicPreview.Changed += OnMusicChanged; }
         public void Detach()
         {
             AppEvents.NamesChanged -= OnNamesChanged;
-            DSPRE.Avalonia.Data.MusicPreview.Changed -= OnMusicChanged;
-            if (DSPRE.Avalonia.Data.MusicPreview.StartedBy((this, 0)) || DSPRE.Avalonia.Data.MusicPreview.StartedBy((this, 1)) || DSPRE.Avalonia.Data.MusicPreview.StartedBy((this, 2))) DSPRE.Avalonia.Data.MusicPreview.Stop();
+            MusicPreview.Changed -= OnMusicChanged;
+            if (MusicPreview.StartedBy((this, 0)) || MusicPreview.StartedBy((this, 1)) || MusicPreview.StartedBy((this, 2))) MusicPreview.Stop();
         }
 
         // ── Music previews ──────────────────────────────────────────────────────────
         private void OnMusicChanged() => global::Avalonia.Threading.Dispatcher.UIThread.Post(RaiseMusicIcons);
         private void RaiseMusicIcons() { OnPropertyChanged(nameof(MainPlayIcon)); OnPropertyChanged(nameof(AltPlayIcon)); OnPropertyChanged(nameof(BattlePlayIcon)); }
-        public string MainPlayIcon => DSPRE.Avalonia.Data.MusicPreview.StartedBy((this, 0)) ? "stop" : "play";
-        public string AltPlayIcon => DSPRE.Avalonia.Data.MusicPreview.StartedBy((this, 1)) ? "stop" : "play";
-        public string BattlePlayIcon => DSPRE.Avalonia.Data.MusicPreview.StartedBy((this, 2)) ? "stop" : "play";
+        public string MainPlayIcon => MusicPreview.StartedBy((this, 0)) ? "stop" : "play";
+        public string AltPlayIcon => MusicPreview.StartedBy((this, 1)) ? "stop" : "play";
+        public string BattlePlayIcon => MusicPreview.StartedBy((this, 2)) ? "stop" : "play";
         /// <summary>Plays or stops one of the class's songs: 0 eye contact, 1 its alternate, 2 battle music.</summary>
-        public void PlayMusic(int which) => DSPRE.Avalonia.Data.MusicPreview.Toggle((int)(which == 0 ? _musicMain : which == 1 ? _musicAlt : _battleMusic), (this, which));
+        public void PlayMusic(int which) => MusicPreview.Toggle((int)(which == 0 ? _musicMain : which == 1 ? _musicAlt : _battleMusic), (this, which));
 
         // ── Trainers of the class ───────────────────────────────────────────────────
         /// <summary>Opens a trainer in the Trainers tab; set by the window hosting this tab.</summary>
@@ -434,7 +434,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                         int count = NarcAPI.Narc.MemberCount(dir);
                         for (int i = 0; i < count; i++)
                         {
-                            using FileStream fs = File.OpenRead(Path.Combine(dir, i.ToString("D4")));
+                            using FileStream fs = PlainFiles.OpenRead(Path.Combine(dir, i.ToString("D4")));
                             int cls = new TrainerProperties((ushort)i, fs).TrainerClass;
                             if (!map.TryGetValue(cls, out List<int> ids)) map[cls] = ids = new List<int>();
                             ids.Add(i);
@@ -463,7 +463,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 string[] names = GetTrainerClassNames();
                 bool was = _suppress;
                 _suppress = true;
-                try { Data.ListSync.Apply(ClassNames, names.Select((n, i) => $"[{i:D3}] {n}").ToList()); }
+                try { ListSync.Apply(ClassNames, names.Select((n, i) => $"[{i:D3}] {n}").ToList()); }
                 finally { _suppress = was; }
                 OnPropertyChanged(nameof(SelectedClassIndex));
             });

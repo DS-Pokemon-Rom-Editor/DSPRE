@@ -439,7 +439,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         // ── Undo / redo (ISupportsUndo) ────────────────────────────────────────
-        private readonly DSPRE.Avalonia.UndoHistory<byte[]> _history = new();
+        private readonly UndoHistory<byte[]> _history = new();
         private DateTime _lastCaptureUtc = DateTime.MinValue;
         private const int CoalesceMs = 500;
 
@@ -1307,7 +1307,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (path == null) return;
             try
             {
-                if (new FileInfo(path).Length > 48) throw new InvalidDataException();
+                if (PlainFiles.Length(path) > 48) throw new InvalidDataException();
                 MapHeader h = MapHeader.LoadFromFile(path, (ushort)_header.ID, 0);
                 if (h == null) throw new InvalidDataException();
                 _header = h;
@@ -1509,7 +1509,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     "Remove header?"))
                 return;
 
-            byte[] data = File.ReadAllBytes(Filesystem.GetDynamicHeaderPath(lastIndex));
+            byte[] data = PlainFiles.ReadBytes(Filesystem.GetDynamicHeaderPath(lastIndex));
             MapHeader.RemoveLastDynamicHeader();
             _removedHeaders.Push((data, name));
 

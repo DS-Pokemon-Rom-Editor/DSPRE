@@ -19,6 +19,14 @@ namespace DSPRE
 
         public static string PathOf(DirNames dir, int id) => Path.Combine(GameDirs[dir].unpackedDir, id.ToString("D4"));
 
+        public static bool Has(DirNames dir, int id) => File.Exists(PathOf(dir, id));
+
+        public static byte[] Read(DirNames dir, int id) => File.ReadAllBytes(PathOf(dir, id));
+
+        public static byte[] ReadOrNull(DirNames dir, int id) => Has(dir, id) ? Read(dir, id) : null;
+
+        public static byte[] ReadOrNull(string path) => File.Exists(path) ? File.ReadAllBytes(path) : null;
+
         /// <summary>Whether the archive is mapped for this game and its folder already holds members.</summary>
         public static bool IsUnpacked(DirNames dir) =>
             GameDirs != null && GameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) p) && HasMembers(p.unpackedDir);
@@ -41,6 +49,22 @@ namespace DSPRE
         /// <summary>How many members the unpacked archive holds, which is also the next new member's number.</summary>
         public static int Count(DirNames dir) =>
             Directory.GetFiles(GameDirs[dir].unpackedDir).Count(f => int.TryParse(Path.GetFileName(f), out int _));
+
+        public static string Magic(DirNames dir, int id)
+        {
+            using FileStream stream = File.OpenRead(PathOf(dir, id));
+            byte[] head = new byte[4];
+            return stream.Read(head, 0, 4) == 4 ? System.Text.Encoding.ASCII.GetString(head) : "";
+        }
+
+        /// <summary>The unpacked archive's member numbers, lowest first.</summary>
+        public static List<int> Ids(DirNames dir)
+        {
+            string folder = GameDirs[dir].unpackedDir;
+            if (!Directory.Exists(folder)) return new List<int>();
+            return Directory.GetFiles(folder).Select(f => int.TryParse(Path.GetFileName(f), out int id) ? id : -1)
+                .Where(id => id >= 0).OrderBy(id => id).ToList();
+        }
 
         public static void Put(DirNames dir, int id, byte[] data)
         {

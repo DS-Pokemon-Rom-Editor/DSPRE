@@ -20,11 +20,27 @@ namespace DSPRE.Models
             public int[][,] Heights = new int[Layers][,];
         }
 
+        // The files a project keeps beside it for one map, by extension.
+        public static Dictionary<string, string> SavedParts(string projectPath, Map map, bool withSoundPlates)
+        {
+            Dictionary<string, string> found = new Dictionary<string, string>();
+            string stem = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(projectPath) ?? ".",
+                                                 $"{System.IO.Path.GetFileNameWithoutExtension(projectPath)}_{map.X:D2}_{map.Y:D2}");
+            foreach (string kind in new[] { "per", "bld", "bgs", "bdhc" })
+            {
+                if (kind == "bgs" && !withSoundPlates) continue;
+                if (System.IO.File.Exists(stem + "." + kind)) found[kind] = stem + "." + kind;
+            }
+            return found;
+        }
+
         public sealed class Project
         {
             public int Game = -1;
 
             public string TilesetPath;
+
+            public bool HasTileset => !string.IsNullOrEmpty(TilesetPath) && System.IO.File.Exists(TilesetPath);
 
             public List<Map> Maps = new List<Map>();
         }

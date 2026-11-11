@@ -115,22 +115,15 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void LoadOptions()
         {
             HashSet<uint> used = new HashSet<uint>(RomInfo.OverworldTable.Values.Select(v => v.spriteID));
-            string dir = RomInfo.GameDirs[DirNames.OWSprites].unpackedDir;
-            List<uint> unusedCandidates = Directory.Exists(dir)
-                ? Directory.GetFiles(dir)
-                    .Select(Path.GetFileName)
-                    .Select(n => uint.TryParse(n, out uint id) ? (uint?)id : null)
-                    .Where(id => id.HasValue).Select(id => id.Value)
-                    .Where(id => !used.Contains(id))
-                    .OrderBy(id => id).ToList()
-                : new List<uint>();
+            List<uint> unusedCandidates = ArchiveMembers.Ids(DirNames.OWSprites).Select(id => (uint)id)
+                .Where(id => !used.Contains(id)).ToList();
 
             int scanned = 0, added = 0;
             foreach (uint id in unusedCandidates)
             {
                 if (added >= MaxUnusedSlotOptions || scanned >= MaxUnusedSlotCandidatesToScan) break;
                 scanned++;
-                if (!TryReadTextureInfo(Path.Combine(dir, id.ToString("D4")), out int w, out int h, out uint colorLimit, out Btx0Structure structure)) continue;
+                if (!TryReadTextureInfo(ArchiveMembers.PathOf(DirNames.OWSprites, (int)id), out int w, out int h, out uint colorLimit, out Btx0Structure structure)) continue;
                 _allSlots.Add(new SlotInfo { Id = id, Width = w, Height = h, ColorLimit = colorLimit, Structure = structure, BaseLabel = $"Unused slot #{id}" });
                 added++;
             }
@@ -138,7 +131,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 // 3D overworlds have no sprite.
                 if (kv.Value.spriteID == 0x3D3D) continue;
-                string path = Path.Combine(dir, kv.Value.spriteID.ToString("D4"));
+                string path = ArchiveMembers.PathOf(DirNames.OWSprites, (int)kv.Value.spriteID);
                 if (!TryReadTextureInfo(path, out int w, out int h, out uint colorLimit, out Btx0Structure structure)) continue;
                 _cloneProfiles[kv.Key] = structure;
                 _allSlots.Add(new SlotInfo { Id = kv.Value.spriteID, Width = w, Height = h, ColorLimit = colorLimit, Structure = structure, BaseLabel = $"Art from overworld {kv.Key} (slot #{kv.Value.spriteID})" });
@@ -200,7 +193,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 RawImage raw;
-                using (FileStream fs = File.OpenRead(path))
+                using (FileStream fs = PlainFiles.OpenRead(path))
                     raw = ImageConverter.DecodeRawImage(fs);
                 if (raw == null)
                 {
@@ -237,7 +230,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             RawBtxPath = path;
             try
             {
-                RawImage raw = BTX0.ReadRaw(File.ReadAllBytes(path), 0);
+                RawImage raw = BTX0.ReadRaw(PlainFiles.ReadBytes(path), 0);
                 if (raw == null)
                 {
                     RawBtxPath = null;
@@ -295,7 +288,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             width = height = 0; colorLimit = 0; structure = null;
             try
             {
-                byte[] data = File.ReadAllBytes(path);
+                byte[] data = PlainFiles.ReadBytes(path);
                 if (!Btx0Structure.TryInspect(data, out structure, out _)) return false;
                 RawImage raw = BTX0.ReadRaw(data, 0);
                 if (raw == null) return false;

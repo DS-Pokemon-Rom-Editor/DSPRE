@@ -23,7 +23,7 @@ namespace DSPRE.Avalonia.Views.World
 
             Grid columns = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*,*"), ColumnSpacing = 8, Margin = new global::Avalonia.Thickness(12) };
             List<CheckBox> ow = Column(columns, 0, "Overworlds", source.Overworlds,
-                                       o => $"ID {o.OwID}, {DSPRE.Avalonia.Data.OverworldLabels.Of(o.OverlayTableEntry)}");
+                                       o => $"ID {o.OwID}, {OverworldLabels.Of(o.OverlayTableEntry)}");
             List<CheckBox> warps = Column(columns, 1, "Warps", source.Warps, w => w.ToString());
             List<CheckBox> trigs = Column(columns, 2, "Triggers", source.Triggers, t => t.ToString());
             List<CheckBox> spawns = Column(columns, 3, "Spawnables", source.Spawnables, s => s.ToString());

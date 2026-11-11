@@ -150,7 +150,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         // ── Undo / redo: the loaded file, as it is stored ──
-        private DSPRE.Avalonia.ByteStateUndo _undo;
+        private ByteStateUndo _undo;
         public bool CanUndo => _undo?.CanUndo == true;
         public bool CanRedo => _undo?.CanRedo == true;
         public void Undo() => _undo?.Undo();
@@ -160,7 +160,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void ResetUndo()
         {
             if (_file == null) return;
-            _undo = new DSPRE.Avalonia.ByteStateUndo(() => _file.ToByteArray(), ApplyState, RaiseUndo);
+            _undo = new ByteStateUndo(() => _file.ToByteArray(), ApplyState, RaiseUndo);
             RaiseUndo();
         }
 
@@ -420,7 +420,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string path = await DialogHelper.OpenFileAsync(owner, "Import headbutt file", HeadbuttFiles);
             if (path == null) return;
             HeadbuttEncounterFile read;
-            try { read = new HeadbuttEncounterFile((ushort)_selFile, System.IO.File.ReadAllBytes(path)); }
+            try { read = new HeadbuttEncounterFile((ushort)_selFile, PlainFiles.ReadBytes(path)); }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is System.IO.EndOfStreamException || ex is ArgumentException)
             {
                 await DialogHelper.ShowErrorAsync($"That file couldn't be read as a headbutt file:\n{ex.Message}", "Special encounters editor");

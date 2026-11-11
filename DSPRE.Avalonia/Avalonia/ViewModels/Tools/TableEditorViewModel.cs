@@ -287,7 +287,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         // ── Undo / redo: all three tables ────────────────────────────────────────
         private sealed record TablesState(int[][] Cond, int[][] Combos, int[][] VsTrainers, int[][] VsPokemon);
-        private DSPRE.Avalonia.ByteStateUndo _undo;
+        private ByteStateUndo _undo;
         private TablesState _saved;
         public bool CanUndo => _undo?.CanUndo == true;
         public bool CanRedo => _undo?.CanRedo == true;
@@ -304,7 +304,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         private void ResetUndo()
         {
             _saved = Current();
-            _undo = new DSPRE.Avalonia.ByteStateUndo(() => DSPRE.Avalonia.UndoJson.Take(Current()), ApplyState, RaiseUndo);
+            _undo = new ByteStateUndo(() => DSPRE.Avalonia.UndoJson.Take(Current()), ApplyState, RaiseUndo);
             RaiseUndo();
         }
 
@@ -539,10 +539,10 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             if (_pokeNames.Length == 0 || _vsTrainerList == null || _vsPokemonList == null) return;
             _pokeNames = GetPokemonNames();
             _trcNames = GetTrainerClassNames();
-            DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, _pokeNames.Select((n, i) => $"[{i}] {n}").ToList());
-            DSPRE.Avalonia.Data.ListSync.Apply(TrainerNames, _trcNames.Select((n, i) => $"[{i:D3}] {n}").ToList());
-            DSPRE.Avalonia.Data.ListSync.Apply(VsTrainerItems, _vsTrainerList.Select(t => $"{TrainerLabel(t.Item1)} uses Combo #{t.Item2}").ToList());
-            DSPRE.Avalonia.Data.ListSync.Apply(VsPokemonItems, Enumerable.Range(0, _vsPokemonList.Count).Select(PokemonRowLabel).ToList());
+            ListSync.Apply(PokemonNames, _pokeNames.Select((n, i) => $"[{i}] {n}").ToList());
+            ListSync.Apply(TrainerNames, _trcNames.Select((n, i) => $"[{i:D3}] {n}").ToList());
+            ListSync.Apply(VsTrainerItems, _vsTrainerList.Select(t => $"{TrainerLabel(t.Item1)} uses Combo #{t.Item2}").ToList());
+            ListSync.Apply(VsPokemonItems, Enumerable.Range(0, _vsPokemonList.Count).Select(PokemonRowLabel).ToList());
         }
 
         private string TrainerLabel(int classID) =>

@@ -991,7 +991,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
 
         /// <summary>Whether the red frame is up round the touch entry the cursor is on; it blinks when one is picked.</summary>
-        public bool TouchCursorShown => global::DSPRE.Avalonia.Data.HgssTouchScreen.BlinkShows(_touchBlink);
+        public bool TouchCursorShown => HgssTouchScreen.BlinkShows(_touchBlink);
 
         /// <summary>Whether the touch question showing is a yes or no, not a list.</summary>
         public bool TouchChoiceIsYesNo => _question?.Kind == ScriptQuestion.QuestionKind.YesNo;
@@ -1004,10 +1004,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             get
             {
-                if (MessageVisible) return global::DSPRE.Avalonia.Data.HgssTouchScreen.NextMessage;
-                if (Player == null) return global::DSPRE.Avalonia.Data.HgssTouchScreen.CheckMessage;
+                if (MessageVisible) return HgssTouchScreen.NextMessage;
+                if (Player == null) return HgssTouchScreen.CheckMessage;
                 (int x, int z) = FieldInteraction.TalkTile(Player, _collision);
-                return NpcAt(x, z) != null ? global::DSPRE.Avalonia.Data.HgssTouchScreen.TalkMessage : global::DSPRE.Avalonia.Data.HgssTouchScreen.CheckMessage;
+                return NpcAt(x, z) != null ? HgssTouchScreen.TalkMessage : HgssTouchScreen.CheckMessage;
             }
         }
 
@@ -1061,7 +1061,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 FieldCameraEntry c = CameraEntry;
                 string kind = c.Orthographic ? "flat" : $"{c.FieldOfViewDegrees:0.#} degrees";
-                string name = DSPRE.Avalonia.Data.LabelStore.GetLabel(DSPRE.Avalonia.Data.LabelStore.CameraKeyFor(_family), c.Id);
+                string name = LabelStore.GetLabel(LabelStore.CameraKeyFor(_family), c.Id);
                 return $"Camera {c.Id} ({name}): {c.DistanceInTiles:0.#} tiles back, "
                      + $"{c.PitchDegrees:0.#} degrees down, {kind}";
             }
@@ -1263,7 +1263,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (n == 0 || _touchBlink >= 0) return;
             if (_question.OnTouchScreen)
             {
-                int to = global::DSPRE.Avalonia.Data.HgssTouchScreen.Neighbour(n, TouchChoiceIsYesNo, _choiceCursor, 0, Math.Sign(delta));
+                int to = HgssTouchScreen.Neighbour(n, TouchChoiceIsYesNo, _choiceCursor, 0, Math.Sign(delta));
                 if (to >= 0) ChoiceCursor = to;
                 return;
             }
@@ -1278,7 +1278,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (_question != null && _question.OnTouchScreen)
             {
                 if (_touchBlink >= 0) return;
-                int to = global::DSPRE.Avalonia.Data.HgssTouchScreen.Neighbour(_question.Options.Count, TouchChoiceIsYesNo, _choiceCursor, Math.Sign(pages), 0);
+                int to = HgssTouchScreen.Neighbour(_question.Options.Count, TouchChoiceIsYesNo, _choiceCursor, Math.Sign(pages), 0);
                 if (to >= 0) ChoiceCursor = to;
                 return;
             }
@@ -2150,7 +2150,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 _touchBlink++;
                 OnPropertyChanged(nameof(TouchCursorShown));
-                if (_touchBlink >= global::DSPRE.Avalonia.Data.HgssTouchScreen.BlinkFrames)
+                if (_touchBlink >= HgssTouchScreen.BlinkFrames)
                 {
                     _touchBlink = -1;
                     OnPropertyChanged(nameof(TouchCursorShown));

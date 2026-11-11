@@ -409,7 +409,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                         (ChangeKind kind, string id, string title) = group.Key;
                         bool conflicted = group.Any(e => e.Conflicted);
                         bool isNew = group.All(e => e.Untracked);
-                        bool gone = !conflicted && !isNew && group.All(e => !File.Exists(Path.Combine(tracker.Folder, e.Path)));
+                        bool gone = !conflicted && !isNew && group.All(e => !PlainFiles.Exists(Path.Combine(tracker.Folder, e.Path)));
                         ChangeRow row = new ChangeRow
                         {
                             Pill = conflicted ? "CLASH" : isNew ? "NEW" : gone ? "BACK" : "EDIT",

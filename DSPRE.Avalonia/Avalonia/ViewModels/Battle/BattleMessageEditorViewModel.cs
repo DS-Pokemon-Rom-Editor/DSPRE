@@ -244,7 +244,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         // ── Undo / redo: the shown trainer's messages ──────────────────────────────
         private sealed record MessagesState(List<string> Archive, int[][] Entries, string[][] Hge);
-        private DSPRE.Avalonia.ByteStateUndo _undo;
+        private ByteStateUndo _undo;
         public bool CanUndo => _undo?.CanUndo == true;
         public bool CanRedo => _undo?.CanRedo == true;
         public void Undo() => _undo?.Undo();
@@ -271,7 +271,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (_dirty != dirty) { _dirty = dirty; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         }
 
-        private void ResetUndo() { _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo); RaiseUndo(); }
+        private void ResetUndo() { _undo = new ByteStateUndo(TakeState, ApplyState, RaiseUndo); RaiseUndo(); }
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         // ── Constructors ────────────────────────────────────────────────────────────
@@ -361,7 +361,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             try
             {
                 string path = Path.Combine(GameDirs[DirNames.TrainerProperties].unpackedDir, trainerId.ToString("D4"));
-                using FileStream s = File.OpenRead(path);
+                using FileStream s = PlainFiles.OpenRead(path);
                 return new TrainerProperties((ushort)trainerId, s).TrainerClass;
             }
             catch (Exception ex) { AppLogger.WarnOnce("BattleMessageEditorViewModel.GetTrainerClassOf", ex); return 0; }
@@ -383,7 +383,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 try
                 {
                     string path = Path.Combine(GameDirs[DirNames.TrainerProperties].unpackedDir, trainerId.ToString("D4"));
-                    using FileStream s = File.OpenRead(path);
+                    using FileStream s = PlainFiles.OpenRead(path);
                     TrainerProperties trp = new TrainerProperties((ushort)trainerId, s);
                     _currentIsDouble = trp.DoubleBattle;
                     ShowSprite(trp.TrainerClass);

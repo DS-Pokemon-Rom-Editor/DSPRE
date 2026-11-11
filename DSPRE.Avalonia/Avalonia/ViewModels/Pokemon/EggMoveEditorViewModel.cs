@@ -68,7 +68,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Undo / redo: the whole table
         // ----------------------------------------------------------------
 
-        private DSPRE.Avalonia.ByteStateUndo _undo;
+        private ByteStateUndo _undo;
         public bool CanUndo => _undo?.CanUndo == true;
         public bool CanRedo => _undo?.CanRedo == true;
         public void Undo() => _undo?.Undo();
@@ -93,7 +93,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             SetDirty(_undo.IsDirty);
         }
 
-        private void ResetUndo() { _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo); RaiseUndo(); }
+        private void ResetUndo() { _undo = new ByteStateUndo(TakeState, ApplyState, RaiseUndo); RaiseUndo(); }
 
         // ----------------------------------------------------------------
         // ROM data
@@ -269,8 +269,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void OnNamesChanged(object sender, System.EventArgs e)
         {
-            DSPRE.Avalonia.Data.ListSync.Apply(MonNames,  RomInfo.GetPokemonNames());
-            DSPRE.Avalonia.Data.ListSync.Apply(MoveNames, RomInfo.GetAttackNames());
+            ListSync.Apply(MonNames,  RomInfo.GetPokemonNames());
+            ListSync.Apply(MoveNames, RomInfo.GetAttackNames());
         }
         /// <summary>Unsubscribes from app-wide events; call when the editor window closes.</summary>
         public void Detach() => AppEvents.NamesChanged -= OnNamesChanged;

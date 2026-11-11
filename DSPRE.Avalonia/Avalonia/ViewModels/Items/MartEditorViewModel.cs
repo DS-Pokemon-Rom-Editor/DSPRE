@@ -141,13 +141,13 @@ namespace DSPRE.Avalonia.ViewModels.Items
             SelectedShop = sample;
         }
 
-        public void RefreshNames() => DSPRE.Avalonia.Data.ListSync.Apply(_itemNames, RomInfo.GetItemNames());
+        public void RefreshNames() => ListSync.Apply(_itemNames, RomInfo.GetItemNames());
 
         public MartEditorViewModel(MartData data, string[] itemNames)
         {
             AppEvents.RomPatchStateChanged += OnRomPatchStateChanged;
             _data = data ?? throw new ArgumentNullException(nameof(data));
-            DSPRE.Avalonia.Data.ListSync.Apply(_itemNames, itemNames ?? Array.Empty<string>());
+            ListSync.Apply(_itemNames, itemNames ?? Array.Empty<string>());
             PopulateShops();
             StartUndo();
         }

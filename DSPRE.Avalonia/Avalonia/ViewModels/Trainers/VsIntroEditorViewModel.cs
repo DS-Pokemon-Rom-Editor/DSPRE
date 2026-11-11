@@ -11,7 +11,7 @@ using DSPRE.Editors;
 using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
 using static DSPRE.ROMFiles.VsIntroTables;
-using Kind = DSPRE.Avalonia.Data.GraphicAssets.Kind;
+using Kind = DSPRE.Graphics.GraphicAssets.Kind;
 
 namespace DSPRE.Avalonia.ViewModels.Trainers
 {
