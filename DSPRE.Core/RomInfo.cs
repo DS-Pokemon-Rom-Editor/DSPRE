@@ -83,6 +83,14 @@ namespace DSPRE
         public static GameVersions GameVersion { get; private set; }
         public static GameFamilies GameFamily { get; private set; }
 
+        /// <summary>Forgets the open project after a failed load.</summary>
+        public static void ClearProject()
+        {
+            GameFamily = GameFamilies.NULL;
+            WorkDir = null;
+            DspreDir = null;
+        }
+
         public static uint SynthOverlayLoadAddress = 0x023C8000;
         /// <summary>How much of the synthetic overlay the game loads.</summary>
         public const int SynthOverlaySize = 0x16000;

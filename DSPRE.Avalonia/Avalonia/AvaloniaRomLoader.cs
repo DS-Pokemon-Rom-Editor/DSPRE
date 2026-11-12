@@ -37,13 +37,20 @@ namespace DSPRE.Avalonia
                 AppLogger.Info($"Re-extracting {ndsPath}: deleting old data at {workDir}");
                 // The script editor's language server runs inside this folder and would keep it from being deleted.
                 RotomLanguageServerClient.StopAll();
+                bool wasOpen = ProjectPaths.Same(workDir, RomInfo.WorkDir);
                 try { Directory.Delete(workDir, true); }
-                catch (IOException)
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
                 {
                     error = $"Another program is using {workDir}. Close it and try again.";
+                    if (wasOpen) RomInfo.ClearProject();
                     return false;
                 }
-                if (!DSUtils.UnpackRom(ndsPath, workDir)) { error = "Unpacking the ROM failed."; return false; }
+                if (!DSUtils.UnpackRom(ndsPath, workDir))
+                {
+                    error = "Unpacking the ROM failed.";
+                    if (wasOpen) RomInfo.ClearProject();
+                    return false;
+                }
             }
             else AppLogger.Info($"Reusing existing extracted data at {workDir}");
 
@@ -93,12 +100,12 @@ namespace DSPRE.Avalonia
                 OnUiThread(OverworldSprites.ClearCache);
 
                 try { _ = new RomInfo(gameCode, folder); }   // populates the static RomInfo.* (gameFamily, workDir, gameDirs, …)
-                catch (Exception ex) { error = "Couldn't initialise ROM data: " + ex.Message; AppLogger.Error(error); return false; }
+                catch (Exception ex) { error = "Couldn't initialise ROM data: " + ex.Message; AppLogger.Error(error); RomInfo.ClearProject(); return false; }
                 // Cleared again after RomInfo, in case a notice read sprites while the folders were changing.
                 OnUiThread(OverworldSprites.ClearCache);
             }
 
-            if (GameFamily == GameFamilies.NULL) { error = "Unsupported ROM (Gen IV Pokémon only)."; return false; }
+            if (GameFamily == GameFamilies.NULL) { error = "Unsupported ROM (Gen IV Pokémon only)."; RomInfo.ClearProject(); return false; }
             AppLogger.Info($"ROM loaded: {RomInfo.RomID} ({RomInfo.ProjectName})");
             if (recordRecent) SettingsManager.RecordRecentProject(folder);
             return true;

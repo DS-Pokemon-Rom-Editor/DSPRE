@@ -304,7 +304,13 @@ namespace DSPRE.Avalonia.Views.Shell
                 // A load that fails early leaves the previous project open, so it keeps its claim.
                 if (claimedBefore != null && openBefore != null && RomInfo.WorkDir == openBefore) ProjectWindows.TryClaim(claimedBefore);
                 if (vm != null) vm.StatusText = "ROM load failed.";
-                await DialogHelper.ShowErrorAsync(error ?? "Couldn't load the ROM.", "Open ROM");
+                bool closed = openBefore != null && RomInfo.WorkDir == null;
+                if (closed)
+                {
+                    ProjectSourceWatcher.Stop();
+                    _window.RefreshGameIcon();
+                }
+                await DialogHelper.ShowErrorAsync((error ?? "Couldn't load the ROM.") + (closed ? "\n\nThe previous project was closed." : ""), "Open ROM");
                 if (vm != null) await vm.Changes.OnProjectLoadedAsync(resume: RomInfo.WorkDir == openBefore);
                 return;
             }
