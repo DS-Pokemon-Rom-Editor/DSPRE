@@ -286,7 +286,7 @@ namespace DSPRE.Csv
             "NoonPalette", "NoonTiles", "NoonScreen",
             "EveningPalette", "EveningTiles", "EveningScreen",
             "NightPalette", "NightTiles", "NightScreen",
-            "NameMessageId",
+            "Unused",
         };
 
         private readonly int[][] _now;
@@ -302,6 +302,7 @@ namespace DSPRE.Csv
         public override string Title => "Dungeon cut-in";
         public override IReadOnlyList<string> Columns => ColumnNames;
         public override bool IsOptional(int column) => column == RowColumn;
+        public override string OldName(int column) => column == ColumnNames.Length - 1 ? "NameMessageId" : null;
 
         public static void Write(TextWriter writer, int[][] rows)
         {

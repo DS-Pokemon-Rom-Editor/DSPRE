@@ -49,9 +49,9 @@
 				         ToolTip.Tip="Unused by the game."/>
 			  </StackPanel>
 			  <StackPanel Spacing="2">
-				<TextBlock Text="Name line"/>
+				<TextBlock Text="Unused"/>
 				<TextBox Text="{Binding SelectedRow.NameMessageId}" Width="120"
-				         ToolTip.Tip="The text line drawn as this place's name. Edit it in the Text editor."/>
+				         ToolTip.Tip="Unused by the game."/>
 			  </StackPanel>
 			</StackPanel>
 		  </StackPanel>

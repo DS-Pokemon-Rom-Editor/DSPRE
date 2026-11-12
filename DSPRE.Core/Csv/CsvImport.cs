@@ -258,6 +258,8 @@ namespace DSPRE.Csv
         public abstract IReadOnlyList<string> Columns { get; }
         /// <summary>Columns a file may leave out; their cells are then empty.</summary>
         public virtual bool IsOptional(int column) => false;
+        /// <summary>The name a column had in files exported before it was renamed, or null.</summary>
+        public virtual string OldName(int column) => null;
 
         /// <summary>Sets the row's label, its issues and, when it can be used, its value.</summary>
         public abstract void Check(CsvCheck check);
@@ -312,8 +314,8 @@ namespace DSPRE.Csv
             List<string> missing = new List<string>();
             for (int c = 0; c < source.Length; c++)
             {
-                string want = HeaderKey(Importer.Columns[c]);
-                source[c] = Array.FindIndex(header, h => HeaderKey(h) == want);
+                string want = HeaderKey(Importer.Columns[c]), old = Importer.OldName(c) is string was ? HeaderKey(was) : null;
+                source[c] = Array.FindIndex(header, h => HeaderKey(h) == want || (old != null && HeaderKey(h) == old));
                 if (source[c] < 0 && !Importer.IsOptional(c)) missing.Add(Importer.Columns[c]);
             }
             if (missing.Count > 0)

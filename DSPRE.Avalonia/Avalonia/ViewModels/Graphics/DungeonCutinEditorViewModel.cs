@@ -76,8 +76,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private int _nightScreenId;
         public int NightScreenId { get => _nightScreenId; set => Set(ref _nightScreenId, value); }
 
-        // Message/text-archive ID for the location name, not a raw group counter. Entries for the
-        // same real-world location, e.g. the two Dark Cave entrances, share this value.
+        // The game never reads it. Entries for one place, like the two Dark Cave entrances, share a value.
         private int _nameMessageId;
         public int NameMessageId { get => _nameMessageId; set => Set(ref _nameMessageId, value); }
     }

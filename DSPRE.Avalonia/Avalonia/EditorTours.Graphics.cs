@@ -63,7 +63,7 @@ namespace DSPRE.Avalonia
 
             Add("DungeonCutinEditorView", "Dungeon cut-in editor",
                 S("name:CutinList", "Splash screens", "The cut-ins shown on entering some places."),
-                S("name:LocationCard", "Location", "The place that shows it, and its name line."),
+                S("name:LocationCard", "Location", "The place it is shown in."),
                 S("name:TimesGrid", "Times of day", "A picture for each time of day."),
                 S("name:CutinToolbar", "Table and graphics", "Export or import the table as CSV."),
                 S(null, "Shortcuts", "Ctrl+S saves, Ctrl+Z undoes, Ctrl+Y redoes."));
