@@ -3,7 +3,7 @@ using System.ComponentModel;
 namespace DSPRE.Avalonia.Models
 {
     /// <summary>
-    /// A flag checklist row in the Trainer flag bulk editor; clicks go through the view, since a click sets the whole
+    /// A flag checklist row in the bulk editors; clicks go through the view, since a click sets the whole
     /// selection to the opposite of this row's tick.
     /// </summary>
     public sealed class FlagChecklistItem : INotifyPropertyChanged

@@ -149,7 +149,7 @@ namespace DSPRE
         }
 
         // party_menu_sprites.c PartyMenu_SetTopScreenSelectionPanelYDisplacement: the top screen's icon at x 30 and status icon at
-        // x 50, 26 and 6 pixels left of the name's corner. Their y is 456 less a scroll, so the name keeps its row. Measured on every dump.
+        // x 50, 26 and 6 pixels left of the name's corner. Their y is 456 and 476 less a scroll, so the name keeps its row. Measured on every dump.
         private static ScreenWindowFollow[] HgssTopIcons(GameVersions game, GameLanguages language)
         {
             uint? icon = language switch

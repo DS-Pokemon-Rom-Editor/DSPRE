@@ -189,9 +189,9 @@ namespace DSPRE.HgEngine
         }
 
         /// <summary>
-        /// Settles each line's #ifdef / #ifndef the way make.py does: an #include "file" line adds every line of that file
-        /// starting with "#define ", the -D flags make passes count as defined, and only #ifdef, #ifndef, #else and
-        /// #endif are understood. Flags the Makefile passes only for some builds leave a line as depending on them.
+        /// Settles each line's #ifdef / #ifndef the way make.py does: an #include "file" line adds every line
+        /// of that file starting with "#define ", and only #ifdef, #ifndef, #else and #endif are understood.
+        /// Flags the Makefile passes only for some builds leave a line as depending on them.
         /// </summary>
         private static void MarkConditions(List<HgEngineHookEntry> entries, string root)
         {

@@ -155,10 +155,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public int CompanionFrames => Math.Max(Math.Max(_slide?.FrameCount ?? 0, _swap?.FrameCount ?? 0),
                                                Math.Max(_colour?.FrameCount ?? 0, _showing?.FrameCount ?? 0));
 
-        /// <summary>
-        /// Every animation in this model's archive that could belong to it, best first, ranked by name. With
-        /// no match, the file right after the model is offered as a guess.
-        /// </summary>
+        // Animations that could belong to this model, from its archive and its animation archive.
+        // With no name match, files within three of it in its own archive are offered as a guess.
         private void FindCompanions(ModelAssets.Archive a, int modelIndex, string modelName)
         {
             _slides.Clear(); _swaps.Clear(); _colours.Clear(); _showings.Clear();

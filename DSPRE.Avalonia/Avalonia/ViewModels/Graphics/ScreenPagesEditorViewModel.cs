@@ -687,7 +687,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
         }
 
-        // The touch buttons of the page the layout shows, in the tiles each one covers.
         private sealed record TouchKey(int Page, int Button);
 
         private IEnumerable<ScreenLayoutItem> TouchItems()

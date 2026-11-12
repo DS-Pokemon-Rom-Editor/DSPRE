@@ -478,7 +478,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             set { if (uint.TryParse(value?.Trim(), out uint v)) SetBattleType(v); }
         }
 
-        /// <summary>The battle type flags as a number, for the number box every editor uses.</summary>
+        /// <summary>The battle type flags as a number, for the number box.</summary>
         public decimal BattleTypeValue
         {
             get => _battleType;

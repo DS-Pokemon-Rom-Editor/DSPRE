@@ -21,7 +21,7 @@ namespace DSPRE.Avalonia
     /// </summary>
     public sealed record TourStep(string Target, string Title, string Body);
 
-    /// <summary>First-open tours of every editor, keyed by the editor's view class.</summary>
+    /// <summary>First-open tours, keyed by the editor's view class.</summary>
     public static partial class EditorTours
     {
         private sealed record Tour(string Name, TourStep[] Steps);

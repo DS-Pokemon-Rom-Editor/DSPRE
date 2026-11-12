@@ -51,7 +51,8 @@ namespace DSPRE.ROMFiles
         /// <summary>How many records Conversion 2 walks, from its `cmp`, or 0 when unknown.</summary>
         public int ConversionCount { get; private set; }
 
-        /// <summary>Matchups past Conversion 2's count, which it never picks. The Foresight marker uses one slot.</summary>
+        /// <summary>Matchups past Conversion 2's count, which its random pick skips.</summary>
+        // The Foresight marker uses one slot.
         public int ConversionMisses
         {
             get

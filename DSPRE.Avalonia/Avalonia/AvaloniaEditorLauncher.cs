@@ -12,7 +12,7 @@ using DSPRE.Avalonia.Data;
 
 namespace DSPRE.Avalonia
 {
-    /// <summary>Opens every editor. Each launcher does nothing when no ROM is loaded, so menu items needn't check.</summary>
+    /// <summary>Opens every editor. A launcher that needs a ROM does nothing without one.</summary>
     public static class AvaloniaEditorLauncher
     {
         /// <summary>True once a ROM has been opened and <see cref="RomInfo"/> populated.</summary>

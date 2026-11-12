@@ -9,7 +9,7 @@ namespace DSPRE.Avalonia.Data
     /// <summary>
     /// A searchable view over a list of names that an editor selects by index. The shown rows follow the filter; the
     /// selection is still read and written through the editor's own index, so its unsaved-changes guard keeps working.
-    /// Rows that hold the filter come first; near misses (about one typo per four letters) only when none do.
+    /// Near misses (one typo per four letters) show when no row matches, or always with Fuzzy on.
     /// </summary>
     public sealed class FilteredNames : INotifyPropertyChanged
     {

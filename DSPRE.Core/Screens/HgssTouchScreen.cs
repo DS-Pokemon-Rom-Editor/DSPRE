@@ -148,7 +148,7 @@ namespace DSPRE.Screens
         /// </summary>
         /// <param name="font">Font 4, for MENU and the A button's word.</param>
         /// <param name="iconFont">Font 0, for the names under the icons.</param>
-        /// <param name="text">Text bank 196 by entry, with the player's name already put in.</param>
+        /// <param name="text">The touch menu's text by entry, with a sample name put in.</param>
         public byte[] RenderMenu(FieldFont font, FieldFont iconFont, Func<int, string> text, MenuLook look)
         {
             look ??= new MenuLook();

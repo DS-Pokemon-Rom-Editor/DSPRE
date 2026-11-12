@@ -2167,8 +2167,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         /// <summary>
-        /// Builds a walker for one of this header's scripts, with the header's own text archive so message
-        /// commands can quote what they actually say.
+        /// Builds a walker for a script this header can run, its own or a common one, with the
+        /// matching text archive so message commands can quote what they actually say.
         /// </summary>
         public ScriptWalker WalkerFor(int scriptNumber)
         {

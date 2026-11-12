@@ -86,8 +86,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
     /// <summary>
     /// The bottom screen as the game draws it while you walk around, with the graphics and colours of
-    /// every piece of it editable. The top screen beside it is a picture of the game, not something this
-    /// window changes; it is there so the bottom screen is seen the way a player sees it.
+    /// every piece of it editable.
     /// </summary>
     public sealed class BottomScreenEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {

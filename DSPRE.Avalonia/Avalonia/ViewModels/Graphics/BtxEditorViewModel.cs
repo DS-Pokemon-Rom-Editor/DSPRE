@@ -494,7 +494,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             return true;
         }
 
-        // ── Add / Delete custom entries (expansion patch only) ───────────────────
+        // ── Add / Delete custom entries ──────────────────────────────────────────
         /// <summary>Adds a custom overworld entry. A picked image goes into a new mmodel member, never into
         /// <paramref name="templateMember"/>, which is only a layout template; without one the entry shares the
         /// template's art. Everything is checked before the table row is added.</summary>

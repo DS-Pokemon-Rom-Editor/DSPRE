@@ -4,7 +4,8 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Tracking
 {
-    /// <summary>An archive member ("TrainerParty/0012"), a ROM tree file ("arm9/arm9.bin") or a DSPRE source ("src:expanded/...").</summary>
+    /// <summary>An archive member ("TrainerParty/0012"), a ROM tree file ("arm9/arm9.bin"),
+    /// a DSPRE source ("src:expanded/...") or a table row ("table:name/0000").</summary>
     public readonly record struct TrackedFile(string Key) : IComparable<TrackedFile>
     {
         private const string SourcePrefix = "src:";

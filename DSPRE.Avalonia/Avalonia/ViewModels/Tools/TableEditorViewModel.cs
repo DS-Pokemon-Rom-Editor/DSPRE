@@ -18,7 +18,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 {
     /// <summary>
     /// Edits the ARM9 music and battle tables, by game family: conditional music (HGSS), battle effects
-    /// (Platinum and HGSS) and the VS trainer and Pokémon tables (HGSS).
+    /// (every game) and the VS trainer and Pokémon tables (HGSS).
     /// </summary>
     public class TableEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
@@ -191,7 +191,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         private int _trainerComboIndex = -1;
         public int TrainerComboIndex { get => _trainerComboIndex; set { if (Set(ref _trainerComboIndex, value)) OnVsTrainerEdited(); } }
 
-        // ── VS Pokémon selection/detail (display only, original Save is a no-op) ──
+        // ── VS Pokémon selection/detail ──
         private int _vsPokemonSelectedIndex = -1;
         public int VsPokemonSelectedIndex
         {

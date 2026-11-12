@@ -102,8 +102,8 @@ namespace DSPRE.Screens
         }
 
         /// <summary>
-        /// The apps in the order the Pokétch cycles through them. Two draw nothing from this archive, and are listed so the
-        /// editor can say why.
+        /// The apps in the order the Pokétch cycles through them. Two have no drawing in this archive,
+        /// and are listed so the editor can say why.
         /// </summary>
         public static readonly App[] All =
         {

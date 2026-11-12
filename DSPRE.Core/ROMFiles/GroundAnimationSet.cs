@@ -33,7 +33,7 @@ namespace DSPRE.ROMFiles
             TextureSrtAnimation anim = null;
             try
             {
-                // Nothing else in DSPRE reads this archive, so it is usually still packed.
+                // Only the model browser also reads this archive, so it is usually still packed.
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.GroundAnimations });
                 string path = Path.Combine(dir, index.ToString("D4"));
                 if (File.Exists(path)) anim = TextureSrtAnimation.Load(File.ReadAllBytes(path));

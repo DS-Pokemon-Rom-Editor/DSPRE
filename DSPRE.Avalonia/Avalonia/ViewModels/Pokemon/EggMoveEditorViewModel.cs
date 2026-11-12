@@ -627,7 +627,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void SetDirty(bool d)
         {
-            // An edit is a step; undoing back to the saved table is clean again.
+            // Undo back to the saved table counts as clean.
             if (d && _undo != null) { _undo.Record(); d = _undo.IsDirty; }
             _dirty = d;
             OnPropertyChanged(nameof(HasUnsavedChanges));

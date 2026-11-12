@@ -47,8 +47,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         // ── Undo / redo (ISupportsUndo) ────────────────────────────────────────
-        // Trade edits live in the VM fields (only synced to _cur at save), and the nickname/OT names live in a
-        // text archive, so the snapshot is composite: the synced trade-data bytes + the two text strings.
+        // Trade edits live in the VM fields, synced to _cur for a save or an undo step. The nickname and OT
+        // names live in a text archive, so the snapshot is the synced trade bytes plus the two strings.
         private sealed class TradeSnapshot { public byte[] Data; public string OtName; public string Nickname; }
         private readonly UndoHistory<TradeSnapshot> _history = new();
         private System.DateTime _lastCaptureUtc = System.DateTime.MinValue;

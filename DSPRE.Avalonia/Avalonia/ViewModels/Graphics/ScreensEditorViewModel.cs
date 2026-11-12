@@ -1135,7 +1135,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             UpdatePlay();
         }
 
-        // A screen that moves on by itself shows each box for about as long as the game does.
         private void UpdatePlay()
         {
             bool play = _stops > 1 && _byItself;

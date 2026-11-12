@@ -142,7 +142,7 @@ namespace DSPRE.Avalonia.Views.World
             if (vm == null || !AvaloniaEditorLauncher.IsRomLoaded) return;
             Window owner = TopLevel.GetTopLevel(this) as Window;
             if (owner == null) return;
-            // Tabs must unpack this ROM's archives before loading a new header, so header changes wait for setup.
+            // Tabs unpack this ROM's archives first, so header changes during setup are ignored.
             _settingUp = true;
             try { await SetUpTabsAsync(vm, owner); }
             finally { _settingUp = false; }

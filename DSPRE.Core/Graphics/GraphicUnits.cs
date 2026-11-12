@@ -307,7 +307,6 @@ namespace DSPRE.Graphics
         // DP/Pt cb_data: one layout, animation and drawing per seal 00-79 (plus a second seal 15), in that order.
         private const int SealLayoutsDppt = 92, SealDrawingsDppt = 184, SealCountDppt = 81, SealCaseLayoutDppt = 180;
 
-        /// <summary>A layout shown with the drawing and colours the game pairs it with.</summary>
         private static GraphicAssets.UnitPart Drawn(GraphicAssets.Archive a, int layout, int drawing, int colours, string name)
         {
             GraphicAssets.Archive own = new GraphicAssets.Archive

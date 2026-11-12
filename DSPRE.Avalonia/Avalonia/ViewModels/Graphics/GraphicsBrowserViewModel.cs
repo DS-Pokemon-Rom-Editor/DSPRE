@@ -80,8 +80,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private List<CategoryTab> _scannedTabs;
 
         /// <summary>
-        /// The launcher defers the archive scan so it can run behind the busy overlay. Tests and small
-        /// callers keep the convenient eager behavior.
+        /// The launcher defers the archive scan so it can run behind the busy overlay.
         /// </summary>
         public GraphicsBrowserViewModel(bool loadImmediately = true)
         {

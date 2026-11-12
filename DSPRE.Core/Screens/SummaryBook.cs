@@ -261,7 +261,7 @@ namespace DSPRE.Screens
 
         // ── pages ─────────────────────────────────────────────────────────────────────────────────
 
-        // Draws every page again from a layout. The sample is read again too, since what it reads may only now be unpacked.
+        // Also rereads the sample's personal data, which may only now be unpacked.
         private void Build(SummaryScreenLayout layout)
         {
             _now = layout;
