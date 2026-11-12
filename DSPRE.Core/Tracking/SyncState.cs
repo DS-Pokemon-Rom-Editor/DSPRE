@@ -30,6 +30,7 @@ namespace DSPRE.Tracking
         public string Repo { get; set; }
         public string BaseSha1 { get; set; }
         public string ProjectId { get; set; }
+        public string ProjectFolder { get; set; }
         /// <summary>The DSPRE build that last wrote this project's records.</summary>
         public string Writer { get; set; }
         public Dictionary<string, FileMark> Files { get; set; } = new Dictionary<string, FileMark>(StringComparer.Ordinal);

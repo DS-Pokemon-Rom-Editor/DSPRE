@@ -54,6 +54,43 @@ namespace DSPRE.Tracking
             return state.Repo != null && Directory.Exists(state.Repo) ? state.Repo : null;
         }
 
+        public static string CopiedFrom()
+        {
+            if (WhyNot() != null || LinkedFolder() == null) return null;
+            string home = SyncState.Load(SyncDir).ProjectFolder;
+            if (home == null || ProjectPaths.Same(home, ProjectKey) || !Directory.Exists(home)) return null;
+            return IsThisFolder(home) ? null : home;
+        }
+
+        public static bool CopyQuestionUnanswered { get; set; }
+
+        public static void KeepCopiedLink()
+        {
+            SyncState state = SyncState.Load(SyncDir);
+            state.ProjectFolder = ProjectKey;
+            state.Save(SyncDir);
+        }
+
+        private static string SyncDir => RomInfo.DspreDir.TrimEnd('\\', '/');
+
+        // Marker file, since mapped drives, junctions and WSL shares alias paths.
+        private static bool IsThisFolder(string other)
+        {
+            string name = ".dspre-same-" + Guid.NewGuid().ToString("N");
+            string marker = Path.Combine(ProjectKey, name);
+            try
+            {
+                PlainFiles.WriteText(marker, "");
+                return File.Exists(Path.Combine(other, name));
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { return false; }
+            finally
+            {
+                try { PlainFiles.Remove(marker); }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { AppLogger.Warn($"Track changes: couldn't remove {name} ({ex.Message})"); }
+            }
+        }
+
         public static bool Declined => SettingsManager.Settings?.TrackingDeclined.Contains(ProjectKey) == true;
 
         public static void Decline()
@@ -208,7 +245,7 @@ namespace DSPRE.Tracking
         /// <summary>Resumes tracking on project load, when a folder is linked and its base ROM is known.</summary>
         public static async Task<string> ResumeAsync()
         {
-            if (WhyNot() != null) return null;
+            if (WhyNot() != null || CopyQuestionUnanswered) return null;
             string folder = LinkedFolder();
             if (folder == null) return null;
             (OpenResult result, ChangesManifest _, string error) = await OpenAsync(folder).ConfigureAwait(false);
@@ -252,6 +289,7 @@ namespace DSPRE.Tracking
 
         private static void Link(string folder, string sha, string nds)
         {
+            CopyQuestionUnanswered = false;
             if (SettingsManager.Settings == null) return;
             SettingsManager.Settings.ChangesFolders[ProjectKey] = Path.GetFullPath(folder);
             SettingsManager.Settings.BaseRoms[sha] = Path.GetFullPath(nds);

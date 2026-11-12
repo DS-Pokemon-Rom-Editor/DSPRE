@@ -22,6 +22,20 @@ namespace DSPRE.Avalonia.Views.Shell
             if (error != null) await DialogHelper.ShowErrorAsync(error, title, owner);
         }
 
+        public static async Task AskAboutCopyAsync(Window owner)
+        {
+            TrackingSetup.CopyQuestionUnanswered = false;
+            string original = await Task.Run(TrackingSetup.CopiedFrom);
+            if (original == null) return;
+            string changes = Path.GetFileName(TrackingSetup.LinkedFolder());
+            DialogHelper.MsgResult answer = await DialogHelper.AskTwoWayWithCancelAsync(
+                $"This folder is a copy of {Path.GetFileName(original)}, which records its changes in {changes}. Record this copy's changes there too?",
+                "Copied project", "Use the same folder", "Don't track this copy", owner);
+            if (answer == DialogHelper.MsgResult.Yes) TrackingSetup.KeepCopiedLink();
+            else if (answer == DialogHelper.MsgResult.No) TrackingSetup.Unlink();
+            else TrackingSetup.CopyQuestionUnanswered = true;
+        }
+
         public static async Task StartAsync(Window owner, ChangesViewModel vm)
         {
             if (owner == null || vm == null) return;

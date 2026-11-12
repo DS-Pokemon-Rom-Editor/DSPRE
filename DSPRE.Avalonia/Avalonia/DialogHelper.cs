@@ -166,6 +166,10 @@ namespace DSPRE.Avalonia
                                                      SpeechBubble? bubble = null)
             => await ShowMsgAsync(message, title, MsgButtons.YesNo, owner: owner, labels: (yes, no, null), bubble: bubble) == MsgResult.Yes;
 
+        /// <summary>Yes / No, or Cancel when the dialog is closed.</summary>
+        public static Task<MsgResult> AskTwoWayWithCancelAsync(string message, string title, string yes, string no, Window owner = null)
+            => ShowMsgAsync(message, title, MsgButtons.YesNo, owner: owner, labels: (yes, no, null));
+
         /// <summary>Asked by every Discard button: a discard cannot be undone.</summary>
         public static async Task<bool> ConfirmDiscardAsync(global::Avalonia.Visual from)
             => await ShowMsgAsync("Discard your unsaved changes?", "Discard", MsgButtons.YesNo,

@@ -76,6 +76,7 @@ namespace DSPRE.Tracking
             _state.Repo = Folder;
             _state.BaseSha1 = manifest.BaseSha1;
             _state.ProjectId = manifest.ProjectId;
+            _state.ProjectFolder = TrackingSetup.ProjectKey;
         }
 
         /// <summary>The extracted original ROM the changes are measured against.</summary>

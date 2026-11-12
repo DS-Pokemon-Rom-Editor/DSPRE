@@ -333,6 +333,7 @@ namespace DSPRE.Avalonia.Views.Shell
                 return;
             }
             await _window.Maps.EnsureSetupAsync();
+            await TrackingActions.AskAboutCopyAsync(_window);
             if (vm != null) await vm.Changes.OnProjectLoadedAsync();
             if (SettingsManager.Settings?.GuidedTourShown == false)
             {
