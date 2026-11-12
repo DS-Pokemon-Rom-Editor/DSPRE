@@ -626,7 +626,6 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 ScanContainersForTrainerParameter(scriptFile.AllFunctions, commandInfoDict, trainerId, scriptFile.FileID, "Function command");
             }
 
-            // Mirrors EventEditor.NavigateToOverworldTarget's decode formula.
             foreach (EventFile eventFile in _cachedEventFiles)
             {
                 if (eventFile.Overworlds == null) continue;
@@ -636,10 +635,8 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                     Overworld ow = eventFile.Overworlds[i];
                     if (ow.Type != (ushort)Overworld.OwType.TRAINER) continue;
 
-                    bool isPartner = ow.ScriptNumber >= 4999;
-                    int decodedId = ow.ScriptNumber - (isPartner ? 4999 : 2999);
-
-                    if (decodedId != trainerId) continue;
+                    if (TrainerScripts.TrainerIdFor(ow.ScriptNumber) != trainerId) continue;
+                    bool isPartner = TrainerScripts.IsDouble(ow.ScriptNumber);
 
                     TrainerWatcherResults.Add(new TrainerUsageResult
                     {

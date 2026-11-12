@@ -320,8 +320,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (KindOfType(_ow.Type) == OwKind.Trainer)
             {
                 _owKind = OwKind.Trainer;
-                bool partner = _ow.ScriptNumber >= TrainerScripts.DoubleFirst - 1;
-                int idx = partner ? _ow.ScriptNumber - (TrainerScripts.DoubleFirst - 1) : _ow.ScriptNumber - (TrainerScripts.SingleFirst - 1);
+                bool partner = TrainerScripts.IsDouble(_ow.ScriptNumber);
+                int idx = TrainerScripts.TrainerIdFor(_ow.ScriptNumber) ?? -1;
                 // Past the roster stays unselected so it isn't clamped to the wrong trainer.
                 _owTrainerIndex = (idx >= 0 && idx < OwTrainerEntries.Count) ? idx : -1;
                 _owPartnerTrainer = partner;
@@ -339,7 +339,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             RaiseOwKindChanged();
             OnPropertyChanged(nameof(OwTrainerIndex)); OnPropertyChanged(nameof(OwPartnerTrainer)); OnPropertyChanged(nameof(OwItemIndex));
-            OnPropertyChanged(nameof(OwTrainerIndexOutOfRange)); OnPropertyChanged(nameof(OwTrainerIsDummy)); OnPropertyChanged(nameof(OwItemIndexOutOfRange)); OnPropertyChanged(nameof(OwScriptEnabled));
+            OnPropertyChanged(nameof(OwTrainerIndexOutOfRange)); OnPropertyChanged(nameof(OwTrainerIsDummy)); OnPropertyChanged(nameof(OwTrainerHasNoScript)); OnPropertyChanged(nameof(OwTrainerNoScriptNote)); OnPropertyChanged(nameof(OwItemIndexOutOfRange)); OnPropertyChanged(nameof(OwScriptEnabled));
             RaiseOwTypeInfoChanged(); OnPropertyChanged(nameof(OwParam1)); OnPropertyChanged(nameof(OwParam2));
 
             _suppress = false;

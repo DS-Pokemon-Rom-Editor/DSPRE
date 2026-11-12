@@ -230,6 +230,8 @@
                                FontSize="10" Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap" IsVisible="{Binding OwTrainerIndexOutOfRange}"/>
                     <TextBlock Text="Trainer 0 is empty. Pick another."
                                FontSize="10" Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap" IsVisible="{Binding OwTrainerIsDummy}"/>
+                    <TextBlock Text="{Binding OwTrainerNoScriptNote}"
+                               FontSize="10" Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap" IsVisible="{Binding OwTrainerHasNoScript}"/>
                     <CheckBox Content="Partner (double battle)" IsChecked="{Binding OwPartnerTrainer}"/>
                     <TextBlock Text="Sight range" FontWeight="Bold" Margin="0,4,0,0"
                                ToolTip.Tip="How many tiles ahead the trainer sees."/>

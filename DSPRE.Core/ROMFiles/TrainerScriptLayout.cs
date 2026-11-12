@@ -18,6 +18,18 @@ namespace DSPRE.ROMFiles
             SpecialTarget = specialTarget;
         }
 
+        /// <summary>The project's table, or null when it isn't laid out this way.</summary>
+        public static TrainerScriptLayout OfProject(RomInfo.GameFamilies family)
+        {
+            CommonScriptId.Result shared = CommonScriptId.Resolve(family, TrainerScripts.SingleFirst);
+            if (shared == null) return null;
+            ScriptFile scripts = new ScriptFile(shared.ScriptArchiveId, readFunctions: true, readActions: true);
+            byte[] bytes = scripts.ParseFailedDueToInvalidCommand ? null : scripts.ToByteArray();
+            return bytes != null && TryAnalyze(bytes, out TrainerScriptLayout layout, out _) ? layout : null;
+        }
+
+        public bool HasOwnEntry(int trainerId) => trainerId >= 1 && trainerId - 1 < SpecialIndex;
+
         public int EntryCount { get; }
         public int GenericEntryCount => EntryCount - 1;
         public int SpecialIndex => EntryCount - 1;

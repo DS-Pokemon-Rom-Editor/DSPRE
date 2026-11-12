@@ -160,7 +160,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             set
             {
                 if (!Set(ref _owTrainerIndex, value)) return;
-                OnPropertyChanged(nameof(OwTrainerIndexOutOfRange)); OnPropertyChanged(nameof(OwTrainerIsDummy)); OnPropertyChanged(nameof(OwScriptEnabled));
+                OnPropertyChanged(nameof(OwTrainerIndexOutOfRange)); OnPropertyChanged(nameof(OwTrainerIsDummy)); OnPropertyChanged(nameof(OwTrainerHasNoScript)); OnPropertyChanged(nameof(OwTrainerNoScriptNote)); OnPropertyChanged(nameof(OwScriptEnabled));
                 OnPropertyChanged(nameof(OwScriptGenericWarningVisible));
                 if (!_suppress && _ow != null && _owKind == OwKind.Trainer) RecomputeTrainerScript();
             }
@@ -169,6 +169,11 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool OwTrainerIndexOutOfRange => _owKind == OwKind.Trainer && (_owTrainerIndex < 0 || _owTrainerIndex >= OwTrainerEntries.Count);
 
         public bool OwTrainerIsDummy => _owKind == OwKind.Trainer && _owTrainerIndex == DummyTrainer;
+        private TrainerScriptLayout _trainerScripts;
+        public bool OwTrainerHasNoScript => _owKind == OwKind.Trainer && _owTrainerIndex > DummyTrainer
+            && _trainerScripts != null && !_trainerScripts.HasOwnEntry(_owTrainerIndex);
+        public string OwTrainerNoScriptNote =>
+            $"Trainer {_owTrainerIndex} has no trainer script of its own. Add trainers in the Trainer editor so the game gets one.";
 
         private bool _owPartnerTrainer;
         public bool OwPartnerTrainer
@@ -205,7 +210,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             OnPropertyChanged(nameof(OwTrainerFieldsVisible));
             OnPropertyChanged(nameof(OwIsApricornTree)); OnPropertyChanged(nameof(OwApricornNote));
             OnPropertyChanged(nameof(OwItemFieldsVisibleVanilla)); OnPropertyChanged(nameof(OwItemFieldsVisibleHGE));
-            OnPropertyChanged(nameof(OwTrainerIndexOutOfRange)); OnPropertyChanged(nameof(OwTrainerIsDummy)); OnPropertyChanged(nameof(OwItemIndexOutOfRange));
+            OnPropertyChanged(nameof(OwTrainerIndexOutOfRange)); OnPropertyChanged(nameof(OwTrainerIsDummy)); OnPropertyChanged(nameof(OwTrainerHasNoScript)); OnPropertyChanged(nameof(OwTrainerNoScriptNote)); OnPropertyChanged(nameof(OwItemIndexOutOfRange));
             OnPropertyChanged(nameof(OwItemIdHGE));
             OnPropertyChanged(nameof(OwScriptEnabled));
             OnPropertyChanged(nameof(OwScriptSectionVisible));
@@ -295,6 +300,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 ListSync.Apply(OwTrainerEntries,
                     new List<string>(TrainerNames.GetAll()));
+                _trainerScripts = TrainerScriptLayout.OfProject(GameFamily);
             }
             catch (Exception ex)
             {
