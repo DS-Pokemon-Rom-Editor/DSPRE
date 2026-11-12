@@ -14,6 +14,10 @@ namespace DSPRE.ROMFiles
         public static bool IsWater(byte behavior, RomInfo.GameFamilies family) =>
             Water.Contains(behavior) || (family != RomInfo.GameFamilies.HGSS && behavior == PlatinumOnlyWater);
 
+        private const byte Door = 0x69;
+
+        public static bool IsDoor(byte behavior) => behavior == Door;
+
         private static readonly Dictionary<byte, (int dx, int dz, int tiles)> Jumps
             = new Dictionary<byte, (int, int, int)>
             {

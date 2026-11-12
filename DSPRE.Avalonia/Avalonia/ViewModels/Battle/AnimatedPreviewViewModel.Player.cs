@@ -65,6 +65,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             Rebuild();
 
             if (result == StepResult.Walked) CheckLevelScriptWatchers();
+            if (result == StepResult.Blocked && FieldInteraction.DoorAhead(_events, Player, _collision) is Warp door)
+            {
+                (int doorX, int doorZ) = Player.TileAhead;
+                OpenDoorAt(doorX, doorZ);
+                return WarpLine(door);
+            }
 
             switch (result)
             {
@@ -99,6 +105,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             Rebuild();
         }
 
+        private static string WarpLine(Warp warp) =>
+            $"A warp to header {warp.Header}, warp {warp.Anchor}. The preview doesn't follow it.";
+
         private void ArriveOnTile()
         {
             PlayerArrivedOn?.Invoke(Player.TileX, Player.TileZ, _frame);
@@ -106,7 +115,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             Warp warp = FieldInteraction.WarpAt(_events, Player.TileX, Player.TileZ);
             if (warp != null)
             {
-                ScriptLines.Add($"A warp to header {warp.Header}, warp {warp.Anchor}. The preview doesn't follow it.");
+                ScriptLines.Add(WarpLine(warp));
                 OpenDoorAt(Player.TileX, Player.TileZ);
             }
 

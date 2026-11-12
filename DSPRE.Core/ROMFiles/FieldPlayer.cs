@@ -368,5 +368,13 @@ namespace DSPRE.ROMFiles
         /// <summary>The warp on a tile, or null.</summary>
         public static Warp WarpAt(EventFile events, int tileX, int tileZ) =>
             events?.Warps?.FirstOrDefault(w => TileX(w) == tileX && TileZ(w) == tileZ);
+
+        /// <summary>The warp on the blocked door tile ahead, entered by walking into it.</summary>
+        public static Warp DoorAhead(EventFile events, FieldPlayer player, MapCollisionGrid map)
+        {
+            if (map == null || map.IsEmpty) return null;
+            (int x, int z) = player.TileAhead;
+            return map.IsBlocked(x, z) && FieldTileBehaviors.IsDoor(map.TypeAt(x, z)) ? WarpAt(events, x, z) : null;
+        }
     }
 }
