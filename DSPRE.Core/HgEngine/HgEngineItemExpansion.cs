@@ -403,7 +403,7 @@ namespace DSPRE.HgEngine
                     body = probe.Substring(key.Length);
             }
             body ??= DefaultEntryBody;
-            return $"\n[{designator}] =\n{body},\n";
+            return HgEngineHeaderEditor.MatchTableSpacing(sourceText, $"[{designator}] =\n{body},\n");
         }
 
         internal const string DefaultEntryBody =

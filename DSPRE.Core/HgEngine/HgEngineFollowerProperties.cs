@@ -11,6 +11,8 @@ namespace DSPRE.HgEngine
     {
         private const string SourceRelPath = "data/FollowerProperties.c";
         private const string SpeciesHeaderRelPath = "include/constants/species.h";
+        private const string NamePrefix = "OVERWORLD_";
+        private const string BouncePrefix = "OVERWORLD_BOUNCE_";
         private static readonly FieldPathSegment[] SizePath = { FieldPathSegment.Field("size") };
         private static readonly FieldPathSegment[] BouncePath = { FieldPathSegment.Field("bounce") };
 
@@ -31,16 +33,24 @@ namespace DSPRE.HgEngine
             if (!HgEngineSourcePatcher.TryFindEntry(text, designator, out _, out _)) return true;   // no entry: defaults
             hasEntry = true;
 
-            HgEngineSymbolTable bounceNames = HgEngineSymbolTable.Load(SourceRelPath);
+            HgEngineSymbolTable names = HgEngineSymbolTable.Load(SourceRelPath);
             if (HgEngineSourcePatcher.TryGetFieldValue(text, designator, SizePath, out string sizeRaw))
-                CLexer.TryParseInt(sizeRaw, out size);
+                HgEngineSymbolTable.TryValue(sizeRaw, out size, names);
             if (HgEngineSourcePatcher.TryGetFieldValue(text, designator, BouncePath, out string bounceRaw))
-            {
-                if (bounceNames != null && bounceNames.TryGetValue(bounceRaw, out int bv)) bounce = bv;
-                else CLexer.TryParseInt(bounceRaw, out bounce);
-            }
+                HgEngineSymbolTable.TryValue(bounceRaw, out bounce, names);
             return true;
         }
+
+        private static string SizeLiteral(int size, HgEngineSymbolTable names)
+        {
+            if (names != null)
+                foreach (KeyValuePair<string, int> kv in names.ByName)
+                    if (kv.Value == size && IsSizeName(kv.Key)) return kv.Key;
+            return size.ToString();
+        }
+
+        private static bool IsSizeName(string name) => name.StartsWith(NamePrefix, System.StringComparison.Ordinal)
+            && !name.StartsWith(BouncePrefix, System.StringComparison.Ordinal);
 
         public static bool TrySet(int speciesId, int size, int bounce, out string error)
         {
@@ -53,19 +63,26 @@ namespace DSPRE.HgEngine
             string text = TryReadSource(out string path);
             if (text == null) { error = $"{path} is missing from the checkout."; return false; }
 
-            HgEngineSymbolTable bounceNames = HgEngineSymbolTable.Load(SourceRelPath);
-            string bounceLiteral = bounceNames != null && bounceNames.TryGetNameWithPrefix(bounce, "OVERWORLD_BOUNCE_", out string bn)
+            HgEngineSymbolTable names = HgEngineSymbolTable.Load(SourceRelPath);
+            string bounceLiteral = names != null && names.TryGetNameWithPrefix(bounce, BouncePrefix, out string bn)
                 ? bn : bounce.ToString();
 
             if (HgEngineSourcePatcher.TryFindEntry(text, designator, out _, out _))
             {
-                bool okSize = HgEngineSourcePatcher.TryUpsertField(ref text, designator, SizePath, size.ToString());
-                bool okBounce = HgEngineSourcePatcher.TryUpsertField(ref text, designator, BouncePath, bounceLiteral);
+                // Skip unchanged fields so values that can't be parsed, like (1), stay as written.
+                bool hasSize = HgEngineSourcePatcher.TryGetFieldValue(text, designator, SizePath, out string sizeRaw);
+                HgEngineSymbolTable.TryValue(sizeRaw, out int oldSize, names);
+                bool okSize = (hasSize && oldSize == size)
+                    || HgEngineSourcePatcher.TryUpsertField(ref text, designator, SizePath, SizeLiteral(size, names));
+                bool hasBounce = HgEngineSourcePatcher.TryGetFieldValue(text, designator, BouncePath, out string bounceRaw);
+                HgEngineSymbolTable.TryValue(bounceRaw, out int oldBounce, names);
+                bool okBounce = (hasBounce && oldBounce == bounce)
+                    || HgEngineSourcePatcher.TryUpsertField(ref text, designator, BouncePath, bounceLiteral);
                 if (!okSize || !okBounce) { error = "Couldn't locate or insert .size/.bounce in the existing entry."; return false; }
             }
             else
             {
-                string newEntry = $"\n    [{designator}] = {{.size = {size}, .bounce = {bounceLiteral}}},";
+                string newEntry = $"    [{designator}] = {{.size = {SizeLiteral(size, names)}, .bounce = {bounceLiteral}}},\n";
                 if (!HgEngineHeaderEditor.TryInsertBeforeFinalCloseBrace(ref text, newEntry))
                 { error = $"Couldn't insert a new FollowerProperties entry for species {speciesId}."; return false; }
             }

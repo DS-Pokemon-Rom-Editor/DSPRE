@@ -144,8 +144,8 @@ namespace DSPRE.HgEngine
             }
             else
             {
-                string newEntry = $"\n    [{designator}] = {{\n        .entries = {newBlock},\n    }},\n";
-                if (!HgEngineHeaderEditor.TryInsertBeforeFinalCloseBrace(ref text, newEntry))
+                string row = $"    [{designator}] = {{\n        .entries = {newBlock},\n    }},\n";
+                if (!HgEngineHeaderEditor.TryInsertBeforeFinalCloseBrace(ref text, HgEngineHeaderEditor.MatchTableSpacing(text, row)))
                 { error = $"Couldn't insert a new Evolutions entry for species {speciesId}."; return false; }
             }
 

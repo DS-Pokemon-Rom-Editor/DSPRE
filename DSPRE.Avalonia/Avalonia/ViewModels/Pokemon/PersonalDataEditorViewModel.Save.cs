@@ -64,6 +64,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             bool partlySaved = false;
             (HgStaged _hgLoaded, int _hgLoadedBounceValue, bool _owPendingCreate, string _owPendingSpritePath, string _owPendingShinyPath) pending =
                 (_hgLoaded, _hgLoadedBounceValue, _owPendingCreate, _owPendingSpritePath, _owPendingShinyPath);
+            HgStaged staged = CaptureHg();
             (bool committed, string commitError) = await DSPRE.Avalonia.HgEngineSave.RunAsync(() =>
             {
                 sourceError = WritePendingSource();
@@ -80,6 +81,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 bool wasLoading = _loading;
                 _loading = true;
                 LoadOwFollower();
+                ApplyHg(staged);
                 _loading = wasLoading;
                 partlySaved = false;
                 sourceError = commitError ?? sourceError;
