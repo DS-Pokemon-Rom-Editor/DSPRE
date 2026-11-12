@@ -308,15 +308,15 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                 if (p != n) OnPropertyChanged(p);
         }
 
-        /// <summary>After a project opens: picks tracking back up if the project has a changes folder.</summary>
-        public async Task OnProjectLoadedAsync()
+        /// <summary>Resumes tracking if the project has a changes folder, unless resume is false.</summary>
+        public async Task OnProjectLoadedAsync(bool resume = true)
         {
             ChangeTracker.Stop();
-            IsRomLoaded = !string.IsNullOrEmpty(RomInfo.WorkDir);
+            IsRomLoaded = resume && !string.IsNullOrEmpty(RomInfo.WorkDir);
             OnPropertyChanged(nameof(CanUndoApply));
             Message = null;
             _remoteFolder = null;
-            if (CanTrack)
+            if (CanTrack && resume)
             {
                 try
                 {

@@ -305,7 +305,7 @@ namespace DSPRE.Avalonia.Views.Shell
                 if (claimedBefore != null && openBefore != null && RomInfo.WorkDir == openBefore) ProjectWindows.TryClaim(claimedBefore);
                 if (vm != null) vm.StatusText = "ROM load failed.";
                 await DialogHelper.ShowErrorAsync(error ?? "Couldn't load the ROM.", "Open ROM");
-                if (vm != null) await vm.Changes.OnProjectLoadedAsync();
+                if (vm != null) await vm.Changes.OnProjectLoadedAsync(resume: RomInfo.WorkDir == openBefore);
                 return;
             }
             if (vm != null) vm.StatusText = $"Loaded {RomInfo.ProjectName ?? "project"}";
