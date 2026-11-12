@@ -973,13 +973,13 @@ namespace DSPRE.ROMFiles
                 try
                 {
                     ScriptFile scriptFile = new ScriptFile(scriptID);
-                    // Falling back to the binary here would rebuild the old script and then regenerate
-                    // the .script from it, throwing the edit away.
+                    // Building from the binary would keep the old script and hide that the edit didn't parse.
                     if (scriptFile.PlaintextParseFailed)
                     {
                         failed.Add(Path.GetFileName(expandedScriptFile) + " doesn't parse");
                         continue;
                     }
+                    if (HasNothingToBuild(scriptFile, binPath)) continue;
 
                     if (!scriptFile.SaveToFileDefaultDir(scriptID, false))
                     {
@@ -1008,6 +1008,15 @@ namespace DSPRE.ROMFiles
             }
 
             return true;
+        }
+
+        // Old DSPRE wrote a headers-only .script for level scripts and empty files, so they are skipped.
+        private static bool HasNothingToBuild(ScriptFile fromText, string binPath)
+        {
+            if (fromText.AllScripts?.Count > 0 || !File.Exists(binPath)) return false;
+            using MemoryStream binary = new MemoryStream(PlainFiles.ReadBytes(binPath));
+            ScriptFile onDisk = new ScriptFile(binary, readFunctions: false, readActions: false);
+            return onDisk.IsLevelScript || !(onDisk.AllScripts?.Count > 0);
         }
 
         public override string ToString()
