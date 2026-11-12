@@ -153,7 +153,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (_normalPal != null && !PaletteEqualsUpTo(_normalPal, newPalette, usedCount))
                 {
                     bool keepExisting = await DialogHelper.AskYesNoAsync(
-                        $"This sheet's colours differ from the saved {genderLabel.ToLowerInvariant()} palette.\n\n" +
+                        "This sheet's colours differ from the saved palette.\n\n" +
                         "Keep the saved palette and match the sheet to it? No replaces the palette for every sprite using it.",
                         "Palette mismatch", owner);
                     if (keepExisting)
@@ -224,7 +224,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 ApplyPalettesAndPublish();
                 Edited();
                 OnPropertyChanged(nameof(HasUnsavedChanges));
-                SaveNotice.Imported($"{genderLabel}'s shiny palette from the reference sheet", null);
+                SaveNotice.Imported($"the shiny palette from the {genderLabel.ToLowerInvariant()} reference sheet", null);
             }
             catch (Exception ex) { StatusText = $"Couldn't import: {ex.Message}"; }
         }
