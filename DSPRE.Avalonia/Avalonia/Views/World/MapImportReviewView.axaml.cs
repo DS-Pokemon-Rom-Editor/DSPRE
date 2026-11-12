@@ -21,8 +21,6 @@ namespace DSPRE.Avalonia.Views.World
         private void UsePack_Click(object sender, RoutedEventArgs e) =>
             VM?.UsePack((sender as Control)?.Tag as MapImportReviewViewModel.PackRow);
 
-        private void FixSelected_Click(object sender, RoutedEventArgs e) => VM?.FixSelectedEvents();
-
         private void Close_Click(object sender, RoutedEventArgs e) => Close();
     }
 }

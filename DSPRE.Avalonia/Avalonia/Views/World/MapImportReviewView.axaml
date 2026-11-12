@@ -62,46 +62,22 @@
       </TabItem>
 
       <TabItem Header="{Binding EventsHeader}" IsVisible="{Binding HasEvents}">
-        <DockPanel Margin="0,6,0,0">
-          <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,4">
-            <CheckBox Grid.Column="0" Content="Select all" IsChecked="{Binding AllEventsTicked}" IsThreeState="True"/>
-            <TextBlock Grid.Column="1" Text="{Binding EventsNote}" VerticalAlignment="Center" Margin="12,0" FontSize="12"
-                       Foreground="{DynamicResource Editor.Subtle}"/>
-            <Button Grid.Column="2" Content="Fix selected" Click="FixSelected_Click" IsEnabled="{Binding AnyEventTicked}"
-                    ToolTip.Tip="Move the selected events to the nearest open square; put back the selected warp and edge squares"/>
-          </Grid>
-          <DataGrid ItemsSource="{Binding Events}" GridLinesVisibility="Horizontal" HeadersVisibility="Column"
-                    CanUserResizeColumns="True" RowHeight="26">
-            <DataGrid.Columns>
-              <DataGridTemplateColumn Header="" Width="36">
-                <DataGridTemplateColumn.CellTemplate>
-                  <DataTemplate x:DataType="vm:MapEditorViewModel+EventClash">
-                    <CheckBox IsChecked="{Binding Move}" HorizontalAlignment="Center"/>
-                  </DataTemplate>
-                </DataGridTemplateColumn.CellTemplate>
-              </DataGridTemplateColumn>
-              <DataGridTextColumn Header="Event" Binding="{Binding Who}" Width="150" IsReadOnly="True"/>
-              <DataGridTextColumn Header="File" Binding="{Binding FileText}" Width="60" IsReadOnly="True"/>
-              <DataGridTextColumn Header="Square" Binding="{Binding Where}" Width="70" IsReadOnly="True"/>
-              <DataGridTemplateColumn Header="Now" Width="*">
-                <DataGridTemplateColumn.CellTemplate>
-                  <DataTemplate x:DataType="vm:MapEditorViewModel+EventClash">
-                    <TextBlock Text="{Binding Why}" ToolTip.Tip="{Binding Why}" TextTrimming="CharacterEllipsis"
-                               VerticalAlignment="Center" Margin="6,0"/>
-                  </DataTemplate>
-                </DataGridTemplateColumn.CellTemplate>
-              </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Fix" Width="220">
-                <DataGridTemplateColumn.CellTemplate>
-                  <DataTemplate x:DataType="vm:MapEditorViewModel+EventClash">
-                    <TextBlock Text="{Binding Result}" ToolTip.Tip="{Binding Result}" TextTrimming="CharacterEllipsis"
-                               VerticalAlignment="Center" Margin="6,0"/>
-                  </DataTemplate>
-                </DataGridTemplateColumn.CellTemplate>
-              </DataGridTemplateColumn>
-            </DataGrid.Columns>
-          </DataGrid>
-        </DockPanel>
+        <DataGrid ItemsSource="{Binding Events}" IsReadOnly="True" Margin="0,6,0,0" RowHeight="26"
+                  GridLinesVisibility="Horizontal" HeadersVisibility="Column" CanUserResizeColumns="True">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Event" Binding="{Binding Who}" Width="150"/>
+            <DataGridTextColumn Header="File" Binding="{Binding FileText}" Width="60"/>
+            <DataGridTextColumn Header="Square" Binding="{Binding Where}" Width="70"/>
+            <DataGridTemplateColumn Header="Problem" Width="*">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate x:DataType="vm:MapEditorViewModel+EventClash">
+                  <TextBlock Text="{Binding Why}" ToolTip.Tip="{Binding Why}" TextTrimming="CharacterEllipsis"
+                             VerticalAlignment="Center" Margin="6,0"/>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+          </DataGrid.Columns>
+        </DataGrid>
       </TabItem>
     </TabControl>
   </DockPanel>

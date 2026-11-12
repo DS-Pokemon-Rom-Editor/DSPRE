@@ -9,10 +9,7 @@ using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.ViewModels.World
 {
-    /// <summary>
-    /// What an imported map is missing here, most visible first: textures, buildings, then events on squares it
-    /// closed. Nothing changes unless the user asks.
-    /// </summary>
+    /// <summary>What an import broke here: textures, buildings, events, edges.</summary>
     public class MapImportReviewViewModel : INotifyPropertyChanged
     {
         public sealed class PackRow
@@ -46,8 +43,6 @@ namespace DSPRE.Avalonia.ViewModels.World
             Title = "Import issues: " + what;
             Buildings = buildings ?? new List<MapImportCheck.BuildingTrouble>();
             Events = events ?? new List<MapEditorViewModel.EventClash>();
-            foreach (MapEditorViewModel.EventClash clash in Events)
-                clash.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(MapEditorViewModel.EventClash.Move)) TickChanged(); };
             CheckTextures();
             SelectedTab = HasTextures ? 0 : HasBuildings ? 1 : 2;
         }
@@ -77,7 +72,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                         bare > 0 ? $"{bare} model{(bare > 1 ? "s" : "")} without textures in the building pack" : null,
                     }.Where(s => s != null)) + ".");
                 }
-                if (HasEvents) lines.Add($"Events: {Events.Count} now stand on squares the import closed.");
+                if (HasEvents) lines.Add($"Events: {Events.Count} no longer work.");
                 return string.Join("\n", lines);
             }
         }
@@ -142,39 +137,6 @@ namespace DSPRE.Avalonia.ViewModels.World
             _pack = row.Pack;
             CheckTextures();
             PackNote = $"Map textures are now pack {row.Pack}, for every header on area {_areaId}. Save the map to keep it.";
-        }
-
-        // ── Events ────────────────────────────────────────────────────────────────
-        public bool? AllEventsTicked
-        {
-            get => Events.All(e => e.Move) ? true : Events.Any(e => e.Move) ? null : false;
-            set
-            {
-                bool tick = value == true;
-                _bulkTicking = true;
-                foreach (MapEditorViewModel.EventClash e in Events) if (!e.Fixed) e.Move = tick;
-                _bulkTicking = false;
-                _editor.PlanFixes(Events);
-            }
-        }
-        public bool AnyEventTicked => Events.Any(e => e.Move);
-
-        // Select all ticks every row at once; the preview is worked out once after.
-        private bool _bulkTicking;
-        private void TickChanged()
-        {
-            Raise(nameof(AllEventsTicked));
-            Raise(nameof(AnyEventTicked));
-            if (!_bulkTicking) _editor.PlanFixes(Events);
-        }
-
-        private string _eventsNote;
-        public string EventsNote { get => _eventsNote; private set => Set(ref _eventsNote, value); }
-
-        public void FixSelectedEvents()
-        {
-            int moved = _editor.MoveEvents(Events.Where(e => e.Move));
-            EventsNote = moved == 0 ? "Nothing fixed." : $"Fixed {moved}. Save the map to keep {(moved > 1 ? "them" : "it")}.";
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
