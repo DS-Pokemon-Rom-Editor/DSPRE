@@ -1015,7 +1015,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// </summary>
         public void ReloadLocationNames()
         {
-            if (_headerListNames.Count == 0) return;   // not set up yet
+            if (_headerListNames.Count == 0 || !AvaloniaEditorLauncher.IsRomLoaded) return;   // not set up yet
             List<string> fresh = ReadLocationNames();
             if (fresh.SequenceEqual(LocationNames)) return;   // archive untouched: leave the combo alone
 
