@@ -28,6 +28,19 @@ namespace DSPRE.HgEngine
             return items != null && items.TryGetValue("ITEM_" + label, out int id) ? id : -1;
         }
 
+        /// <summary>Generator script named in the icon rules header, or null.</summary>
+        public static string RulesGeneratorRelPath()
+        {
+            if (!HgEngineProject.IsActive) return null;
+            string rules = Path.Combine(HgEngineProject.RepoPathUnc, IconRulesRelPath.Replace('/', Path.DirectorySeparatorChar));
+            if (!File.Exists(rules)) return null;
+            string header = HgEngineFileCache.GetText(rules).Split('\n')[0];
+            string script = header.Split(new[] { ' ', '\t', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                .LastOrDefault(word => word.EndsWith(".py", StringComparison.Ordinal));
+            if (script == null || script.Contains('\'') || script.StartsWith('/') || script.Contains("..") || script.Contains(':') || script.Contains('\\')) return null;
+            return File.Exists(Path.Combine(HgEngineProject.RepoPathUnc, script.Replace('/', Path.DirectorySeparatorChar))) ? script : null;
+        }
+
         /// <summary>The PNG an item's icon is built from, or null when the checkout names none.</summary>
         public static string IconPathFor(int item)
         {

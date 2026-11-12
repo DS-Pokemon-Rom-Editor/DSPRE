@@ -51,6 +51,17 @@ namespace DSPRE.HgEngine
             return true;
         }
 
+        /// <summary>False if no generator script or it failed; script is its repo path.</summary>
+        public static bool TryRegenerateItemIconRules(out string script)
+        {
+            script = HgEngineMachineIcons.RulesGeneratorRelPath();
+            if (script == null) return false;
+            bool ran = Run($"cd '{HgEngineProject.RepoPathPosix}' && python3 '{script}'", out _, out _);
+            HgEngineFileCache.ClearCache();
+            if (!ran) AppLogger.Error($"hg-engine: the icon rules generator {script} failed.");
+            return ran;
+        }
+
         /// <summary>Whether the next make wipes base/ and extracts it again from rom.nds. False when make couldn't tell.</summary>
         public static bool TryCheckBaseReextract(out bool reextracts)
         {

@@ -25,6 +25,12 @@ namespace DSPRE.Avalonia.ViewModels.Items
         private void UpdateIcon()
         {
             if (Design.IsDesignMode) return;
+            // New hg-engine items have no icon files yet.
+            if (RomInfo.IsHGE && !(ArchiveMembers.Has(DirNames.ItemIcons, (int)_currentEntry.ItemIcon) && ArchiveMembers.Has(DirNames.ItemIcons, (int)_currentEntry.ItemPalette)))
+            {
+                ItemIcon = null;
+                return;
+            }
             try
             {
                 byte[] drawing = ArchiveMembers.Read(DirNames.ItemIcons, (int)_currentEntry.ItemIcon);

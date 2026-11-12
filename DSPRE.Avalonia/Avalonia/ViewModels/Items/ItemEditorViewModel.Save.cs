@@ -135,6 +135,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
             OnPropertyChanged(nameof(SelectedItemIndex));
             LoadFile(pending.Id);
             SaveNotice.Saved(UnsavedChangesDescription);
+            (bool ran, string script) = await Task.Run(() => (HgEngineBuild.TryRegenerateItemIconRules(out string name), name));
+            if (!ran) SaveNotice.Show($"Icon rules not updated: {Path.GetFileName(script) ?? "the generator"} could not run.", Data.SpeechBubble.Troubled);
             return true;
         }
 
