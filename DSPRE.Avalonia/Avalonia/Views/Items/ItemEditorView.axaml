@@ -71,21 +71,24 @@
 
                         <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
                                 BorderThickness="1" CornerRadius="4" Padding="6">
-                            <StackPanel Spacing="4">
+                            <StackPanel Spacing="4" Background="Transparent" ToolTip.Tip="{Binding TableEntryNote}">
                                 <TextBlock FontWeight="SemiBold" Margin="0,0,0,2">Item table entry</TextBlock>
 
                                 <TextBlock>Icon image</TextBlock>
                                 <ComboBox ItemsSource="{Binding IconImages}"
                                           SelectedItem="{Binding SelectedIconImage}"
+                                          IsEnabled="{Binding TableEntryEditable}"
                                           HorizontalAlignment="Stretch"/>
 
                                 <TextBlock>Icon palette</TextBlock>
                                 <ComboBox ItemsSource="{Binding IconPalettes}"
                                           SelectedItem="{Binding SelectedIconPalette}"
+                                          IsEnabled="{Binding TableEntryEditable}"
                                           HorizontalAlignment="Stretch"/>
 
                                 <TextBlock>Data file</TextBlock>
                                 <NumericUpDown Value="{Binding ItemDataId}"
+                                               IsEnabled="{Binding TableEntryEditable}"
                                                Minimum="0" Maximum="{Binding MaxItemDataId}"
                                                FormatString="0"/>
                             </StackPanel>
