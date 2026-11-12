@@ -76,10 +76,6 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         private static bool HgAllows => !IsHGE || HgEngineProject.IsActive;
 
-        // Without a linked checkout, hg-engine's changed formats and tables would be corrupted by the vanilla
-        // readers, so only the map, event, script and text editors stay open.
-        public bool HgeUnlinkedAllows => HgAllows;
-
         /// <summary>Why an editor is greyed out on an hg-engine project with no linked checkout, or nothing.</summary>
         public string HgeUnlinkedNote => HgAllows ? null : HgEngineNote;
 
@@ -324,7 +320,6 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(IsHgEngineLinked));
             OnPropertyChanged(nameof(CanCompileRom));
             OnPropertyChanged(nameof(HgEngineNote));
-            OnPropertyChanged(nameof(HgeUnlinkedAllows));
             OnPropertyChanged(nameof(HgeUnlinkedNote));
             OnPropertyChanged(nameof(BlockedNote));
             OnPropertyChanged(nameof(Shown));
@@ -379,7 +374,6 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(CanUseWildEditors));
             OnPropertyChanged(nameof(CanCompileRom));
             OnPropertyChanged(nameof(HgEngineNote));
-            OnPropertyChanged(nameof(HgeUnlinkedAllows));
             OnPropertyChanged(nameof(HgeUnlinkedNote));
             OnPropertyChanged(nameof(BlockedNote));
             OnPropertyChanged(nameof(Shown));
