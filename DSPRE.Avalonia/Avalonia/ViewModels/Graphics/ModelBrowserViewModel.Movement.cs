@@ -142,7 +142,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             if (_selected == null) return null;
             if (_animationIndex <= 0 || _animationIndex >= _animationEntries.Count) return null;
-            return ModelAssets.AnimationFor(_selected.Archive, _selected.Index, _animationEntries[_animationIndex]);
+            return ModelAssets.AnimationFor(_selected.Archive, ShowingIndex, _animationEntries[_animationIndex]);
         }
 
         public bool CanPlay => (_animationIndex > 0 && _animationIndex < _animationEntries.Count)

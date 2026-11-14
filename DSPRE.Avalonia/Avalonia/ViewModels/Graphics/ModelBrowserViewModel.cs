@@ -164,6 +164,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             AnimationChoices.Clear();
             _animationEntries.Clear();
             Playing = false;
+            _frame = 0;
             AnimationDetails = "";
             AnimationOwner = "";
             MovementNote = "";
@@ -178,6 +179,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 OnPropertyChanged(nameof(HasAnimationChoice));
                 OnPropertyChanged(nameof(HasAnimationDetails));
                 OnPropertyChanged(nameof(HasMovementNote));
+                OnPropertyChanged(nameof(HasCompanionSummary));
+                OnPropertyChanged(nameof(CompanionSummary));
                 RaiseAll();
                 return;
             }
@@ -262,6 +265,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             OnPropertyChanged(nameof(PlayHelp));
             OnPropertyChanged(nameof(MovementSource));
             OnPropertyChanged(nameof(HasMovementSource));
+            OnPropertyChanged(nameof(Frame));
+            OnPropertyChanged(nameof(FrameCount));
+            OnPropertyChanged(nameof(FrameSummary));
         }
 
         /// <summary>Whether anything is picked. Saving a file as it is works on whatever is

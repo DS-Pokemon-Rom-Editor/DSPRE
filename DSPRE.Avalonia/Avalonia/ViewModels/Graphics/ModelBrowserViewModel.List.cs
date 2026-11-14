@@ -22,6 +22,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public void Reload() { Scan(); Publish(); }
 
         private List<CategoryTab> _scanned;
+        private List<Item> _scannedItems;
 
         /// <summary>Reads every archive. The view runs it off the UI thread.</summary>
         public void Scan()
@@ -71,9 +72,23 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 tabs.Insert(0, new CategoryTab { Title = "Everything", Only = null, Count = found.Count,
                                                  What = "Every model, texture set and animation this game has." });
 
-            _everything.Clear();
-            _everything.AddRange(found);
+            _scannedItems = found;
             _scanned = tabs;
+        }
+
+        private bool _rescanning, _rescanAgain;
+
+        /// <summary>A call during a scan queues one more scan instead of running alongside it.</summary>
+        public async System.Threading.Tasks.Task RescanAsync()
+        {
+            if (_rescanning) { _rescanAgain = true; return; }
+            _rescanning = true;
+            try
+            {
+                do { _rescanAgain = false; await System.Threading.Tasks.Task.Run(Scan); } while (_rescanAgain);
+            }
+            finally { _rescanning = false; }
+            Publish();
         }
 
         /// <summary>Puts what Scan found into the bound collections. UI thread only.</summary>
@@ -83,6 +98,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             Item old = _selected;
             int oldPart = _partIndex;
 
+            _everything.Clear();
+            _everything.AddRange(_scannedItems ?? new List<Item>());
             _publishing = true;
             Tabs.Clear();
             foreach (CategoryTab t in _scanned ?? new List<CategoryTab>()) Tabs.Add(t);

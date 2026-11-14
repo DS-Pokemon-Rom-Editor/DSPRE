@@ -298,7 +298,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (_swaps.Count > 0) bits.Add($"{_swaps.Count} that swap its pictures");
                 if (_colours.Count > 0) bits.Add($"{_colours.Count} that change its colour");
                 if (_showings.Count > 0) bits.Add($"{_showings.Count} that hide parts of it");
-                if (bits.Count == 0) return "Nothing in this archive animates this model.";
+                if (bits.Count == 0) return "No texture or colour animations here.";
                 return "This model has " + string.Join(", ", bits) + ".";
             }
         }

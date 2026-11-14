@@ -31,11 +31,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             EditorWindowChrome.Attach(this, vm, onClosed: vm.Dispose);
             EditorWindowChrome.AttachUndoKeys(this, vm);
             // An import, undo, redo or discard can change what kind of thing an entry is, so the list is read again.
-            vm.PendingChanged += async () =>
-            {
-                await System.Threading.Tasks.Task.Run(vm.Scan);
-                vm.Publish();
-            };
+            vm.PendingChanged += async () => await vm.RescanAsync();
             // Drag to turn it round, wheel to come closer, the same as everywhere else in DSPRE.
             _nav = new Gl3DPointerNavigation(GlHost, GlView);
             vm.ModelReady += (_, _) =>
