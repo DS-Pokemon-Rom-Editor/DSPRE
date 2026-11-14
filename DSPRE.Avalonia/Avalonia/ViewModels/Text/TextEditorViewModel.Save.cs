@@ -56,7 +56,18 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (_current == null) return;
             if (_managedSource != null) { await SaveToHgEngineSourceAsync(); return; }
             if (_fieldSource?.IsMain == true) { await SaveToGeneratedFieldAsync(); return; }
-            if (_generatedSource != null) { await RefusedForManagedArchiveAsync(); return; }
+            if (_generatedSource != null)
+            {
+                string stagedNames = StagedArchive.Join(null, false, StagedDescription);
+                if (WriteStagedWithSource())
+                {
+                    SaveNotice.Saved(stagedNames);
+                    AppEvents.RaiseNamesChanged();
+                    if (!_dirty) return;
+                }
+                await RefusedForManagedArchiveAsync();
+                return;
+            }
 
             if (!_addedArchives.ContainsKey(_current.ID))
                 _current.SaveToExpandedDir(_current.ID, showSuccessMessage: false, sender: this);
@@ -66,6 +77,14 @@ namespace DSPRE.Avalonia.ViewModels.Text
             SaveNotice.Saved(UnsavedChangesDescription);
             StatusText = $"Saved text archive {_current.ID}.";
             AppEvents.RaiseNamesChanged();
+        }
+
+        private bool WriteStagedWithSource()
+        {
+            if (_addedArchives.Count == 0 && _removedArchives.Count == 0) return false;
+            WriteStagedArchives();
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            return true;
         }
 
         private async Task<bool> RefusedForManagedArchiveAsync()
@@ -121,6 +140,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 return;
             }
 
+            WriteStagedWithSource();
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);
             StatusText = $"Saved {source.RelPath}.";
@@ -159,6 +179,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
 
             _fieldBefore = lines;
+            WriteStagedWithSource();
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);
             StatusText = $"Saved {source.FieldLabel} in {source.RelPath}.";

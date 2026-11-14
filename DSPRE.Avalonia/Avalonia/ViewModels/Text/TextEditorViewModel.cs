@@ -123,10 +123,12 @@ namespace DSPRE.Avalonia.ViewModels.Text
             _addedArchives.Clear();
             _savedArchiveCount = Filesystem.GetTextArchivesCount();
         }
-        public string UnsavedChangesDescription => StagedArchive.Join(_current != null ? $"Text archive {_current.ID}" : "Text archive", _dirty,
-            StagedArchive.Describe("text archive", "text archives",
-                _addedArchives.Keys.Select(id => (id, PendingArchiveWrites.PendingKind.Added))
-                    .Concat(_removedArchives.Select(id => (id, PendingArchiveWrites.PendingKind.Removed)))));
+        public string UnsavedChangesDescription =>
+            StagedArchive.Join(_current != null ? $"Text archive {_current.ID}" : "Text archive", _dirty, StagedDescription);
+
+        private string StagedDescription => StagedArchive.Describe("text archive", "text archives",
+            _addedArchives.Keys.Select(id => (id, PendingArchiveWrites.PendingKind.Added))
+                .Concat(_removedArchives.Select(id => (id, PendingArchiveWrites.PendingKind.Removed))));
 
         public void SaveChanges() => Save();
         // The edited lines live in the loaded archive, so dropping them means reading it again.
