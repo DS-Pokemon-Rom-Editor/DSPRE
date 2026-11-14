@@ -25,7 +25,7 @@ namespace DSPRE
                 {
                     byte[] row = reader.ReadBytes(RomInfo.InternalNameLength);
                     string internalName = Encoding.ASCII.GetString(row);
-                    headerListBoxNames.Add(MapHeader.BuildName(i, internalName));
+                    headerListBoxNames.Add(MapHeader.BuildName(i, internalName.TrimEnd('\0')));
                 }
             }
 

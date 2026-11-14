@@ -23,8 +23,7 @@ namespace DSPRE.Graphics
             List<string> headerNames = null;
             try { headerNames = HeaderLists.GetHeaderListBoxNames(); } catch (Exception ex) { AppLogger.Warn("Dungeon cut-ins: header names: " + ex.Message); }
 
-            // The list names read "323 -   D24R0211" with the internal name padded out with zero bytes.
-            // Only the name is wanted here, without the number or the padding.
+            // Names read "323 -   D24R0211". Keep the part after the dash.
             string Where(int header)
             {
                 if (headerNames == null || header < 0 || header >= headerNames.Count) return null;
@@ -32,7 +31,7 @@ namespace DSPRE.Graphics
                 if (string.IsNullOrWhiteSpace(name)) return null;
                 int dash = name.IndexOf('-');
                 if (dash >= 0) name = name.Substring(dash + 1);
-                name = name.Replace("\0", "").Trim();
+                name = name.Trim();
                 return string.IsNullOrWhiteSpace(name) ? null : name;
             }
 

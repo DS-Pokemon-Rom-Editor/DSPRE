@@ -109,7 +109,7 @@ namespace DSPRE.ROMFiles
                     try { place = HeaderLabels.LocationNameOf(MapHeader.GetMapHeader((ushort)header)); } catch (Exception caught) when (AppLogger.Noted("PokedexAreaData.Areas", caught)) { }   // a header that can't be read is listed by its number
                     if (names != null && header < names.Count)
                     {
-                        string n = names[header].Replace("\0", "").Trim();
+                        string n = names[header].Trim();
                         int sep = n.IndexOf(MapHeader.NameSeparator, StringComparison.Ordinal);
                         label = sep >= 0 ? n.Substring(sep + MapHeader.NameSeparator.Length).Trim() : n;
                     }
