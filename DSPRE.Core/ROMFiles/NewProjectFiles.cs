@@ -17,7 +17,7 @@ namespace DSPRE.ROMFiles
         public const string BlankScriptRotom = "script Main #1:\n\tEnd\n";
 
         /// <summary>Adds a text archive holding one message and returns its number.</summary>
-        public static int AddTextArchive(string firstMessage = "Your text here.", object sender = null)
+        public static int AddTextArchive(string firstMessage = "New text.", object sender = null)
         {
             int id = Filesystem.GetTextArchivesCount();
             new TextArchive(id, new List<string> { firstMessage }).SaveToExpandedDir(id, showSuccessMessage: false, sender: sender);
