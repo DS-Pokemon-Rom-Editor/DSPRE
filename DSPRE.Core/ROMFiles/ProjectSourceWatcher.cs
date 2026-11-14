@@ -44,6 +44,12 @@ namespace DSPRE.ROMFiles
                 _subscribed = true;
             }
 
+            if (OperatingSystem.IsWindows() && WslPaths.IsWslPath(expanded))
+            {
+                AppLogger.Warn("Windows reports no file changes in WSL folders, so edits made outside DSPRE are not noticed.");
+                return;
+            }
+
             FileSystemWatcher watcher = new FileSystemWatcher(expanded)
             {
                 IncludeSubdirectories = true,
