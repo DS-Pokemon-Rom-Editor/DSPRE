@@ -123,11 +123,11 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         public IReadOnlyList<string> PickupRangeNames { get; } = Enumerable.Range(0, PickupTable.Ranges).Select(RangeName).ToList();
 
-        // Rare 1 is roll 99 and Rare 2 roll 98.
+        // Rare 1 is roll 99 and Rare 2 roll 98. Only the first slot's cut-off can take them.
         private int RareChance(int slot)
         {
-            int total = _pickup.Weights[PickupTable.WeightSize - 1];
-            return slot == 0 ? (total <= 99 ? 1 : 0) : (total <= 98 ? 1 : 0);
+            int first = _pickup.Weights[0];
+            return slot == 0 ? (first <= 99 ? 1 : 0) : (first <= 98 ? 1 : 0);
         }
 
         /// <summary>An entry's chance per level range, each reading the list one step further.</summary>
@@ -151,7 +151,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         // The weights are cut-offs on a 0-99 roll; a slot's chance is its cut-off minus the one before.
         internal int SlotChance(int slot) => _pickup.Weights[slot] - (slot > 0 ? _pickup.Weights[slot - 1] : 0);
 
-        /// <summary>Changes one slot's chance and keeps the others'. A total past 98 is refused.</summary>
+        /// <summary>Changes one slot's chance, keeping the others. A total past 98 is refused.</summary>
         internal bool SetSlotChance(int slot, int percent)
         {
             int delta = percent - SlotChance(slot);
@@ -176,10 +176,10 @@ namespace DSPRE.Avalonia.ViewModels.Items
         {
             get
             {
-                int total = _pickup.Weights[PickupTable.WeightSize - 1];
+                int total = _pickup.Weights[PickupTable.WeightSize - 1], first = _pickup.Weights[0];
+                if (first > 99) return "The rare items never drop.";
+                if (first == 99) return "Rare 2 never drops.";
                 if (total < 98) return $"Rolls {total} to 97 give nothing.";
-                if (total == 99) return "Rare 2 never drops.";
-                if (total > 99) return "The rare items never drop.";
                 return "";
             }
         }
