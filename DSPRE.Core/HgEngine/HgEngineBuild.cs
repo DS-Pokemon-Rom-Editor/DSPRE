@@ -30,8 +30,8 @@ namespace DSPRE.HgEngine
         }
 
         /// <summary>
-        /// Runs hg-engine's text-archive validator over one source file. It reports problems on stdout
-        /// and still exits 0, so output is the result, not the exit code. False means it could not run.
+        /// Runs hg-engine's text-archive validator over one source file. It prints problems and exits 1,
+        /// or exits 0 when the file is clean. False means it could not run.
         /// </summary>
         public static bool TryValidateTextArchive(string repoRelPath, out string problems)
         {
@@ -44,9 +44,14 @@ namespace DSPRE.HgEngine
 
             string command = $"cd '{HgEngineProject.RepoPathPosix}' && " +
                 $"python3 '{validator}' '{charmap}' '{repoRelPath}'";
-            if (!Run(command, out string stdout, out string stderr)) return false;
+            if (!TryRun(command, out string stdout, out string stderr, out int exitCode)) return false;
 
             string reported = (stdout + Environment.NewLine + stderr).Trim();
+            if (exitCode != 0 && (exitCode != 1 || reported.Length == 0))
+            {
+                AppLogger.Error("hg-engine text validator failed: " + reported);
+                return false;
+            }
             if (reported.Length > 0) problems = reported;
             return true;
         }
@@ -83,7 +88,19 @@ namespace DSPRE.HgEngine
 
         private static bool Run(string bashCommand, out string stdout, out string stderr)
         {
-            stdout = ""; stderr = "";
+            if (!TryRun(bashCommand, out stdout, out stderr, out int exitCode)) return false;
+            if (exitCode != 0)
+            {
+                AppLogger.Error("hg-engine make failed: " + stderr);
+                return false;
+            }
+            if (!string.IsNullOrWhiteSpace(stdout)) AppLogger.Info("hg-engine make stdout: " + stdout);
+            return true;
+        }
+
+        private static bool TryRun(string bashCommand, out string stdout, out string stderr, out int exitCode)
+        {
+            stdout = ""; stderr = ""; exitCode = -1;
             if (!HgEngineProject.IsLinked) { stderr = "No hg-engine checkout is linked."; return false; }
 
             using Process proc = new Process { StartInfo = BuildStartInfo(bashCommand, redirectOutput: true) };
@@ -105,12 +122,7 @@ namespace DSPRE.HgEngine
                 return false;
             }
 
-            if (proc.ExitCode != 0)
-            {
-                AppLogger.Error("hg-engine make failed: " + stderr);
-                return false;
-            }
-            if (!string.IsNullOrWhiteSpace(stdout)) AppLogger.Info("hg-engine make stdout: " + stdout);
+            exitCode = proc.ExitCode;
             return true;
         }
 
