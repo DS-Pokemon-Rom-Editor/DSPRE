@@ -227,10 +227,10 @@ namespace DSPRE.Avalonia.ViewModels.World
             int newId = MapHeader.AddDynamicHeader(newmap, source);
             _removedHeaders.Clear();   // a restore would land on a different number now
             RaiseUndoState();
-            OnPropertyChanged(nameof(RemoveTip));
 
             _headerListNames.Add(newId.ToString("D3") + MapHeader.NameSeparator + newmap);
             _internalNames.Add(newmap);
+            OnPropertyChanged(nameof(RemoveTip));
             LoadLocationIndices();
             RebuildTree();
             SelectHeader((ushort)newId);
