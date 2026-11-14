@@ -206,9 +206,13 @@ namespace DSPRE.Avalonia.ViewModels.Items
             if (HiddenItems.Count > 0) SelectedHiddenItem = HiddenItems[0];
         }
 
-        public void AddHiddenItem()
+        public async System.Threading.Tasks.Task AddHiddenItemAsync()
         {
-            if (!HgEngineProject.IsActive && HiddenItems.Count >= _hiddenMaxCapacity) return;
+            if (!HgEngineProject.IsActive && HiddenItems.Count >= _hiddenMaxCapacity)
+            {
+                await DialogHelper.ShowInfoAsync("The table is full. Remove an entry first.", "Hidden items");
+                return;
+            }
             HashSet<ushort> used = new HashSet<ushort>(HiddenItems.Select(h => h.ScriptID));
             // DP and Pt take the lowest free script, whose flag is one the game already sets aside.
             ushort sid = ShowHiddenReuseNote ? (ushort)0 : (ushort)95;
@@ -227,9 +231,10 @@ namespace DSPRE.Avalonia.ViewModels.Items
             List<int> users = HiddenItemUsers(_selectedHiddenItem.ScriptID);
             if (users.Count > 0)
             {
-                await DialogHelper.ShowErrorAsync(
-                    $"Event file {string.Join(", ", users.Take(5))}{(users.Count > 5 ? " and more" : "")} still uses this entry. Change or delete those events first.",
-                    "Hidden items");
+                string files = string.Join(", ", users.Take(5)) + (users.Count > 5 ? " and more" : "");
+                await DialogHelper.ShowErrorAsync(users.Count == 1
+                    ? $"Event file {files} still uses this entry. Change or delete its events first."
+                    : $"Event files {files} still use this entry. Change or delete those events first.", "Hidden items");
                 return;
             }
             int idx = HiddenItems.IndexOf(_selectedHiddenItem);
