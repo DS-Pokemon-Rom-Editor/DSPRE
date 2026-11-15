@@ -14,6 +14,14 @@ namespace DSPRE.ROMFiles
         public List<byte[]> CmdParams;
         public string Name;
 
+        /// <summary>A parameter as one byte or its first two. A 4-byte one loses its top half.</summary>
+        public static int ParamValue(byte[] data)
+        {
+            if (data == null || data.Length == 0) return 0;
+            if (data.Length == 1) return data[0];
+            return BitConverter.ToUInt16(data, 0);
+        }
+
         public ScriptCommand(ushort id, List<byte[]> parameterData)
         {
             this.Id = id;
