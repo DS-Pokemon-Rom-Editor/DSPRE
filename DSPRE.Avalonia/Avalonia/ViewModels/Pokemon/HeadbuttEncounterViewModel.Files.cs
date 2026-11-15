@@ -55,7 +55,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _specialGroupActive = false;
             BuildEncounterRows();
             RefreshGroups();
-            ShowGroupTrees();
+            RedrawIfTreeCellsMoved();
+            SelectFirstGroup();
             Dirty();
             SaveNotice.Imported($"headbutt file {_selFile}", path);
         }

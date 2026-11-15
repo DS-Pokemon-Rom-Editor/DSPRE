@@ -52,15 +52,25 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             catch (Exception ex) { AppLogger.Error("Headbutt matrix resolve failed (file " + _selFile + "): " + ex.Message); }
         }
 
+        private HashSet<(int x, int y)> _drawnCells;
+
+        // New tree cells aren't in the scene, so it has to be rebuilt.
+        private void RedrawIfTreeCellsMoved()
+        {
+            if (_matrix != null && (_drawnCells == null || !HeaderCells().SetEquals(_drawnCells))) DisplayMap();
+        }
+
         // Renders the header's cells and any cell with a tree, once per file.
         private void DisplayMap()
         {
             Model3D = null;
+            _drawnCells = null;
             try
             {
                 if (_matrix == null) { MapInfo = "No map for this file."; MapLoaded?.Invoke(this, EventArgs.Empty); RefreshTreeMarkers(); return; }
 
                 HashSet<(int x, int y)> include = HeaderCells();
+                _drawnCells = include;
                 if (include.Count == 0 && _headerId == MapHeader.Everywhere)
                 {
                     MapInfo = "Header 0 has no map.";

@@ -185,6 +185,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             return 0;
         }
 
+        private void SelectFirstGroup()
+        {
+            if (_file.NormalTreeGroups.Count > 0) SelectedNormalGroupIndex = 0;
+            else if (_file.SpecialTreeGroups.Count > 0) SelectedSpecialGroupIndex = 0;
+            else ShowGroupTrees();
+        }
+
         private void LoadFile(int index)
         {
             try
@@ -215,8 +222,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 // The map renders once per file, as in the Event editor; picking a group only re-marks trees.
                 ResolveMatrix();
                 DisplayMap();
-                if (_file.NormalTreeGroups.Count > 0) SelectedNormalGroupIndex = 0;
-                else if (_file.SpecialTreeGroups.Count > 0) SelectedSpecialGroupIndex = 0;
+                SelectFirstGroup();
             }
             catch (Exception ex)
             {

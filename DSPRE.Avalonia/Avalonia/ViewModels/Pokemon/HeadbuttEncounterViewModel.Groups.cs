@@ -21,6 +21,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
     {
         private void RefreshGroups()
         {
+            // Refilling the lists drops the selection. The caller sets it again.
+            _selGroup = -1;
+            OnPropertyChanged(nameof(SelectedNormalGroupIndex));
+            OnPropertyChanged(nameof(SelectedSpecialGroupIndex));
             NormalTreeGroups.Clear();
             for (int i = 0; i < _file.NormalTreeGroups.Count; i++) NormalTreeGroups.Add($"Group {i + 1}");
             SpecialTreeGroups.Clear();
@@ -36,10 +40,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             OnPropertyChanged(nameof(CanAddTree));
             OnPropertyChanged(nameof(AddTreeHelp));
             SelectedGroupTrees.Clear();
-            if (_file == null || _selGroup < 0) return;
-            BindingList<HeadbuttTreeGroup> groups = _specialGroupActive ? _file.SpecialTreeGroups : _file.NormalTreeGroups;
-            if (_selGroup >= groups.Count) return;
-            List<HeadbuttTree> trees = groups[_selGroup].Trees;
+            if (_file == null) return;
+            HeadbuttTreeGroup group = CurrentGroup();
+            if (group == null) _selGroup = -1;
+            else if (StatusText == NoGroupPicked) StatusText = "";
+            List<HeadbuttTree> trees = group?.Trees ?? new List<HeadbuttTree>();
             // Only used slots show, since empty ones read 65535, 65535; the name keeps the slot number.
             for (int i = 0; i < trees.Count; i++)
                 if (!trees[i].IsUnused)
@@ -50,7 +55,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             OnPropertyChanged(nameof(SelectedTreeIndex));
             OnPropertyChanged(nameof(GroupTreeSummary));
             RefreshTreeMarkers();   // the map is already built for the whole file, only re-mark this group
-            FocusGroup();
+            if (group != null) FocusGroup();
         }
 
         /// <summary>Raised with the selected group's centre in normalized render space.</summary>
@@ -80,6 +85,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
         }
 
+        private const string NoGroupPicked = "Select a tree group in this list first.";
+
         private HeadbuttTreeGroup CurrentGroup()
         {
             if (_file == null || _selGroup < 0) return null;
@@ -100,7 +107,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>Adds a copy of the selected group, trees and all, and selects it.</summary>
         public void DuplicateGroup(bool special)
         {
-            if (_file == null || _specialGroupActive != special || CurrentGroup() is not HeadbuttTreeGroup group) return;
+            if (_file == null) return;
+            if (_specialGroupActive != special || CurrentGroup() is not HeadbuttTreeGroup group) { StatusText = NoGroupPicked; return; }
             BindingList<HeadbuttTreeGroup> groups = special ? _file.SpecialTreeGroups : _file.NormalTreeGroups;
             groups.Add(new HeadbuttTreeGroup(group));
             Dirty();
@@ -110,15 +118,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public void RemoveGroup(bool special)
         {
-            if (_file == null || _specialGroupActive != special || _selGroup < 0) return;
+            if (_file == null) return;
+            if (_specialGroupActive != special || CurrentGroup() == null) { StatusText = NoGroupPicked; return; }
             BindingList<HeadbuttTreeGroup> groups = special ? _file.SpecialTreeGroups : _file.NormalTreeGroups;
-            if (_selGroup >= groups.Count) return;
             int keep = Math.Min(_selGroup, groups.Count - 2);
             groups.RemoveAt(_selGroup);
             Dirty();
             RefreshGroups();
             if (keep >= 0) { if (special) SelectedSpecialGroupIndex = keep; else SelectedNormalGroupIndex = keep; }
-            else ShowGroupTrees();
+            else SelectFirstGroup();
         }
 
         /// <summary>Makes the group's first empty slot a tree, on another tree's cell or 0,0.</summary>

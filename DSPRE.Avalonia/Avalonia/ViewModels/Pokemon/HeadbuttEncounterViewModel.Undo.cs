@@ -40,9 +40,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _file = new HeadbuttEncounterFile((ushort)System.Math.Max(0, _selFile), state);
             BuildEncounterRows();
             RefreshGroups();
-            _selGroup = group;
+            _selGroup = Math.Min(group, (special ? _file.SpecialTreeGroups : _file.NormalTreeGroups).Count - 1);
             _specialGroupActive = special;
-            ShowGroupTrees();
+            RedrawIfTreeCellsMoved();
+            if (_selGroup < 0) SelectFirstGroup(); else ShowGroupTrees();
             bool dirty = _undo.IsDirty;
             if (_dirty != dirty) { _dirty = dirty; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         }
