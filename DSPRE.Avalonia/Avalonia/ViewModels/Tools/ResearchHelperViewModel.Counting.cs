@@ -83,26 +83,36 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             return count;
         }
 
-        private static int CountFlagInScriptFile(ScriptFile sf, int flagNum)
+        private static int CountFlagInScriptFile(ScriptFile sf, int flagNum, Dictionary<ushort, ScriptCommandInfo> dict)
         {
             int count = 0;
             if (sf.AllScripts != null)
-                foreach (ScriptCommandContainer s in sf.AllScripts) count += CountFlagInCommands(s.Commands, flagNum);
+                foreach (ScriptCommandContainer s in sf.AllScripts) count += CountFlagInCommands(s.Commands, flagNum, dict);
             if (sf.AllFunctions != null)
-                foreach (ScriptCommandContainer f in sf.AllFunctions) count += CountFlagInCommands(f.Commands, flagNum);
+                foreach (ScriptCommandContainer f in sf.AllFunctions) count += CountFlagInCommands(f.Commands, flagNum, dict);
             return count;
         }
 
-        private static int CountFlagInCommands(List<ScriptCommand> commands, int flagNum)
+        // The only commands with a literal flag, always first. The FromVar ones take a variable.
+        private static readonly HashSet<string> FlagCommands = new HashSet<string> { "SetFlag", "ClearFlag", "CheckFlag" };
+
+        private static bool TakesFlag(ScriptCommand cmd, Dictionary<ushort, ScriptCommandInfo> dict)
+        {
+            ScriptCommandInfo info = null;
+            if (cmd.Id is ushort id) dict?.TryGetValue(id, out info);
+            string name = info?.LegacyName;
+            return FlagCommands.Contains(string.IsNullOrEmpty(name) ? ScriptWalker.BareName(cmd) : name);
+        }
+
+        private static int CountFlagInCommands(List<ScriptCommand> commands, int flagNum, Dictionary<ushort, ScriptCommandInfo> dict)
         {
             int count = 0;
             if (commands == null) return 0;
             foreach (ScriptCommand cmd in commands)
             {
-                if (cmd.CmdParams == null) continue;
-                foreach (byte[] p in cmd.CmdParams)
-                    if (p.Length >= 2 && ScriptCommand.ParamValue(p) == flagNum && flagNum < 0x4000)
-                        count++;
+                if (cmd.CmdParams == null || cmd.CmdParams.Count == 0 || !TakesFlag(cmd, dict)) continue;
+                byte[] p = cmd.CmdParams[0];
+                if (p.Length >= 2 && ScriptCommand.ParamValue(p) == flagNum && flagNum < 0x4000) count++;
             }
             return count;
         }

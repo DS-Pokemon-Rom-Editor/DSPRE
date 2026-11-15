@@ -81,7 +81,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             // The battle-message table and the phone book, from the same scanner trainer removal uses.
             if (TrainerReferenceScanner.TryFindTableReferences(trainerId, out List<TrainerReference> tables, out string tableError))
                 foreach (TrainerReference reference in tables) TrainerWatcherResults.Add(TrainerUsageResult.From(reference));
-            else StatusText = tableError;
+            else { StatusText = tableError; return; }
 
             StatusText = $"Found {Plural.Of(TrainerWatcherResults.Count, "use")} of trainer {trainerId}";
         }
@@ -95,7 +95,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 for (int i = 0; i < eventFile.Overworlds.Count; i++)
                 {
                     Overworld ow = eventFile.Overworlds[i];
-                    if (ow.Type != (ushort)Overworld.OwType.TRAINER) continue;
+                    if (OverworldEventTypes.Find(RomInfo.GameFamily, ow.Type)?.IsTrainer != true) continue;
 
                     if (TrainerScripts.TrainerIdFor(ow.ScriptNumber) != trainerId) continue;
                     bool isPartner = TrainerScripts.IsDouble(ow.ScriptNumber);
@@ -246,7 +246,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 return;
             }
 
-            if (result.Type == "Pokégear phonebook")
+            if (result.Type == "Pokégear phone book")
             {
                 AvaloniaEditorLauncher.OpenPokegearPhoneBook(result.Index);
                 return;

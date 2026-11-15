@@ -1171,8 +1171,13 @@ namespace DSPRE.ROMFiles
                 string legacy = LegacyNameOf?.Invoke(cmd.Id.Value);
                 if (!string.IsNullOrEmpty(legacy)) return legacy;
             }
-            // ScriptCommand.name is the command plus its formatted parameters; the command is the first word.
-            string full = cmd.Name ?? "";
+            return BareName(cmd);
+        }
+
+        /// <summary>The command word alone, without the parameters Name carries after it.</summary>
+        public static string BareName(ScriptCommand cmd)
+        {
+            string full = cmd?.Name ?? "";
             int space = full.IndexOf(' ');
             return space < 0 ? full : full.Substring(0, space);
         }

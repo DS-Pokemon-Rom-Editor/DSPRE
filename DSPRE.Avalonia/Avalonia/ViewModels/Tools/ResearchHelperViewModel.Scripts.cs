@@ -93,9 +93,10 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 }
             }
 
+            Dictionary<ushort, ScriptCommandInfo> commandInfoDict = RomInfo.GetScriptCommandInfoDict();
             foreach (ScriptFile sf in _cachedScriptFiles)
             {
-                int count = CountFlagInScriptFile(sf, flagNum);
+                int count = CountFlagInScriptFile(sf, flagNum, commandInfoDict);
                 if (count > 0)
                     FlagResults.Add(new FlagUsageResult
                     {
