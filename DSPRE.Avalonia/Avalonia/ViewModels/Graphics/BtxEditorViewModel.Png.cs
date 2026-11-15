@@ -37,7 +37,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 // Both palettes share the pixels, so the imported one keeps its slot order.
                 byte[] newData = BTX0.WriteKeepingPalette(_btxData, import, CurrentPaletteIndex, out string writeError);
                 if (newData == null) return writeError;
-                if (!apply) return null;
+                if (!apply || newData.AsSpan().SequenceEqual(_btxData)) return null;
                 _btxData = newData;
 
                 uint key = _owKeys[_selectedIndex];
@@ -179,6 +179,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 _btxData = newData;
                 TouchFile(targetAppearanceId);
                 _modifiedFiles[targetAppearanceId] = newData;
+                if (!_originalProfiles.ContainsKey(targetAppearanceId)) _originalProfiles[targetAppearanceId] = metadataPatch.Current();
                 _metadataPatches[targetAppearanceId] = metadataPatch;
                 _knownPatches[targetAppearanceId] = metadataPatch;
 

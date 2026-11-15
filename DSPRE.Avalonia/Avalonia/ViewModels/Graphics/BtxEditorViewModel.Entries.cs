@@ -132,11 +132,16 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (image != null && OverworldSourceFiles.Check(members[(int)templateMember], image) is string problem) return problem;
 
             if (!HgEngine.HgEngineOverworlds.TryAddNpc((int)templateMember, out int tag, out int gfx, out HgEngineOverworlds.Member added, out error)) return error;
+            // The checkout has the NPC now, so the rest runs even when a step fails.
+            string trouble = null;
             if (image != null && OverworldSourceFiles.Write(added, image) is string written)
-                return $"NPC {tag} was added but its picture couldn't be saved: {written}";
+            {
+                trouble = $"NPC {tag} was added but its picture couldn't be saved: {written}";
+                image = null;
+            }
             int props = RomInfo.OverworldTable.TryGetValue(cloneFrom, out (uint spriteID, ushort properties) clone) ? clone.properties : 0;
             if (props != 0 && !HgEngine.HgEngineOverworlds.TrySetProperties(tag, props, out error))
-                return $"NPC {tag} was added but its properties couldn't be copied: {error}";
+                trouble ??= $"NPC {tag} was added but its properties couldn't be copied: {error}";
 
             try
             {
@@ -146,7 +151,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                return $"NPC {tag} was added to the checkout, but DSPRE's copy of the textures couldn't follow ({ex.Message}). Build to bring it in line.";
+                trouble ??= $"NPC {tag} was added to the checkout, but DSPRE's copy of the textures couldn't follow ({ex.Message}). Build to bring it in line.";
             }
 
             RomInfo.ReadOWTable();
@@ -155,7 +160,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             SelectEntry(_owKeys.IndexOf((uint)tag));
             OnPropertyChanged(nameof(CanAddEntry));
             StatusText = $"Added NPC {tag}.";
-            return null;
+            return trouble;
         }
 
         private static bool TryBuildRawBtx(uint templateMember, string rawBtxPath, out byte[] stagedImage, out string error)

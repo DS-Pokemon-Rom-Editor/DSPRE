@@ -21,10 +21,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
     public partial class BtxEditorViewModel
     {
         // Applying a state makes an entry pending only where it differs from the project now.
-        private sealed record OwState(Dictionary<uint, byte[]> Files, Dictionary<uint, int[]> Render);
+        private sealed record OwState(Dictionary<uint, byte[]> Files, Dictionary<uint, int[]> Render, Dictionary<uint, byte[]> Profiles);
         private readonly Dictionary<uint, byte[]> _originalFiles = new();
         private readonly Dictionary<uint, int[]> _originalRender = new();
         private readonly Dictionary<uint, OverworldSpriteProfileMetadataPatch> _knownPatches = new();
+        private readonly Dictionary<uint, byte[]> _originalProfiles = new();
         private ByteStateUndo _undo;
         public bool CanUndo => _undo?.CanUndo == true;
         public bool CanRedo => _undo?.CanRedo == true;
@@ -53,7 +54,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             foreach (uint key in _originalRender.Keys)
                 render[key] = _pendingRender.TryGetValue(key, out OverworldSpriteTableExpansion.OwRenderState r)
                     ? new[] { r.DrawType, r.ShadowType, r.FootmarkType, r.ReflectType } : DiskRender(key);
-            return DSPRE.Avalonia.UndoJson.Take(new OwState(files, render));
+            Dictionary<uint, byte[]> profiles = new Dictionary<uint, byte[]>();
+            foreach ((uint key, OverworldSpriteProfileMetadataPatch known) in _knownPatches)
+                profiles[key] = _metadataPatches.TryGetValue(key, out OverworldSpriteProfileMetadataPatch pending) ? pending.Target() : known.Current();
+            return DSPRE.Avalonia.UndoJson.Take(new OwState(files, render, profiles));
         }
 
         private void ApplyState(byte[] state)
@@ -71,7 +75,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 else
                 {
                     _modifiedFiles[key] = want;
-                    if (_knownPatches.TryGetValue(key, out OverworldSpriteProfileMetadataPatch patch)) _metadataPatches[key] = patch;
+                    StageProfile(key, s);
                 }
             }
             foreach (uint key in _originalRender.Keys)
@@ -87,8 +91,20 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             LoadEntry(_selectedIndex);
         }
 
+        // The profile value that goes with the file: a patch from what the project holds now, or none.
+        private void StageProfile(uint key, OwState s)
+        {
+            _metadataPatches.Remove(key);
+            if (!_knownPatches.TryGetValue(key, out OverworldSpriteProfileMetadataPatch known)) return;
+            byte[] want = s.Profiles != null && s.Profiles.TryGetValue(key, out byte[] p) ? p : _originalProfiles.GetValueOrDefault(key);
+            byte[] now = known.Current();
+            if (want == null || now == null || want.AsSpan().SequenceEqual(now)) return;
+            _metadataPatches[key] = known.Between(now, want);
+        }
+
         private void ResetUndo()
         {
+            _originalProfiles.Clear();
             _originalFiles.Clear();
             _originalRender.Clear();
             _knownPatches.Clear();

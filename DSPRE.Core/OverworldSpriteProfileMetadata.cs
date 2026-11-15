@@ -35,6 +35,33 @@ namespace DSPRE
             _sourceTo = to;
         }
 
+        /// <summary>Null when the value can't be read.</summary>
+        public byte[] Current()
+        {
+            if (_sourceTag >= 0)
+            {
+                if (!HgEngineOverworlds.TryReadTable(out List<HgEngineOverworlds.Entry> rows, out _)) return null;
+                HgEngineOverworlds.Entry row = rows.Find(r => r.Tag == _sourceTag);
+                return row == null ? null : BitConverter.GetBytes(row.Properties);
+            }
+            try
+            {
+                byte[] all = File.ReadAllBytes(_path);
+                if (_offset < 0 || _replacement.Length > all.Length - _offset) return null;
+                return all.AsSpan((int)_offset, _replacement.Length).ToArray();
+            }
+            catch (Exception ex) when (AppLogger.Noted("OverworldSpriteProfileMetadata.Current", ex))
+            {
+                return null;
+            }
+        }
+
+        public byte[] Target() => _sourceTag >= 0 ? BitConverter.GetBytes(_sourceTo) : (byte[])_replacement.Clone();
+
+        public OverworldSpriteProfileMetadataPatch Between(byte[] from, byte[] to) => _sourceTag >= 0
+            ? new OverworldSpriteProfileMetadataPatch(_sourceTag, BitConverter.ToInt32(from, 0), BitConverter.ToInt32(to, 0))
+            : new OverworldSpriteProfileMetadataPatch(_path, _offset, (byte[])from.Clone(), (byte[])to.Clone());
+
         public bool TryApply(out string error) => _sourceTag >= 0
             ? TrySetSource(_sourceFrom, _sourceTo, out error)
             : TryReplace(_expected, _replacement, out error);
