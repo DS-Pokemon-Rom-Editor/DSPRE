@@ -48,13 +48,28 @@ runs:
         set -euo pipefail
         echo "Building rotom $(git -C Tools/rotom-src rev-parse HEAD)"
 
-        cargo build --release --locked --workspace --manifest-path Tools/rotom-src/Cargo.toml
+        if [ "$RUNNER_OS" = "macOS" ]; then
+          echo '#ifndef __ASSEMBLER__' > /tmp/fix_strchrnul.h
+          echo '#include <string.h>' >> /tmp/fix_strchrnul.h
+          echo '#define strchrnul nitroarc_strchrnul' >> /tmp/fix_strchrnul.h
+          echo '#endif' >> /tmp/fix_strchrnul.h
+          CFLAGS="-include /tmp/fix_strchrnul.h" cargo build --release --locked --workspace --manifest-path Tools/rotom-src/Cargo.toml
+        else
+          cargo build --release --locked --workspace --manifest-path Tools/rotom-src/Cargo.toml
+        fi
 
         built=Tools/rotom-src/target/release
         mkdir -p "$OUTPUT_DIRECTORY"
-        cp "$built/rotom" "$built/rotom-lsp" "$OUTPUT_DIRECTORY/"
-        # rotom links nitroarc statically, so the macOS build doesn't ship the library.
-        if [ "$RUNNER_OS" = "Linux" ]; then cp "$built/libnitroarc_ffi.so" "$OUTPUT_DIRECTORY/"; fi
+        cp "$built/rotom" "$OUTPUT_DIRECTORY/"
+        cp "$built/rotom-lsp" "$OUTPUT_DIRECTORY/"
+        ls $built
+        lib_file=$(find $built -name "libnitroarc_ffi.*" \( -name "*.dylib" -o -name "*.so" \) | head -n 1)
+        cp "$lib_file" "$OUTPUT_DIRECTORY/"
+
+        if [ "$RUNNER_OS" = "macOS" ]; then
+          install_name_tool -add_rpath "@executable_path" "$OUTPUT_DIRECTORY/rotom"
+        fi
+
         chmod +x "$OUTPUT_DIRECTORY/rotom" "$OUTPUT_DIRECTORY/rotom-lsp"
 
     - name: Check rotom version
