@@ -23,6 +23,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private void Remember(Step before, bool merge = false)
         {
             if (before.Animation == null && before.Layout == null) return;
+            if (!merge) _lastEditFrame = _lastMoveCell = _lastMovePiece = -1;
             // The step starts from exactly what was there before this edit.
             if (!merge) _history.Capture(before, coalesce: true);
             _history.Capture(Now(), coalesce: merge);
@@ -43,6 +44,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
 
             Dirty = true;
+            // Undoing an add or a removal changes the sequence count, so the list is rebuilt.
+            if (Sequences.Count != _file.Sequences.Count)
+            {
+                int keep = Math.Clamp(_sequence, 0, _file.Sequences.Count - 1);
+                FillSequences();
+                SelectedSequence = keep;
+            }
             FillFrames();
             RefreshSequenceRows();
             StatusText = "";
