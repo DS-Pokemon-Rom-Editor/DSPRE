@@ -25,7 +25,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 using IDisposable pending = Pending.Reading();
                 _hgss = IsHgss ? HgssTouchScreen.Load() : null;
                 _poketch = HasPoketch ? PoketchScreen.Load() : null;
-                if (HasPoketch) LoadAnimation();
+                if (HasPoketch) LoadAnimation(keepSequence: true);
                 if (RomInfo.FieldTouchMenuTextArchive >= 0)
                     try { _words = new TextArchive(RomInfo.FieldTouchMenuTextArchive); } catch (Exception ex) { AppLogger.WarnOnce("BottomScreenEditorViewModel.LoadScreens", ex); _words = null; }
             }

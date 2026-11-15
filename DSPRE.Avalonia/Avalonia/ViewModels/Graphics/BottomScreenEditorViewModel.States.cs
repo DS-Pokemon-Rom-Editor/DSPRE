@@ -73,7 +73,15 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public int SelectedApp
         {
             get => _app;
-            set { if (Set(ref _app, value)) { Stop(); LoadAnimation(); Refresh(); } }
+            set
+            {
+                if (!Set(ref _app, value)) return;
+                Stop();
+                _bank = 0;
+                OnPropertyChanged(nameof(CellBank));
+                LoadAnimation();
+                Refresh();
+            }
         }
 
         /// <summary>The game's Id for the app shown (not its list index), or -1 for the frame.</summary>

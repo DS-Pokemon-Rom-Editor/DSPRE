@@ -41,13 +41,19 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             get => _sequence;
             set
             {
-                if (!Set(ref _sequence, value)) return;
+                int to = Math.Clamp(value, 0, LastSequence);
+                if (!Set(ref _sequence, to))
+                {
+                    if (to != value) OnPropertyChanged();
+                    return;
+                }
                 OnPropertyChanged(nameof(PlayNote));
                 if (Playing) { Stop(); Play(); }
             }
         }
 
         public int PlaySequenceCount => _animation?.Sequences.Count ?? 0;
+        public int LastSequence => Math.Max(0, PlaySequenceCount - 1);
 
         public string PlayNote
         {
@@ -63,28 +69,31 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     4 => "loops backwards",
                     _ => "once",
                 };
-                return $"Sequence {_sequence} of {_animation.Sequences.Count}, "
+                return $"(0 to {_animation.Sequences.Count - 1}): "
                      + $"{s.Frames.Count} frame{(s.Frames.Count == 1 ? "" : "s")}, {mode}";
             }
         }
 
-        private void LoadAnimation()
+        private void LoadAnimation(bool keepSequence = false)
         {
+            int keep = keepSequence ? _sequence : 0;
             _animation = null;
             _sequence = 0;
-            _motion = PoketchScreen.Motion.Still;
+            if (!keepSequence) _motion = PoketchScreen.Motion.Still;
             try
             {
                 PoketchApps.App app = _app >= 1 && _app <= PoketchApps.All.Length ? PoketchApps.All[_app - 1] : null;
-                if (app == null || app.Animation < 0) return;
-                using (Pending.Reading())
-                    _animation = NanrFile.Read(NitroBgCodec.Inflate(new ScriptNarc(DirNames.Poketch).Get(app.Animation)));
+                if (app != null && app.Animation >= 0)
+                    using (Pending.Reading())
+                        _animation = NanrFile.Read(NitroBgCodec.Inflate(new ScriptNarc(DirNames.Poketch).Get(app.Animation)));
             }
             catch (Exception ex) { AppLogger.Error("Poketch animation: " + ex.Message); }
+            if (_animation != null && keep < _animation.Sequences.Count) _sequence = keep;
 
             OnPropertyChanged(nameof(CanPlay));
-            OnPropertyChanged(nameof(PlaySequence));
             OnPropertyChanged(nameof(PlaySequenceCount));
+            OnPropertyChanged(nameof(LastSequence));
+            OnPropertyChanged(nameof(PlaySequence));
             OnPropertyChanged(nameof(PlayNote));
         }
 
@@ -131,6 +140,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (!CanPlay || _sequence < 0 || _sequence >= _animation.Sequences.Count) { Stop(); return; }
             NanrFile.Sequence s = _animation.Sequences[_sequence];
             if (s.Frames.Count == 0) { Stop(); return; }
+            // A reload can leave the run past the end of a shorter sequence.
+            _frame = Math.Clamp(_frame, 0, s.Frames.Count - 1);
+            _shown = Math.Clamp(_shown, 0, s.Frames.Count - 1);
 
             int due = (int)(_clock.Elapsed.TotalSeconds * 60 * TicksPerRefresh);
             if (due - _ticksRun > 4 * TicksPerRefresh) _ticksRun = due - 1;
@@ -178,8 +190,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _motion = new PoketchScreen.Motion(turn, across, down, shiftX, shiftY);
 
             int cell = _animation.CellOf(_sequence, _shown);
-            if (!Set(ref _bank, Math.Max(0, cell))) Draw();
-            else { OnPropertyChanged(nameof(BankNote)); Draw(); }
+            Set(ref _bank, Math.Max(0, cell), nameof(CellBank));
+            Draw();
         }
 
         // Stand-in wording to fill the boxes. A script supplies the real words.

@@ -126,7 +126,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             get => _bank;
             set
             {
-                if (!Set(ref _bank, Math.Max(0, value))) return;
+                int to = Math.Clamp(value, 0, LastBank);
+                if (!Set(ref _bank, to))
+                {
+                    if (to != value) OnPropertyChanged();
+                    return;
+                }
                 // Stepping a bank by hand stops the run so the two don't fight over the picture.
                 Stop();
                 _motion = PoketchScreen.Motion.Still;
@@ -143,11 +148,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 if (!Set(ref _bankCount, value)) return;
                 OnPropertyChanged(nameof(HasBanks));
+                OnPropertyChanged(nameof(LastBank));
                 OnPropertyChanged(nameof(BankNote));
             }
         }
         public bool HasBanks => _bankCount > 1;
-        public string BankNote => _bankCount <= 0 ? null : $"Cell bank {_bank + 1} of {_bankCount}";
+        public int LastBank => Math.Max(0, _bankCount - 1);
+        public string BankNote => _bankCount <= 0 ? null : $"Cell bank (0 to {LastBank})";
 
         private bool _showSprites = true;
         /// <summary>The moving pieces, drawn over the screen where the game would put them.</summary>
