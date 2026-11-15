@@ -19,7 +19,6 @@ using DSPRE.Csv;
 
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
-    // ── Per-flag observable item ──────────────────────────────────────────────
     public class FlagEntry : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -36,8 +35,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    public class MoveDataEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
+    public partial class MoveDataEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -45,7 +43,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)
         { if (Equals(f, v)) return false; f = v; OnPropertyChanged(n); return true; }
 
-        // ─── hg-engine source banner ──────────────────────────────────────────────
         public string HgEngineBanner => DSPRE.HgEngine.HgEngineProject.BannerText;
         public bool ShowHgEngineBanner => HgEngineBanner != null;
 
@@ -54,7 +51,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public string SourceLoadError { get => _sourceLoadError; private set { if (Set(ref _sourceLoadError, value)) OnPropertyChanged(nameof(HasSourceLoadError)); } }
         public bool HasSourceLoadError => _sourceLoadError != null;
 
-        // ── IEditorWithUnsavedChanges ─────────────────────────────────────────
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty || _pendingMove != null || _pendingImports.Count > 0;
         public string UnsavedChangesDescription =>
@@ -94,7 +90,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private string _status = string.Empty;
         public string StatusText { get => _status; private set => Set(ref _status, value); }
 
-        // ── Move names / type names / battle sequences ─────────────────────────
         public ObservableCollection<string> MoveNames    { get; } = new();
         public ObservableCollection<string> TypeNames    { get; } = new();
         public ObservableCollection<string> SplitNames   { get; } = new();
@@ -104,7 +99,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public ObservableCollection<string> ContestEffectNames { get; } = new();
         public ObservableCollection<FlagEntry> Flags     { get; } = new();
 
-        // ── Current move selection ─────────────────────────────────────────────
         public int MaxMoveIndex => Math.Max(0, MoveNames.Count - 1);
         private int _selectedMoveIndex;
         public int SelectedMoveIndex
@@ -121,456 +115,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
         }
 
-        // ── Move fields ────────────────────────────────────────────────────────
-        private int _typeIndex;
-        public int TypeIndex { get => _typeIndex; set { if (Set(ref _typeIndex, value) && _currentFile != null) { _currentFile.Movetype = (PokemonType)value; SetDirty(); } } }
-
-        private int _splitIndex;
-        public int SplitIndex { get => _splitIndex; set { if (Set(ref _splitIndex, value) && _currentFile != null) { _currentFile.Split = (MoveSplit)value; SetDirty(); } } }
-
-        private int _rangeIndex;
-        public int RangeIndex { get => _rangeIndex; set { if (Set(ref _rangeIndex, value) && _currentFile != null) { _currentFile.Target = AttackRangeDescriptions[value].value; SetDirty(); } } }
-
-        private int _battleSeqIndex;
-        public int BattleSeqIndex { get => _battleSeqIndex; set { if (value < 0) return; if (Set(ref _battleSeqIndex, value) && _currentFile != null) { _currentFile.Battleeffect = (ushort)value; SetDirty(); } } }
-
-        private int _contestIndex;
-        public int ContestIndex { get => _contestIndex; set { if (Set(ref _contestIndex, value) && _currentFile != null) { _currentFile.ContestConditionType = (ContestCondition)value; SetDirty(); } } }
-
-        private int _power;
-        public int Power { get => _power; set { if (Set(ref _power, value) && _currentFile != null) { _currentFile.Damage = (byte)value; SetDirty(); } } }
-
-        private int _accuracy;
-        public int Accuracy { get => _accuracy; set { if (Set(ref _accuracy, value) && _currentFile != null) { _currentFile.Accuracy = (byte)value; SetDirty(); } } }
-
-        private int _pp;
-        public int PP { get => _pp; set { if (Set(ref _pp, value) && _currentFile != null) { _currentFile.Pp = (byte)value; SetDirty(); } } }
-
-        private int _priority;
-        public int Priority { get => _priority; set { if (Set(ref _priority, value) && _currentFile != null) { _currentFile.Priority = (sbyte)value; SetDirty(); } } }
-
-        private int _sideEffectPct;
-        // Vanilla ranges, widened for a move that already holds a value outside them so loading never changes it.
-        public int AccuracyMax { get; private set; } = 100;
-        public int SideEffectMax { get; private set; } = 100;
-        public int PriorityMin { get; private set; } = -7;
-        public int PriorityMax { get; private set; } = 5;
-
-        private void SetLimits(int accMax, int effMax, int priMin, int priMax)
-        {
-            AccuracyMax = accMax; SideEffectMax = effMax; PriorityMin = priMin; PriorityMax = priMax;
-            OnPropertyChanged(nameof(AccuracyMax)); OnPropertyChanged(nameof(SideEffectMax));
-            OnPropertyChanged(nameof(PriorityMin)); OnPropertyChanged(nameof(PriorityMax));
-        }
-
-        public int SideEffectPct { get => _sideEffectPct; set { if (Set(ref _sideEffectPct, value) && _currentFile != null) { _currentFile.SideEffectProbability = (byte)value; SetDirty(); } } }
-
-        private int _contestAppeal;
-        public int ContestAppeal
-        {
-            get => _contestAppeal;
-            set
-            {
-                // A combo with no selection reports -1; that is not a value to store.
-                if (value < 0 || !Set(ref _contestAppeal, value)) return;
-                OnPropertyChanged(nameof(ContestHearts));
-                if (_currentFile != null) { _currentFile.ContestAppeal = (byte)value; SetDirty(); }
-            }
-        }
-        public int ContestHearts => _contestAppeal < MoveData.ContestEffectAppeal.Length ? MoveData.ContestEffectAppeal[_contestAppeal] / 10 : 0;
-        public bool HasContestEffects => RomInfo.GameFamily != RomInfo.GameFamilies.HGSS;
-
-        // Effect labels, plus plain numbers for any id past them so every stored byte can show.
-        private void SyncContestEffects(int need)
-        {
-            List<string> labels = LabelStore.Get("move_contest_effects").ToList();
-            for (int i = labels.Count; i <= need; i++) labels.Add(i.ToString());
-            ListSync.Apply(ContestEffectNames, labels);
-        }
-
-        private string _description = string.Empty;
-        public string Description
-        {
-            get => _description;
-            set
-            {
-                value = (value ?? "").Replace("\r\n", "\n");
-                if (Set(ref _description, value)) { RaiseTextChecks(); if (!_loading) SetDirty(); }
-            }
-        }
-
-        // ── Description and TM bag text ────────────────────────────────────────
-        // Kept with real line breaks here; the archives store them as \n.
-        private EditableTextBank _descBank, _bagBank;
-        // hg-engine keeps bag descriptions in one archive per item generation.
-        private readonly Dictionary<int, EditableTextBank> _bagBanks = new();
-        private int[] _machineMoves = Array.Empty<int>();
-        private string _savedDescription = "", _bagText = "", _savedBagText = "";
-        private int _bagItem = -1;
-
-        public bool DescriptionReadOnly => _descBank?.ReadOnlyReason != null || _pendingMove != null;
-        public string DescriptionReadOnlyReason => _pendingMove != null ? null : _descBank?.ReadOnlyReason;
-        public bool HasBag => _bagItem >= 0;
-        public string BagLabel { get; private set; } = "";
-        public bool BagReadOnly => _bagBank?.ReadOnlyReason != null;
-        public string BagText
-        {
-            get => _bagText;
-            set
-            {
-                value = (value ?? "").Replace("\r\n", "\n");
-                if (Set(ref _bagText, value)) { RaiseTextChecks(); if (!_loading) SetDirty(); }
-            }
-        }
-
-        private static string Shown(string stored) => (stored ?? "").Replace("\\n", "\n");
-        private static string Stored(string shown) => (shown ?? "").Replace("\n", "\\n");
-
-        private void LoadTexts()
-        {
-            bool was = _loading;
-            _loading = true;
-            _savedDescription = _pendingMove == null && _descBank != null && _currentId < _descBank.Messages.Count
-                ? Shown(_descBank.Messages[_currentId]) : "";
-            Description = _savedDescription;
-            int machine = Array.IndexOf(_machineMoves, _currentId);
-            _bagItem = -1;
-            if (machine >= 0 && _pendingMove == null && DSPRE.Editors.TmItemDescriptions.TryLocate(TMEditor.MachineItemId(machine), out int bank, out int line))
-            {
-                if (!_bagBanks.TryGetValue(bank, out _bagBank)) _bagBanks[bank] = _bagBank = new EditableTextBank(bank);
-                if (line < _bagBank.Messages.Count) _bagItem = line;
-            }
-            BagLabel = machine >= 0 ? TMEditor.MachineLabelFromIndex(machine) : "";
-            _savedBagText = _bagItem >= 0 ? Shown(_bagBank.Messages[_bagItem]) : "";
-            BagText = _savedBagText;
-            _loading = was;
-            foreach (string n in new[] { nameof(DescriptionReadOnly), nameof(DescriptionReadOnlyReason), nameof(HasBag), nameof(BagLabel), nameof(BagReadOnly) })
-                OnPropertyChanged(n);
-            if (IsBagTab && !HasBag) PreviewTab = 0;
-            RefreshPreview();
-        }
-
-        /// <summary>Writes the description and bag text when they changed; returns an error, or null.</summary>
-        private string SaveTexts()
-        {
-            if (_descBank != null && _description != _savedDescription && _currentId < _descBank.Messages.Count)
-            {
-                _descBank.Messages[_currentId] = Stored(_description);
-                if (_descBank.Save(this) is string error) return error;
-                _savedDescription = _description;
-            }
-            if (_bagItem >= 0 && _bagText != _savedBagText)
-            {
-                _bagBank.Messages[_bagItem] = Stored(_bagText);
-                if (_bagBank.Save(this) is string error) return error;
-                _savedBagText = _bagText;
-            }
-            return null;
-        }
-
-        // The game prints these as stored, without wrapping, so anything past the box is cut off.
-        public const int DescriptionWidth = 120, DescriptionLines = 5, BagLines = 3;
-        private FieldFont _systemFont;
-        private bool _systemFontTried;
-        public FieldFont SystemFont
-        {
-            get
-            {
-                if (_systemFontTried) return _systemFont;
-                _systemFontTried = true;
-                try { _systemFont = FieldFontCharacters.Ready ? FieldFont.LoadSystemFont() : null; }
-                catch (Exception ex) { AppLogger.Warn("Move data editor: system font not read: " + ex.Message); }
-                return _systemFont;
-            }
-        }
-        public string DescriptionWarning => Overflow(_description, DescriptionWidth, DescriptionLines);
-        public string BagWarning => Overflow(_bagText, MoveTextScreens.BagTextWidth, BagLines);
-        public bool HasDescriptionWarning => DescriptionWarning != null;
-        public bool HasBagWarning => BagWarning != null;
-
-        private string Overflow(string text, int width, int maxLines)
-        {
-            List<string> lines = (text ?? "").Split('\n').ToList();
-            if (lines.Count > 1 && lines[^1].Length == 0) lines.RemoveAt(lines.Count - 1);
-            if (lines.Count > maxLines) return $"Only {maxLines} lines show";
-            if (SystemFont == null) return null;
-            for (int i = 0; i < lines.Count; i++)
-            {
-                int over = SystemFont.Measure(lines[i]) - width;
-                if (over > 0) return $"Line {i + 1} runs {over} px past the box";
-            }
-            return null;
-        }
-
-        private void RaiseTextChecks()
-        {
-            foreach (string n in new[] { nameof(DescriptionWarning), nameof(HasDescriptionWarning), nameof(BagWarning), nameof(HasBagWarning) })
-                OnPropertyChanged(n);
-            RefreshPreview();
-        }
-
-        // ── In-game preview ───────────────────────────────────────────────────
-        private readonly MoveTextScreens _screens = new();
-        private int _previewTab;
-        /// <summary>0 summary, 1 battle, 2 relearner, 3 the bag's TM pocket.</summary>
-        public int PreviewTab
-        {
-            get => _previewTab;
-            set { if (Set(ref _previewTab, value)) { OnPropertyChanged(nameof(IsBagTab)); RefreshPreview(); } }
-        }
-        public bool IsBagTab => _previewTab == 3;
-        public global::Avalonia.Media.Imaging.Bitmap Preview { get; private set; }
-
-        private void RefreshPreview()
-        {
-            if (_descBank == null) return;
-            MoveTextScreens.Screen screen = (MoveTextScreens.Screen)Math.Clamp(_previewTab, 0, 3);
-            byte[] rgba = _screens.Render(screen, screen == MoveTextScreens.Screen.Bag ? _bagText : _description, SystemFont);
-            Preview = rgba == null ? null : DSPRE.Avalonia.ImageConverter.FromRgba(rgba, 256, 192);
-            OnPropertyChanged(nameof(Preview));
-        }
-
-        private sealed record UndoState(byte[] Move, string Description, string Bag, bool Punching, bool Sound, bool[] Extra);
-        private byte[] Snapshot() => DSPRE.Avalonia.UndoJson.Take(new UndoState(_currentFile.ToByteArray(), _description, _bagText, IsPunching, IsSound,
-            ExtraLists.Select(l => l.IsListed).ToArray()));
-
-        /// <summary>One of hg-engine's own move lists, ticked for the move shown.</summary>
-        public sealed class ExtraListRow : INotifyPropertyChanged
-        {
-            private readonly MoveDataEditorViewModel _owner;
-            public HgEngine.HgEngineMoveList.Info Info { get; }
-            public List<ushort> Moves { get; }
-            public List<ushort> Saved { get; set; }
-            public string Label => Info.Label;
-            public string Tip => Info.Tip;
-
-            public ExtraListRow(MoveDataEditorViewModel owner, HgEngine.HgEngineMoveList.Info info, List<ushort> moves)
-            {
-                _owner = owner; Info = info; Moves = moves; Saved = moves.ToList();
-            }
-
-            public bool IsListed
-            {
-                get => Moves.Contains((ushort)_owner._currentId);
-                set
-                {
-                    if (_owner._loading || _owner._currentFile == null || value == IsListed) return;
-                    if (value) Moves.Add((ushort)_owner._currentId); else Moves.Remove((ushort)_owner._currentId);
-                    Raise();
-                    _owner.SetDirty();
-                }
-            }
-
-            public bool Changed => !Moves.SequenceEqual(Saved);
-            public void Raise() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsListed)));
-            public event PropertyChangedEventHandler PropertyChanged;
-        }
-
-        public ObservableCollection<ExtraListRow> ExtraLists { get; } = new ObservableCollection<ExtraListRow>();
-        public bool HasExtraLists => ExtraLists.Count > 0;
-
-        private void LoadExtraLists()
-        {
-            ExtraLists.Clear();
-            if (!HgEngine.HgEngineProject.IsActive) return;
-            foreach (HgEngine.HgEngineMoveList.Info info in HgEngine.HgEngineMoveList.Extra)
-            {
-                if (HgEngine.HgEngineMoveList.WhyNot(info) != null) continue;
-                try { ExtraLists.Add(new ExtraListRow(this, info, HgEngine.HgEngineMoveList.Load(info))); }
-                catch (InvalidDataException ex) { AppLogger.Warn($"Move list {info.Symbol}: {ex.Message}"); }
-            }
-            OnPropertyChanged(nameof(HasExtraLists));
-        }
-
-        // ── Ability based lists: the punching and sound moves the battle code keeps as tables ──
-        private MoveCategoryTable _punching, _sound;
-        private List<ushort> _savedPunching, _savedSound;
-        public string AbilityWhyNot { get; private set; }
-        public bool HasAbilityWhyNot => AbilityWhyNot != null;
-        public bool HasPunchingList => _punching != null;
-        public bool HasSoundList => _sound != null;
-
-        /// <summary>Raised when a list still sits in the game's overlay; the view offers the expansion patch, then applies the tick.</summary>
-        public event Action<MoveCategoryTable.Kind, bool> NeedsExpansion;
-
-        /// <summary>Raised whenever either list's membership may have changed, for windows showing a list.</summary>
-        public event Action ListsChanged;
-
-        /// <summary>The moves on a list as held here now, unsaved ticks included, lowest id first.</summary>
-        public List<(int Id, string Name)> ListedMoves(MoveCategoryTable.Kind kind)
-        {
-            MoveCategoryTable table = kind == MoveCategoryTable.Kind.Punching ? _punching : _sound;
-            List<(int Id, string Name)> rows = new List<(int Id, string Name)>();
-            if (table == null) return rows;
-            foreach (ushort id in table.Moves.OrderBy(m => m))
-                rows.Add((id, id < MoveNames.Count ? MoveNames[id] : $"Move {id}"));
-            return rows;
-        }
-
-        public bool IsPunching
-        {
-            get => _punching != null && _punching.Contains(_currentId);
-            set => SetListed(_punching, MoveCategoryTable.Kind.Punching, value, nameof(IsPunching), nameof(PunchingNote));
-        }
-
-        public bool IsSound
-        {
-            get => _sound != null && _sound.Contains(_currentId);
-            set => SetListed(_sound, MoveCategoryTable.Kind.Sound, value, nameof(IsSound), nameof(SoundNote));
-        }
-
-        private void SetListed(MoveCategoryTable table, MoveCategoryTable.Kind kind, bool listed, string flag, string note)
-        {
-            if (table == null || _loading || _currentFile == null) return;
-            if (listed == table.Contains(_currentId)) return;
-            // The game's own list has no room to speak of, so every change goes to the moved list.
-            if (!table.InExpansion) { OnPropertyChanged(flag); NeedsExpansion?.Invoke(kind, listed); return; }
-            if (!table.Set(_currentId, listed))
-            {
-                OnPropertyChanged(flag);
-                StatusText = $"The {MoveCategoryTable.NameOf(kind)} move list is full.";
-                return;
-            }
-            OnPropertyChanged(flag);
-            OnPropertyChanged(note);
-            SetDirty();
-            ListsChanged?.Invoke();
-        }
-
-        public string PunchingNote => _punching == null ? null : "Iron Fist boosts these. The trainer AI counts the boost itself.";
-        public string SoundNote => _sound == null ? null : "Soundproof blocks these. The trainer AI keeps its own sound list; the guide shows how to edit it.";
-
-        private void LoadCategories()
-        {
-            _punching = _sound = null;
-            _savedPunching = _savedSound = null;
-            AbilityWhyNot = null;
-            {
-                try
-                {
-                    if (MoveCategoryTable.WhyNot(MoveCategoryTable.Kind.Punching) is string why) AbilityWhyNot = why;
-                    else
-                    {
-                        _punching = MoveCategoryTable.Load(MoveCategoryTable.Kind.Punching);
-                        _sound = MoveCategoryTable.Load(MoveCategoryTable.Kind.Sound);
-                        _savedPunching = _punching.Moves.ToList();
-                        _savedSound = _sound.Moves.ToList();
-                    }
-                }
-                catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is InvalidOperationException)
-                {
-                    _punching = _sound = null;
-                    AbilityWhyNot = ex.Message;
-                }
-            }
-            LoadExtraLists();
-            RaiseCategories();
-        }
-
-        /// <summary>Shows the ticks as the lists hold them, after a declined or failed expansion.</summary>
-        public void RefreshCategories() => RaiseCategories();
-
-        private void RaiseCategories()
-        {
-            foreach (string n in new[] { nameof(IsPunching), nameof(IsSound), nameof(PunchingNote), nameof(SoundNote),
-                                         nameof(AbilityWhyNot), nameof(HasAbilityWhyNot), nameof(HasPunchingList), nameof(HasSoundList) })
-                OnPropertyChanged(n);
-            foreach (ExtraListRow row in ExtraLists) row.Raise();
-            ListsChanged?.Invoke();
-        }
-
-        private bool CategoriesChanged =>
-            (_punching != null && !_punching.Moves.SequenceEqual(_savedPunching)) || (_sound != null && !_sound.Moves.SequenceEqual(_savedSound))
-            || ExtraLists.Any(l => l.Changed);
-
-        private void RevertCategories()
-        {
-            if (_punching != null) { _punching.Moves.Clear(); _punching.Moves.AddRange(_savedPunching); }
-            if (_sound != null) { _sound.Moves.Clear(); _sound.Moves.AddRange(_savedSound); }
-            foreach (ExtraListRow row in ExtraLists) { row.Moves.Clear(); row.Moves.AddRange(row.Saved); }
-            RaiseCategories();
-        }
-
-        /// <summary>Writes the lists that changed. On hg-engine this runs inside the move's save session, so all commit together.</summary>
-        private string WriteCategories()
-        {
-            if (!CategoriesChanged) return null;
-            try
-            {
-                if (_punching != null && !_punching.Moves.SequenceEqual(_savedPunching)) _punching.Save();
-                if (_sound != null && !_sound.Moves.SequenceEqual(_savedSound)) _sound.Save();
-                foreach (ExtraListRow row in ExtraLists.Where(l => l.Changed)) HgEngine.HgEngineMoveList.Save(row.Info, row.Moves);
-                return null;
-            }
-            catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is InvalidOperationException || ex is UnauthorizedAccessException)
-            {
-                return ex.Message;
-            }
-        }
-
-        private void MarkCategoriesSaved()
-        {
-            if (_punching != null) _savedPunching = _punching.Moves.ToList();
-            if (_sound != null) _savedSound = _sound.Moves.ToList();
-            foreach (ExtraListRow row in ExtraLists) row.Saved = row.Moves.ToList();
-        }
-
         private string _title = "Move data editor";
         public string Title { get => _title; private set => Set(ref _title, value); }
 
-        // ── Private state ──────────────────────────────────────────────────────
         private MoveData _currentFile;
         private int _currentId;
         private bool _loading;
 
-        // ── Undo / redo (ISupportsUndo) ────────────────────────────────────────
-        // Snapshots are the move file's bytes; consecutive edits within CoalesceMs collapse into one step.
-        private readonly UndoHistory<byte[]> _history = new();
-        private System.DateTime _lastCaptureUtc = System.DateTime.MinValue;
-        private const int CoalesceMs = 500;
-
-        public bool CanUndo => _history.CanUndo;
-        public bool CanRedo => _history.CanRedo;
-        public void Undo() { if (_history.CanUndo) ApplyState(_history.Undo()); }
-        public void Redo() { if (_history.CanRedo) ApplyState(_history.Redo()); }
-
-        private void RaiseUndoState() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
-
-        private void RecordUndoSnapshot()
-        {
-            if (_currentFile == null) return;
-            bool coalesce = (System.DateTime.UtcNow - _lastCaptureUtc).TotalMilliseconds < CoalesceMs;
-            _history.Capture(Snapshot(), coalesce);
-            _lastCaptureUtc = System.DateTime.UtcNow;
-            RaiseUndoState();
-        }
-
-        private void ApplyState(byte[] bytes)
-        {
-            if (bytes == null) return;
-            UndoState state = DSPRE.Avalonia.UndoJson.Read<UndoState>(bytes);
-            _loading = true;
-            _currentFile = new MoveData(new MemoryStream(state.Move));
-            PopulateFromCurrentFile();
-            Description = state.Description;
-            BagText = state.Bag;
-            _punching?.Set(_currentId, state.Punching);
-            _sound?.Set(_currentId, state.Sound);
-            for (int i = 0; i < ExtraLists.Count && state.Extra != null && i < state.Extra.Length; i++)
-            {
-                ushort id = (ushort)_currentId;
-                if (state.Extra[i] && !ExtraLists[i].Moves.Contains(id)) ExtraLists[i].Moves.Add(id);
-                else if (!state.Extra[i]) ExtraLists[i].Moves.Remove(id);
-            }
-            _loading = false;
-            RaiseCategories();
-
-            _dirty = _history.IsDirty;
-            RefreshDirty();
-            RaiseUndoState();
-        }
-
-        // ── Constructor ────────────────────────────────────────────────────────
         public MoveDataEditorViewModel()
         {
             if (Design.IsDesignMode)
@@ -612,7 +163,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             OnPropertyChanged(nameof(MaxMoveIndex));
             LoadCategories();
             foreach (string n in typeNames) TypeNames.Add(n);
-            // Split / contest dropdowns come from the customisable LabelStore (Tools ▸ Edit Dropdown Labels).
             ReloadSplitContest();
             foreach ((ushort value, string name, string description) r in AttackRangeDescriptions) RangeItems.Add($"{r.name}: {r.description}");
 
@@ -697,254 +247,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>Unsubscribes from app-wide events; call when the editor window closes.</summary>
         public void Detach() { AppEvents.LabelsChanged -= OnLabelsChanged; AppEvents.NamesChanged -= OnNamesChanged; AppEvents.RomPatchStateChanged -= OnPatchStateChanged; }
 
-        // ── Commands ──────────────────────────────────────────────────────────
-
-        public async Task SaveCommandAsync()
-        {
-            if (_currentFile == null) return;
-            if (HgEngineProject.IsActive && SourceLoadError != null)
-            {
-                await DialogHelper.ShowErrorAsync($"Move {_currentId} wasn't saved.\n{SourceLoadError}", "Move data editor");
-                return;
-            }
-            int id = _currentId;
-            MoveData move = _currentFile;
-            HgEngineMoveExpansion.PendingMove pending = _pendingMove;
-            // The shown record wins over an import staged for the same move.
-            Dictionary<int, MoveData> records = new Dictionary<int, MoveData>(_pendingImports) { [id] = move };
-            string subject = pending != null ? pending.DisplayName : records.Count > 1 ? $"{records.Count} moves" : $"Move {id}";
-
-            // The next sync rebuilds from the source, so a save that can't write it fails.
-            if (HgEngineProject.IsActive)
-            {
-                (bool saved, string error) = await HgEngineSave.RunAsync(() => pending != null
-                    ? (HgEngineMoveExpansion.TryCommitMove(pending, move, out string addError) ? null : addError)
-                    : (HgEngineMoveSource.TryWriteMany(records, out string writeError) ? WriteCategories() : writeError));
-                if (!saved)
-                {
-                    if (error != null) await DialogHelper.ShowErrorAsync($"{subject} not saved.\n{error}", "Move data editor");
-                    return;
-                }
-            }
-
-            _pendingImports.Clear();
-            StatusText = string.Empty;
-            if (pending != null)
-            {
-                HgEngineMoveExpansion.CompleteAdd(pending);
-                _pendingMove = null;
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.MoveData });
-                move.SaveToFileDefaultDir(id, showSuccessMessage: false);
-                SyncNames();
-                AppEvents.RaiseNamesChanged();
-                _selectedMoveIndex = id;
-                OnPropertyChanged(nameof(SelectedMoveIndex));
-                LoadMove(id);   // reads back through the new define
-            }
-            else
-            {
-                foreach ((int importId, MoveData imported) in records)
-                    if (importId != id) imported.SaveToFileDefaultDir(importId, showSuccessMessage: false);
-                move.SaveToFileDefaultDir(id, showSuccessMessage: false);
-                if (SaveTexts() is string textError)
-                {
-                    await DialogHelper.ShowErrorAsync($"The text of move {id} wasn't saved.\n{textError}", "Move data editor");
-                    return;
-                }
-                if (!HgEngineProject.IsActive && WriteCategories() is string listError)
-                {
-                    await DialogHelper.ShowErrorAsync($"Move {id} was saved, but its punching or sound listing wasn't.\n{listError}", "Move data editor");
-                    return;
-                }
-                MarkCategoriesSaved();
-                _history.MarkSaved();   // current state is now the on-disk baseline (undo can still go past it)
-            }
-            SetClean();
-            MoveInfo.Forget();
-            SaveNotice.Saved(UnsavedChangesDescription);
-            RaiseUndoState();
-        }
-
-        /// <summary>On hg-engine the move comes from Moves.c; the built copy only fills a field the entry lacks,
-        /// which the save then reports.</summary>
-        private static MoveData LoadRecord(int id, out string error)
-        {
-            error = null;
-            if (!HgEngineProject.IsActive) return new MoveData(id);
-            string built = Path.Combine(GameDirs[DirNames.MoveData].unpackedDir, id.ToString("D4"));
-            MoveData move = PlainFiles.Exists(built) ? new MoveData(id) : new MoveData(new MemoryStream(new byte[16]));
-            HgEngineMoveSource.TryLoad(id, move, out error);
-            return move;
-        }
-
-        /// <summary>hg-engine-only: shapes a brand new move and opens it for editing. Nothing is written
-        /// until Save, and Discard drops it.</summary>
-        public async Task AddNewMoveAsync(Window owner)
-        {
-            if (!HgEngineProject.IsActive) return;
-            if (_pendingMove != null || _pendingImports.Count > 0)
-            {
-                string first = _pendingMove != null ? "Save or discard the new move first." : "Save or discard the imported moves first.";
-                await DialogHelper.ShowErrorAsync(first, "Add new move", owner);
-                return;
-            }
-            if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, owner, "move", "Save them before adding a new move?")) return;
-
-            string name = await DialogHelper.PromptTextAsync("New move's display name:", "Add new move", owner: owner);
-            if (name == null) return;
-
-            MoveData move = new MoveData(new MemoryStream(new byte[16]));
-            if (!HgEngineMoveExpansion.TryPrepareMove(name, out HgEngineMoveExpansion.PendingMove pending, out string error)
-                || !HgEngineMoveExpansion.TryReadTemplate(pending, move, out error))
-            {
-                await DialogHelper.ShowErrorAsync($"Couldn't add the move:\n{error}", "Add new move", owner);
-                return;
-            }
-
-            _returnIndex = _selectedMoveIndex;
-            _pendingMove = pending;
-            SyncNames();
-
-            _loading = true;
-            _currentId = pending.Id;
-            _currentFile = move;
-            SourceLoadError = null;
-            PopulateFromCurrentFile();
-            _loading = false;
-            _selectedMoveIndex = pending.Id;
-            OnPropertyChanged(nameof(SelectedMoveIndex));
-
-            _dirty = false;
-            LoadTexts();
-            _history.Reset(Snapshot());
-            _lastCaptureUtc = System.DateTime.MinValue;
-            RefreshDirty();
-            RaiseUndoState();
-        }
-
-        public async Task ExportCommandAsync(Window owner)
-        {
-            string path = await DialogHelper.SaveFileAsync(owner, "Export move data to CSV",
-                new[] { DialogHelper.CsvFilter, DialogHelper.AllFilter }, "MoveData.csv");
-            if (path == null) return;
-
-            try
-            {
-                string[] typeNames = GetTypeNames();
-                // What is on disk, without this editor's unsaved moves.
-                string[] names = RomInfo.GetAttackNames();
-                SortedDictionary<int, MoveData> moves = new SortedDictionary<int, MoveData>();
-                List<string> skipped = new List<string>();
-                if (HgEngineProject.IsActive)
-                {
-                    string builtDir = GameDirs[DirNames.MoveData].unpackedDir;
-                    MoveData BuiltOrEmpty(int id) => PlainFiles.Exists(Path.Combine(builtDir, id.ToString("D4"))) ? new MoveData(id) : new MoveData(new MemoryStream(new byte[16]));
-                    if (!HgEngineMoveSource.TryLoadMany(Enumerable.Range(0, names.Length), BuiltOrEmpty, out moves, out skipped, out string loadError))
-                    {
-                        await DialogHelper.ShowErrorAsync($"Couldn't export:\n{loadError}", "Move data editor");
-                        return;
-                    }
-                }
-                else
-                {
-                    for (int i = 0; i < names.Length; i++) moves[i] = new MoveData(i);
-                }
-
-                using (StreamWriter writer = new StreamWriter(path))
-                    MoveDataCsv.Write(writer, names, typeNames, moves.Select(kv => (kv.Key, kv.Value)));
-
-                SaveNotice.Exported(path);
-                if (skipped.Count > 0)
-                    await DialogHelper.ShowInfoAsync($"{skipped.Count} moves couldn't be read and were left out:\n" + string.Join("\n", skipped.Take(10))
-                        + (skipped.Count > 10 ? $"\n...and {skipped.Count - 10} more" : ""), "Moves left out");
-            }
-            catch (Exception ex) when (AppLogger.Noted("MoveDataEditorViewModel.ExportCommandAsync", ex))
-            {
-                await DialogHelper.ShowErrorAsync($"Couldn't export:\n{ex.Message}", "Move data editor");
-            }
-        }
-
-        public async Task ImportCommandAsync(Window owner)
-        {
-            if (_pendingMove != null)
-            {
-                await DialogHelper.ShowErrorAsync("Save or discard the new move first.", "Import CSV", owner);
-                return;
-            }
-            // Compare against unsaved imports too, so a second import shows the right changes.
-            MoveDataCsv importer = new MoveDataCsv(MoveNames.ToArray(), GetTypeNames(), id =>
-            {
-                if (id == _currentId && _currentFile != null) return (_currentFile, SourceLoadError);
-                if (_pendingImports.TryGetValue(id, out MoveData staged)) return (staged, null);
-                try
-                {
-                    MoveData move = LoadRecord(id, out string loadError);
-                    return (move, loadError);
-                }
-                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { return (null, ex.Message); }
-            });
-            CsvImportSession session = await CsvImportReviewView.ReviewAsync(owner, importer);
-            if (session == null) return;
-            List<MoveDataCsv.Entry> entries = session.Accepted.Select(r => (MoveDataCsv.Entry)r.Value).ToList();
-            // A row that only renames leaves the move data as it is, so it stages nothing.
-            List<MoveDataImportEntry> changed = entries.Select(e => e.Move).Where(DataDiffers).ToList();
-            if (changed.Count > 0) await StageImportedDataAsync(changed);
-            SaveNotice.Imported($"{entries.Count} moves", session.FileName);
-            if (!HgEngineProject.IsActive) await OfferRenamesAsync(owner, entries.Where(e => e.NameDiffers).ToList());
-        }
-
-        private bool DataDiffers(MoveDataImportEntry e)
-        {
-            MoveData m;
-            if (e.MoveID == _currentId && _currentFile != null) m = _currentFile;
-            else if (!_pendingImports.TryGetValue(e.MoveID, out m))
-            {
-                try { m = LoadRecord(e.MoveID, out string loadError); if (loadError != null) return true; }
-                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { return true; }
-            }
-            return m.Movetype != e.MoveType || m.Split != e.Split || m.Damage != e.Power || m.Accuracy != e.Accuracy || m.Priority != e.Priority
-                || m.SideEffectProbability != e.SideEffectProbability || m.Pp != e.PP || m.Target != e.Range;
-        }
-
-        // Names live in a text archive, not in move data, so a rename is written straight away as the Text editor would.
-        private async Task OfferRenamesAsync(Window owner, List<MoveDataCsv.Entry> differing)
-        {
-            if (differing.Count == 0) return;
-            (string Label, bool IsChecked)[] options = differing
-                .Select(e => ($"{e.Move.MoveID}: {e.Move.MoveName} to {e.CsvName}", false))
-                .Append(("Title Case (Water Gun, not WATER GUN)", true)).ToArray();
-            (bool yes, bool[] ticked) = await DialogHelper.AskWithChecksAsync(
-                "The file names these moves differently. Rename the ticked ones in the ROM? Names are saved now.",
-                "Rename moves", "Rename", "Keep ROM names", options, owner);
-            if (!yes) return;
-            bool titleCase = ticked[^1];
-            try
-            {
-                TextArchive names = new TextArchive(AttackNamesTextNumber);
-                int renamed = 0;
-                for (int i = 0; i < differing.Count; i++)
-                {
-                    int id = differing[i].Move.MoveID;
-                    if (!ticked[i] || id < 0 || id >= names.Messages.Count) continue;
-                    string name = differing[i].CsvName;
-                    names.Messages[id] = titleCase ? System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(name.ToLowerInvariant()) : name;
-                    renamed++;
-                }
-                if (renamed == 0) return;
-                names.SaveToExpandedDir(AttackNamesTextNumber, showSuccessMessage: false);
-                SyncNames();
-                AppEvents.RaiseNamesChanged();
-                StatusText = renamed == 1 ? "Renamed 1 move." : $"Renamed {renamed} moves.";
-            }
-            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
-            {
-                await DialogHelper.ShowErrorAsync("Renaming failed:\n" + ex.Message, "Rename moves", owner);
-            }
-        }
-
-
-
-        // ── Private helpers ────────────────────────────────────────────────────
         private void SetDirty() { if (_loading) return; _dirty = true; RefreshDirty(); RecordUndoSnapshot(); }
         private void SetClean() { _dirty = false; RefreshDirty(); }
         private void RefreshDirty() { OnPropertyChanged(nameof(HasUnsavedChanges)); }
@@ -1009,14 +311,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             ContestAppeal   = _currentFile.ContestAppeal;
             SetLimits(Math.Max(100, acc), Math.Max(100, eff), Math.Min(-7, pri), Math.Max(5, pri));
 
-            // Range
             int rangeIdx = 0;
             for (int i = 0; i < AttackRangeDescriptions.Length; i++)
                 if (AttackRangeDescriptions[i].value == _currentFile.Target) { rangeIdx = i; break; }
             _rangeIndex = rangeIdx;
             OnPropertyChanged(nameof(RangeIndex));
 
-            // Flags
             string[] flagNames = Enum.GetNames(typeof(MoveFlags)).Skip(1).ToArray();
             for (int i = 0; i < Flags.Count && i < flagNames.Length; i++)
                 Flags[i].IsSet = (_currentFile.FlagField & (1 << i)) != 0;
@@ -1029,69 +329,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             for (int i = 0; i < Flags.Count; i++)
                 if (Flags[i].IsSet) field |= (byte)(1 << i);
             _currentFile.FlagField = field;
-        }
-
-        /// <summary>Imported values wait in memory, keyed by move id, until Save or Discard. The current move takes
-        /// them directly and its undo history restarts from them.</summary>
-        private async Task StageImportedDataAsync(List<MoveDataImportEntry> entries)
-        {
-            int staged = 0;
-            bool currentChanged = false;
-            List<string> failures = new List<string>();
-            foreach (MoveDataImportEntry e in entries)
-            {
-                MoveData move;
-                if (e.MoveID == _currentId && _currentFile != null)
-                {
-                    if (SourceLoadError != null) { failures.Add($"Move {e.MoveID}: {SourceLoadError}"); continue; }
-                    move = _currentFile;
-                    currentChanged = true;
-                }
-                else if (!_pendingImports.TryGetValue(e.MoveID, out move))
-                {
-                    try
-                    {
-                        // Effect, flags and contest aren't in the CSV, so on hg-engine they come from Moves.c.
-                        move = LoadRecord(e.MoveID, out string loadError);
-                        if (loadError != null) { failures.Add($"Move {e.MoveID}: {loadError}"); continue; }
-                    }
-                    catch (Exception ex)
-                    {
-                        AppLogger.Error($"Couldn't read move {e.MoveID}: {ex.Message}");
-                        failures.Add($"Move {e.MoveID}: {ex.Message}");
-                        continue;
-                    }
-                }
-                move.Movetype  = e.MoveType;
-                move.Split     = e.Split;
-                move.Damage    = e.Power;
-                move.Accuracy  = e.Accuracy;
-                move.Priority  = e.Priority;
-                move.SideEffectProbability = e.SideEffectProbability;
-                move.Pp        = e.PP;
-                move.Target    = e.Range;
-                if (!ReferenceEquals(move, _currentFile)) _pendingImports[e.MoveID] = move;
-                staged++;
-            }
-
-            if (currentChanged)
-            {
-                _pendingImports[_currentId] = Copy(_currentFile);
-                _loading = true;
-                PopulateFromCurrentFile();
-                _loading = false;
-                _dirty = false;
-                _history.Reset(Snapshot());
-                _lastCaptureUtc = System.DateTime.MinValue;
-                RaiseUndoState();
-            }
-            StatusText = _pendingImports.Count == 0 ? string.Empty
-                : _pendingImports.Count == 1 ? "1 imported move has unsaved changes. Press Save to write them to disk." : $"{_pendingImports.Count} imported moves have unsaved changes. Press Save to write them to disk.";
-            RefreshDirty();
-
-            if (failures.Count == 0) return;
-            string listed = string.Join("\n", failures.Take(10)) + (failures.Count > 10 ? $"\n...and {failures.Count - 10} more" : "");
-            await DialogHelper.ShowErrorAsync($"{Plural.Of(staged, "move")} imported, {failures.Count} not:\n{listed}", "Move data editor");
         }
     }
 }

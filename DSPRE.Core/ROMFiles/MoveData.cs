@@ -135,7 +135,13 @@ namespace DSPRE
             }
         }
 
-        public MoveData(int ID) : this(new FileStream(Path.Combine(RomInfo.GameDirs[DirNames.MoveData].unpackedDir, ID.ToString("D4")), FileMode.Open, FileAccess.Read)) { }
+        private static string BuiltPath(int id) => Path.Combine(RomInfo.GameDirs[DirNames.MoveData].unpackedDir, id.ToString("D4"));
+
+        public MoveData(int ID) : this(new FileStream(BuiltPath(ID), FileMode.Open, FileAccess.Read)) { }
+
+        /// <summary>The built record, or a blank one when the archive has no file for the id.</summary>
+        public static MoveData BuiltOrBlank(int id) =>
+            File.Exists(BuiltPath(id)) ? new MoveData(id) : new MoveData(new MemoryStream(new byte[16]));
 
         public override byte[] ToByteArray()
         {
