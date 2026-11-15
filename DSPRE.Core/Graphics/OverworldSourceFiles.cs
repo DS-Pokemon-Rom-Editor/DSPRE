@@ -59,6 +59,27 @@ namespace DSPRE.Graphics
             }
         }
 
+        /// <summary>Copies one member's PNG and palettes over another's. Null on success.</summary>
+        public static string CopyPicture(HgEngineOverworlds.Member from, HgEngineOverworlds.Member to)
+        {
+            try
+            {
+                if (from.Png == null || to.Png == null) return null;
+                PlainFiles.Copy(from.Png, to.Png, overwrite: true);
+                PlainFiles.Touch(to.Png, DateTime.UtcNow);
+                for (int p = 0; p < Math.Min(from.Palettes.Count, to.Palettes.Count); p++)
+                {
+                    PlainFiles.Copy(from.Palettes[p], to.Palettes[p], overwrite: true);
+                    PlainFiles.Touch(to.Palettes[p], DateTime.UtcNow);
+                }
+                return null;
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                return ex.Message;
+            }
+        }
+
         /// <summary>Why <paramref name="btx"/> can't be saved into this member's PNG and palettes, or null.</summary>
         public static string Check(HgEngineOverworlds.Member member, byte[] btx) => member.Bin != null ? null : Check(member, btx, out _, out _, out _, out _);
 

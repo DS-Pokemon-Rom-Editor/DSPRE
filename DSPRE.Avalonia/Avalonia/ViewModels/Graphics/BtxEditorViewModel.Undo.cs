@@ -63,6 +63,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private void ApplyState(byte[] state)
         {
             OwState s = DSPRE.Avalonia.UndoJson.Read<OwState>(state);
+            bool unreadable = false;
             foreach (uint key in _originalFiles.Keys)
             {
                 byte[] want = s.Files != null && s.Files.TryGetValue(key, out byte[] f) ? f : _originalFiles[key];
@@ -75,7 +76,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 else
                 {
                     _modifiedFiles[key] = want;
-                    StageProfile(key, s);
+                    if (!StageProfile(key, s))
+                    {
+                        _modifiedFiles.Remove(key);
+                        unreadable = true;
+                    }
                 }
             }
             foreach (uint key in _originalRender.Keys)
@@ -89,17 +94,19 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             OnPropertyChanged(nameof(HasUnsavedChanges));
             OnPropertyChanged(nameof(ModifiedCount));
             LoadEntry(_selectedIndex);
+            if (unreadable) StatusText = "Couldn't read that overworld's profile, so its picture wasn't changed.";
         }
 
-        // The profile value that goes with the file: a patch from what the project holds now, or none.
-        private void StageProfile(uint key, OwState s)
+        // Stages the profile value that goes with the file. False when it can't be read.
+        private bool StageProfile(uint key, OwState s)
         {
             _metadataPatches.Remove(key);
-            if (!_knownPatches.TryGetValue(key, out OverworldSpriteProfileMetadataPatch known)) return;
+            if (!_knownPatches.TryGetValue(key, out OverworldSpriteProfileMetadataPatch known)) return true;
             byte[] want = s.Profiles != null && s.Profiles.TryGetValue(key, out byte[] p) ? p : _originalProfiles.GetValueOrDefault(key);
             byte[] now = known.Current();
-            if (want == null || now == null || want.AsSpan().SequenceEqual(now)) return;
-            _metadataPatches[key] = known.Between(now, want);
+            if (want == null || now == null) return false;
+            if (!want.AsSpan().SequenceEqual(now)) _metadataPatches[key] = known.Between(now, want);
+            return true;
         }
 
         private void ResetUndo()

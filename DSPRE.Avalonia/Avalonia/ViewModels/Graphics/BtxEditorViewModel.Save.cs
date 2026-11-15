@@ -90,7 +90,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 // hg-engine rebuilds every texture from the checkout, so the sources are what has to change.
                 if (OverworldSourceFiles.Write((int)sprite, data) is string sourceError)
                 {
-                    if (metadataApplied) patch.TryRollback(out _);
+                    if (metadataApplied && !patch.TryRollback(out string undoError))
+                        return Fail("The overworld wasn't saved:\n" + sourceError + "\n\nIts table entry couldn't be put back either:\n" + undoError);
                     return Fail("The overworld wasn't saved:\n" + sourceError);
                 }
                 ArchiveMembers.Put(DirNames.OWSprites, (int)sprite, data);

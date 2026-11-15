@@ -61,9 +61,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private string _animationInfoText;
         public string AnimationInfoText { get => _animationInfoText; private set => Set(ref _animationInfoText, value); }
 
+        // Delete moves rows a waiting patch points into, and both reset undo, losing track of the patch.
+        private const string ProfilesWaiting = "Save or discard the imported profiles first.";
+
         /// <summary>Adds a custom entry. Without picked art it shares the template's.</summary>
         public string AddEntryWithImage(string appearanceIdText, uint templateMember, uint cloneFrom, string pngPath, string rawBtxPath)
         {
+            if (_metadataPatches.Count > 0) return ProfilesWaiting;
             if (HgEngine.HgEngineProject.IsActive) return AddSourceNpc(templateMember, cloneFrom, pngPath, rawBtxPath);
             if (!TryParseId(appearanceIdText, "Appearance ID", out uint appearanceId, out string error)) return error;
 
@@ -138,6 +142,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 trouble = $"NPC {tag} was added but its picture couldn't be saved: {written}";
                 image = null;
+                if (OverworldSourceFiles.CopyPicture(members[(int)templateMember], added) is string restore)
+                    AppLogger.Warn("Overworld editor: couldn't put the template picture back: " + restore);
             }
             int props = RomInfo.OverworldTable.TryGetValue(cloneFrom, out (uint spriteID, ushort properties) clone) ? clone.properties : 0;
             if (props != 0 && !HgEngine.HgEngineOverworlds.TrySetProperties(tag, props, out error))
@@ -260,6 +266,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string DeleteSelectedEntry()
         {
             if (!HasSelectedEntry) return "No entry selected.";
+            if (_metadataPatches.Count > 0) return ProfilesWaiting;
             uint key = _owKeys[_selectedIndex];
             if (!OverworldSpriteTableExpansion.DeleteEntry(key, out string error)) return error;
 
