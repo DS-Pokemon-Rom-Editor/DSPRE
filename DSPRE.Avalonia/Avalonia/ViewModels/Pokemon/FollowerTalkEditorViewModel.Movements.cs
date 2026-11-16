@@ -23,6 +23,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             MoveRows.Clear();
             for (int n = 1; n <= MoveCount; n++) MoveRows.Add(new MoveRow(this, n));
             _moveChoices = null;
+            ReactionEditor?.Refresh();
         }
 
         private MoveRow _selectedMoveRow;

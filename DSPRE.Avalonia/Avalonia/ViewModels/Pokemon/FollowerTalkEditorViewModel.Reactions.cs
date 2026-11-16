@@ -245,7 +245,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             internal void Refresh()
             {
-                foreach (string n in new[] { nameof(Movement), nameof(Bubble), nameof(SoundKind), nameof(IsEffect), nameof(Effect), nameof(Wait), nameof(Line), nameof(HasLine), nameof(Text), nameof(Note), nameof(MaxLine) })
+                foreach (string n in new[] { nameof(MoveChoices), nameof(Movement), nameof(Bubble), nameof(SoundKind), nameof(IsEffect), nameof(Effect), nameof(Wait), nameof(Line), nameof(HasLine), nameof(Text), nameof(Note), nameof(MaxLine) })
                     PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
             }
         }
