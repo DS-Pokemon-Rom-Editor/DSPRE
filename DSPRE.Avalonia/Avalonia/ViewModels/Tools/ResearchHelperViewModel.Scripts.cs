@@ -32,7 +32,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             }
 
             VariableResults.Clear();
-            StatusText = $"Searching for variable 0x{varNum:X}...";
+            StatusText = $"Searching for variable 0x{varNum:X}";
 
             Dictionary<ushort, ScriptCommandInfo> commandInfoDict = RomInfo.GetScriptCommandInfoDict();
 
@@ -54,7 +54,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 if (count > 0) VariableResults.Add(new VariableUsageResult { FileType = "Event", FileID = ev.ID, UsageCount = count });
             }
 
-            StatusText = $"Found {VariableResults.Count} files using variable 0x{varNum:X}";
+            StatusText = $"Found {Plural.Of(VariableResults.Count, "file")} using variable 0x{varNum:X}";
         }
 
         public void ClearVariableResults() { VariableResults.Clear(); VarSearchText = ""; StatusText = "Variable search cleared"; }
@@ -73,7 +73,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             }
 
             FlagResults.Clear();
-            StatusText = $"Searching for flag 0x{flagNum:X}...";
+            StatusText = $"Searching for flag 0x{flagNum:X}";
 
             foreach (EventFile ev in _cachedEventFiles)
             {
@@ -108,7 +108,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                     });
             }
 
-            StatusText = $"Found {FlagResults.Count} results for flag 0x{flagNum:X}";
+            StatusText = $"Found {Plural.Of(FlagResults.Count, "result")} for flag 0x{flagNum:X}";
         }
 
         public void ClearFlagResults() { FlagResults.Clear(); FlagSearchText = ""; StatusText = "Flag search cleared"; }
@@ -117,7 +117,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         {
             int id = FileWatcherScriptFileId;
             FileWatcherResults.Clear();
-            StatusText = $"Searching for references to script file {id}...";
+            StatusText = $"Searching for references to script file {id}";
 
             int headerCount = RomInfo.GetHeaderCount();
             for (ushort i = 0; i < headerCount; i++)
@@ -134,7 +134,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 catch (Exception caught) when (AppLogger.Noted("ResearchHelperViewModel.SearchScriptFileReferences", caught)) { }   // a header that can't be read is skipped
             }
 
-            StatusText = $"Found {FileWatcherResults.Count} references to script file {id}";
+            StatusText = $"Found {Plural.Of(FileWatcherResults.Count, "reference")} to script file {id}";
         }
 
         private void RefreshScriptIdEntries()
@@ -165,7 +165,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             string label = ScriptIdEntries[scriptId];
 
             ScriptIdResults.Clear();
-            StatusText = $"Searching script file {sf.FileID} for {label}…";
+            StatusText = $"Searching script file {sf.FileID} for {label}";
 
             HashSet<int> assocEventIds = new HashSet<int>();
             int headerCount = RomInfo.GetHeaderCount();
@@ -209,7 +209,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                     }
             }
 
-            StatusText = $"Found {ScriptIdResults.Count} uses of {label}";
+            StatusText = $"Found {Plural.Of(ScriptIdResults.Count, "use")} of {label}";
         }
     }
 }

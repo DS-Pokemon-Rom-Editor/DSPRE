@@ -22,6 +22,9 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         {
             int id = HeaderSearchId;
             int headerCount = RomInfo.GetHeaderCount();
+            HeaderProperties.Clear();
+            IncomingWarps.Clear();
+            OutgoingWarps.Clear();
 
             if (id < 0 || id >= headerCount)
             { StatusText = $"Header ID must be between 0 and {headerCount - 1}."; return; }

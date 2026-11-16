@@ -24,7 +24,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
             int owEntryId = OwEntryIdSearch;
             OwWatcherResults.Clear();
-            StatusText = $"Searching for overworld {owEntryId}…";
+            StatusText = $"Searching for overworld {owEntryId}";
 
             foreach (EventFile eventFile in _cachedEventFiles)
             {
@@ -65,7 +65,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
             int trainerId = SelectedTrainerIndex;
             TrainerWatcherResults.Clear();
-            StatusText = $"Searching for uses of trainer {trainerId}…";
+            StatusText = $"Searching for uses of trainer {trainerId}";
 
             Dictionary<ushort, ScriptCommandInfo> commandInfoDict = RomInfo.GetScriptCommandInfoDict();
             foreach (ScriptFile scriptFile in _cachedScriptFiles)

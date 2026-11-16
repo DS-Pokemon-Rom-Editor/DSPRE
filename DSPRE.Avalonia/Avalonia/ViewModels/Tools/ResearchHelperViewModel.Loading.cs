@@ -23,7 +23,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             if (IsLoading) return;
             IsLoading = true;
             DataLoaded = false;
-            StatusText = "Loading data...";
+            StatusText = "Loading data";
 
             ScriptStats.Clear();
             LevelScriptStats.Clear();
