@@ -39,6 +39,7 @@ namespace DSPRE
         private readonly UndoHistory<State> _history = new();
         private readonly ScriptNarc.Staging _staging;
         private bool _saving;
+        private readonly HashSet<(DirNames, int)> _savedElsewhere = new();
         private bool _halfSaved;
         private object _lastGroup;
 
@@ -87,7 +88,7 @@ namespace DSPRE
         private void WrittenElsewhere((DirNames, int) key)
         {
             if (_saving || !_first.ContainsKey(key)) return;
-            if (!Same(MemberIn(_state, key), MemberIn(_saved, key))) return;
+            if (!Same(MemberIn(_state, key), MemberIn(_saved, key))) { _savedElsewhere.Add(key); return; }
             _first.TryRemove(key, out _);
             LetGo(s => s.Members.Remove(key));
         }
@@ -336,11 +337,19 @@ namespace DSPRE
             return null;
         }
 
-        public void Undo() { if (!_history.CanUndo) return; _state = _history.Undo(); _lastGroup = null; Changed?.Invoke(); LetStaleTextGo(); }
-        public void Redo() { if (!_history.CanRedo) return; _state = _history.Redo(); _lastGroup = null; Changed?.Invoke(); LetStaleTextGo(); }
+        public void Undo() { if (!_history.CanUndo) return; _state = _history.Undo(); _lastGroup = null; Changed?.Invoke(); LetStaleGo(); }
+        public void Redo() { if (!_history.CanRedo) return; _state = _history.Redo(); _lastGroup = null; Changed?.Invoke(); LetStaleGo(); }
 
-        private void LetStaleTextGo()
+        // Drops members and banks saved elsewhere once undo, redo or discard makes them clean.
+        private void LetStaleGo()
         {
+            foreach ((DirNames, int) key in _savedElsewhere.ToList())
+            {
+                if (!Same(MemberIn(_state, key), MemberIn(_saved, key))) continue;
+                _savedElsewhere.Remove(key);
+                _first.TryRemove(key, out _);
+                LetGo(s => s.Members.Remove(key));
+            }
             foreach (int bank in _firstOthers.Values.Select(v => v.Target.TextBank).Where(b => b >= 0).Distinct().ToList())
                 TextWrittenElsewhere(bank);
         }
@@ -356,9 +365,10 @@ namespace DSPRE
             {
                 using (PreviewFileGate.Writing()) SaveMembers();
             }
-            catch { _halfSaved = true; throw; }
+            catch { _halfSaved = true; _savedElsewhere.Clear(); throw; }
             finally { _saving = false; }
             _halfSaved = false;
+            _savedElsewhere.Clear();
             _saved = _state;
             _history.MarkSaved();
             Changed?.Invoke();
@@ -396,7 +406,7 @@ namespace DSPRE
             _history.Reset(_state);
             _lastGroup = null;
             Changed?.Invoke();
-            LetStaleTextGo();
+            LetStaleGo();
         }
     }
 }
