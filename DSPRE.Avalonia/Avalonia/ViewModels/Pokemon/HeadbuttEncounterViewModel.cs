@@ -108,7 +108,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             for (int i = 0; i < _file.SpecialEncounters.Count; i++)
                 SpecialEncounters.Add(new HeadbuttEncRow($"Special {i + 1}", _file.SpecialEncounters[i], Species, Dirty));
         }
-        private void OnTreeChanged() { Dirty(); RefreshTreeMarkers(); }
+        private void OnTreeChanged() { Dirty(); if (!RedrawIfTreeCellsMoved()) RefreshTreeMarkers(); }
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         public bool ShowForms => HgEngineProject.IsActive;

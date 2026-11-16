@@ -130,7 +130,13 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private void WireEvents(HeadbuttEncounterViewModel vm)
         {
             _wired = true;
-            vm.MapLoaded += (_, _) => { GlView.SetModel(VM.Model3D); RefreshGizmo(); };
+            vm.MapLoaded += (_, _) =>
+            {
+                GlView.SetModel(VM.Model3D, keepView: VM.KeepViewOnLoad);
+                // A rebuilt scene is centred and scaled anew, so the view follows the tree being moved.
+                if (VM.KeepViewOnLoad && VM.TrySelectedTreeAnchorNorm(out float nx, out float ny, out float nz)) GlView.LookAt(nx, ny, nz);
+                RefreshGizmo();
+            };
             // Picking a group brings its tree into view, close enough to see the tiles around it.
             vm.GroupFocused += (_, p) => { GlView.LookAt(p.X, p.Y, p.Z); GlView.Distance = 1.2f; };
             vm.MarkersChanged += (_, _) =>

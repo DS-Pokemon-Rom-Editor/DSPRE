@@ -54,10 +54,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private HashSet<(int x, int y)> _drawnCells;
 
+        public bool KeepViewOnLoad { get; private set; }
+
         // New tree cells aren't in the scene, so it has to be rebuilt.
-        private void RedrawIfTreeCellsMoved()
+        private bool RedrawIfTreeCellsMoved()
         {
-            if (_matrix != null && (_drawnCells == null || !HeaderCells().SetEquals(_drawnCells))) DisplayMap();
+            if (_matrix == null || (_drawnCells != null && HeaderCells().SetEquals(_drawnCells))) return false;
+            KeepViewOnLoad = true;
+            try { DisplayMap(); }
+            finally { KeepViewOnLoad = false; }
+            return true;
         }
 
         // Renders the header's cells and any cell with a tree, once per file.
