@@ -15,12 +15,12 @@ namespace DSPRE
     public sealed class PendingArchiveWrites
     {
         /// <summary>Bytes outside the archives that an import can change along with them.</summary>
-        public sealed record Target(string Key, Func<byte[]> Read, Action<byte[]> Write);
+        public sealed record Target(string Key, Func<byte[]> Read, Action<byte[]> Write, int TextBank = -1);
 
         /// <summary>A text archive as a target, saved by the Text editor's writer. Stage <see cref="TextBytes"/>.</summary>
         public static Target Text(string key, int bank, object sender) =>
             new(key, () => TextBytes(new DSPRE.ROMFiles.TextArchive(bank).Messages),
-                b => new DSPRE.ROMFiles.TextArchive(bank, TextLines(b)).SaveToExpandedDir(bank, false, sender));
+                b => new DSPRE.ROMFiles.TextArchive(bank, TextLines(b)).SaveToExpandedDir(bank, false, sender), bank);
 
         public static byte[] TextBytes(List<string> lines) => System.Text.Encoding.UTF8.GetBytes(string.Join("\0", lines));
 
@@ -39,12 +39,17 @@ namespace DSPRE
         private readonly UndoHistory<State> _history = new();
         private readonly ScriptNarc.Staging _staging;
         private bool _saving;
+        private bool _halfSaved;
         private object _lastGroup;
 
         // Every store still in use, so a member another writer saves reaches the ones holding it.
         private static readonly List<WeakReference<PendingArchiveWrites>> Live = new();
 
-        static PendingArchiveWrites() => ArchiveMembers.Written += OnWritten;
+        static PendingArchiveWrites()
+        {
+            ArchiveMembers.Written += OnWritten;
+            DSPRE.ROMFiles.TextArchive.Saved += (_, bank) => ToEachStore(store => store.TextWrittenElsewhere(bank));
+        }
 
         /// <summary>Raised whenever the pending entries, or whether there are any, may have changed.</summary>
         public event Action Changed;
@@ -62,6 +67,9 @@ namespace DSPRE
         }
 
         private static void OnWritten(DirNames dir, int id, byte[] before, byte[] after)
+            => ToEachStore(store => store.WrittenElsewhere((dir, id)));
+
+        private static void ToEachStore(Action<PendingArchiveWrites> tell)
         {
             List<PendingArchiveWrites> stores = new();
             lock (Live)
@@ -69,9 +77,9 @@ namespace DSPRE
                     if (w.TryGetTarget(out PendingArchiveWrites store)) stores.Add(store);
             // A patch is applied from a worker thread, and editors read these stores on the UI thread.
             if (AppMessages.OnUiThread())
-                foreach (PendingArchiveWrites store in stores) store.WrittenElsewhere((dir, id));
+                foreach (PendingArchiveWrites store in stores) tell(store);
             else
-                AppMessages.PostToUi(() => { foreach (PendingArchiveWrites store in stores) store.WrittenElsewhere((dir, id)); });
+                AppMessages.PostToUi(() => { foreach (PendingArchiveWrites store in stores) tell(store); });
         }
 
         // A painter or another editor saved a member this store holds. Without an unsaved change to it the store lets
@@ -81,10 +89,32 @@ namespace DSPRE
             if (_saving || !_first.ContainsKey(key)) return;
             if (!Same(MemberIn(_state, key), MemberIn(_saved, key))) return;
             _first.TryRemove(key, out _);
+            LetGo(s => s.Members.Remove(key));
+        }
+
+        // The same rule for a text bank. Disk equal to the last save here means the save was its own.
+        private void TextWrittenElsewhere(int bank)
+        {
+            if (_saving || bank < 0) return;
+            foreach (string key in _firstOthers.Where(kv => kv.Value.Target.TextBank == bank).Select(kv => kv.Key).ToList())
+            {
+                if (!Same(OtherIn(_state, key), OtherIn(_saved, key))) continue;
+                if (!_firstOthers.TryGetValue(key, out (Target Target, byte[] Bytes) held)) continue;
+                byte[] onDisk;
+                try { onDisk = held.Target.Read(); }
+                catch (Exception ex) when (AppLogger.Noted("PendingArchiveWrites.TextWrittenElsewhere", ex)) { continue; }
+                if (Same(onDisk, OtherIn(_saved, key))) continue;
+                _firstOthers.TryRemove(key, out _);
+                LetGo(s => s.Others.Remove(key));
+            }
+        }
+
+        private void LetGo(Action<State> forget)
+        {
             State saved = new(new(_saved.Members), new(_saved.Others));
             State now = new(new(_state.Members), new(_state.Others));
-            saved.Members.Remove(key);
-            now.Members.Remove(key);
+            forget(saved);
+            forget(now);
             _saved = saved;
             _state = now;
             bool differs = DiffersFromSaved();
@@ -93,6 +123,9 @@ namespace DSPRE
             else _state = saved;
             Changed?.Invoke();
         }
+
+        private byte[] OtherIn(State state, string key)
+            => state.Others.TryGetValue(key, out byte[] b) ? b : _firstOthers.TryGetValue(key, out (Target, byte[] Bytes) f) ? f.Bytes : null;
 
         // Stands for a member removed until Save; compared by reference, so an empty member is still a member.
         private static readonly byte[] Removed = new byte[0];
@@ -303,12 +336,18 @@ namespace DSPRE
             return null;
         }
 
-        public void Undo() { if (!_history.CanUndo) return; _state = _history.Undo(); _lastGroup = null; Changed?.Invoke(); }
-        public void Redo() { if (!_history.CanRedo) return; _state = _history.Redo(); _lastGroup = null; Changed?.Invoke(); }
+        public void Undo() { if (!_history.CanUndo) return; _state = _history.Undo(); _lastGroup = null; Changed?.Invoke(); LetStaleTextGo(); }
+        public void Redo() { if (!_history.CanRedo) return; _state = _history.Redo(); _lastGroup = null; Changed?.Invoke(); LetStaleTextGo(); }
+
+        private void LetStaleTextGo()
+        {
+            foreach (int bank in _firstOthers.Values.Select(v => v.Target.TextBank).Where(b => b >= 0).Distinct().ToList())
+                TextWrittenElsewhere(bank);
+        }
 
         /// <summary>
-        /// Writes every pending entry that differs from the project: puts lowest first, so an archive grows without
-        /// gaps, then removals highest first, so it shrinks from the end.
+        /// Writes pending archive entries that differ from the project: puts lowest first, then removals highest
+        /// first. Other targets are written only if they changed since the last save here.
         /// </summary>
         public void Save()
         {
@@ -317,7 +356,9 @@ namespace DSPRE
             {
                 using (PreviewFileGate.Writing()) SaveMembers();
             }
+            catch { _halfSaved = true; throw; }
             finally { _saving = false; }
+            _halfSaved = false;
             _saved = _state;
             _history.MarkSaved();
             Changed?.Invoke();
@@ -341,7 +382,8 @@ namespace DSPRE
             foreach (KeyValuePair<string, (Target Target, byte[] Bytes)> kv in _firstOthers)
             {
                 byte[] bytes = _state.Others.TryGetValue(kv.Key, out byte[] now) ? now : kv.Value.Bytes;
-                if (bytes == null) continue;
+                // Unchanged since the last save here stays as on disk, unless that save stopped partway.
+                if (bytes == null || (!_halfSaved && Same(bytes, OtherIn(_saved, kv.Key)))) continue;
                 byte[] onDisk = kv.Value.Target.Read();
                 if (onDisk == null || !onDisk.AsSpan().SequenceEqual(bytes)) kv.Value.Target.Write(bytes);
             }
@@ -354,6 +396,7 @@ namespace DSPRE
             _history.Reset(_state);
             _lastGroup = null;
             Changed?.Invoke();
+            LetStaleTextGo();
         }
     }
 }
