@@ -107,14 +107,15 @@ namespace DSPRE.HgEngine
         public static HgEngineSymbolTable Load(string headerRelPath)
         {
             if (!HgEngineProject.IsLinked) return null;
-            if (Cache.TryGetValue(headerRelPath, out HgEngineSymbolTable cached)) return cached;
-
             string path = Path.Combine(HgEngineProject.RepoPathUnc, headerRelPath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(path)) return null;
+            // A save under way holds the header's new text, which is read and not cached.
+            bool pending = HgEngineWriteSession.Current?.Holds(path) == true;
+            if (!pending && Cache.TryGetValue(headerRelPath, out HgEngineSymbolTable cached)) return cached;
+            if (!pending && !File.Exists(path)) return null;
             // #if conditions in other headers test config.h switches such as DISALLOW_DEXIT_GEN.
             IReadOnlyDictionary<string, int> config = headerRelPath == ConfigHeaderRelPath ? null : Load(ConfigHeaderRelPath)?.ByName;
-            HgEngineSymbolTable table = Parse(File.ReadAllText(path), config);
-            Cache[headerRelPath] = table;
+            HgEngineSymbolTable table = Parse(HgEngineFileCache.GetText(path), config);
+            if (!pending) Cache[headerRelPath] = table;
             return table;
         }
 

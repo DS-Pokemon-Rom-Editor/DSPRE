@@ -40,11 +40,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // The next sync rebuilds from the source, so a save that can't write it fails.
             if (HgEngineProject.IsActive)
             {
+                MoveTicks ticks = pending != null ? TicksOf(pending.Id) : null;
                 (bool saved, string error) = await HgEngineSave.RunAsync(() => pending != null
-                    ? (HgEngineMoveExpansion.TryCommitMove(pending, move, out string addError) ? null : addError)
+                    ? (HgEngineMoveExpansion.TryCommitMove(pending, move, out string addError) ? WriteNewMoveCategories(pending.Id, ticks) : addError)
                     : (HgEngineMoveSource.TryWriteMany(records, out string writeError) ? WriteCategories() : writeError));
                 if (!saved)
                 {
+                    // The lists were read with the new move in place; without it they go back to the files.
+                    if (ticks != null) ReloadWithTicks(pending.Id, ticks);
                     if (error != null) await DialogHelper.ShowErrorAsync($"{subject} not saved.\n{error}", "Move data editor");
                     return;
                 }
@@ -56,6 +59,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 HgEngineMoveExpansion.CompleteAdd(pending);
                 _pendingMove = null;
+                MarkCategoriesSaved();
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.MoveData });
                 move.SaveToFileDefaultDir(id, showSuccessMessage: false);
                 SyncNames();

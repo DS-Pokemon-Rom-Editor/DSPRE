@@ -145,6 +145,28 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
         }
 
+        private sealed record MoveTicks(bool Punching, bool Sound, List<string> Extra);
+
+        private MoveTicks TicksOf(int id) => !CategoriesChanged ? null : new MoveTicks(_punching?.Contains(id) == true,
+            _sound?.Contains(id) == true, ExtraLists.Where(l => l.Moves.Contains((ushort)id)).Select(l => l.Info.Symbol).ToList());
+
+        // Adding a move renumbers later ones, so the lists are read again with its ticks.
+        private string ReloadWithTicks(int id, MoveTicks ticks)
+        {
+            LoadCategories();
+            if ((ticks.Punching || ticks.Sound) && (_punching == null || _sound == null)) return AbilityWhyNot;
+            if (ticks.Punching && !_punching.Contains(id) && !_punching.Set(id, true))
+                return $"The {MoveCategoryTable.NameOf(MoveCategoryTable.Kind.Punching)} move list is full.";
+            if (ticks.Sound && !_sound.Contains(id) && !_sound.Set(id, true))
+                return $"The {MoveCategoryTable.NameOf(MoveCategoryTable.Kind.Sound)} move list is full.";
+            foreach (ExtraListRow row in ExtraLists.Where(l => ticks.Extra.Contains(l.Info.Symbol) && !l.Moves.Contains((ushort)id)))
+                row.Moves.Add((ushort)id);
+            return null;
+        }
+
+        private string WriteNewMoveCategories(int id, MoveTicks ticks)
+            => ticks == null ? null : ReloadWithTicks(id, ticks) ?? WriteCategories();
+
         private void MarkCategoriesSaved()
         {
             if (_punching != null) _savedPunching = _punching.Moves.ToList();
