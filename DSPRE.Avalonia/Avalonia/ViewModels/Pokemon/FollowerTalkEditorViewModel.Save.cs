@@ -34,11 +34,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             AfterEdit();
         }
 
-        // The Text editor saved this bank: show its lines unless this editor has its own edits to them.
+        // The Text editor saved this bank: show its lines, or warn when this editor has edits to them.
         private void OnTextSaved(object sender, int id)
         {
             if (id != FollowerTalkTextArchive || ReferenceEquals(sender, this)) return;
-            global::Avalonia.Threading.Dispatcher.UIThread.Post(OnPendingChanged);
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                OnPendingChanged();
+                if (!_pending.Read(_text).AsSpan().SequenceEqual(_text.Read()))
+                    SaveNotice.Show("The Text editor saved these lines. Saving here replaces them.", DSPRE.Avalonia.Data.SpeechBubble.Exclamation);
+            });
         }
 
         public void Detach() => TextArchive.Saved -= OnTextSaved;
