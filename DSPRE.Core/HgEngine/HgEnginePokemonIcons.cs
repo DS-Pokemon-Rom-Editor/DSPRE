@@ -14,6 +14,7 @@ namespace DSPRE.HgEngine
 
         private static Dictionary<int, string> _cache;
         private static string _cachedForRepo;
+        private static DateTime _cachedAt;
 
         public static bool TryGetIconPath(int speciesId, out string absolutePngPath)
         {
@@ -23,7 +24,7 @@ namespace DSPRE.HgEngine
             Dictionary<int, string> map = LoadMap();
             if (map == null) return false;
 
-            int lookupId = HgEngineSpeciesExpansion.AdjustForPokegraMkLookup(speciesId);
+            int lookupId = HgEngineSpeciesExpansion.PokegraMkNumber(speciesId, n => map.GetValueOrDefault(n));
             if (lookupId < 0 || !map.TryGetValue(lookupId, out string relPath)) return false;
 
             string full = Path.Combine(HgEngineProject.RepoPathUnc, relPath.Replace('/', Path.DirectorySeparatorChar));
@@ -36,14 +37,15 @@ namespace DSPRE.HgEngine
         private static Dictionary<int, string> LoadMap()
         {
             string repo = HgEngineProject.RepoPathUnc;
-            if (_cache != null && _cachedForRepo == repo) return _cache;
-
             string path = Path.Combine(repo, PokegraMkRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(path)) return null;
+            DateTime written = File.GetLastWriteTimeUtc(path);
+            if (_cache != null && _cachedForRepo == repo && _cachedAt == written) return _cache;
 
             Dictionary<int, string> map = ParseMap(File.ReadAllText(path));
             _cache = map;
             _cachedForRepo = repo;
+            _cachedAt = written;
             return map;
         }
 

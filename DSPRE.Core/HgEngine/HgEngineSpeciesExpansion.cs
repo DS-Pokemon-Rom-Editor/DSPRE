@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using DSPRE.ROMFiles;
 
@@ -35,19 +36,26 @@ namespace DSPRE.HgEngine
             return true;
         }
 
-        /// <summary>pokegra.mk is static and never regenerated when a fakemon is inserted, even though
-        /// every downstream form species shifts up by NUM_OF_FAKEMONS in personal.narc. Maps an id past
-        /// the fakemon block back down to what pokegra.mk still calls it by; an id inside the fakemon
-        /// block has no dump-time entry and correctly resolves to "not found". Shared by every domain
-        /// that looks a species id up in pokegra.mk (icons, battle sprites).</summary>
-        public static int AdjustForPokegraMkLookup(int speciesId)
-        {
-            if (!TryGetCustomRange(out int firstCustomId, out int fakemonCount) || fakemonCount == 0)
-                return speciesId;
+        public const string SpriteScript = "scripts/reformat_sprite_data.py";
+        private const string SpritesDir = "data/graphics/sprites/";
 
-            if (speciesId < firstCustomId) return speciesId;
-            if (speciesId < firstCustomId + fakemonCount) return -1;
-            return speciesId - fakemonCount;
+        // Forms sit below their id in pokegra.mk until SpriteScript generates it again.
+        public static int PokegraMkNumber(int speciesId, Func<int, string> spriteAt)
+        {
+            if (!TryGetCustomRange(out int firstCustomId, out int fakemonCount) || fakemonCount == 0 || speciesId < firstCustomId)
+                return speciesId;
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(HeaderRelPath);
+            if (species == null) return -1;
+            for (int behind = 0; behind <= fakemonCount; behind++)
+            {
+                string png = spriteAt(speciesId - behind);
+                if (png == null || !png.StartsWith(SpritesDir, StringComparison.Ordinal)) continue;
+                int end = png.IndexOf('/', SpritesDir.Length);
+                if (end < 0) continue;
+                string constant = Prefix + png.Substring(SpritesDir.Length, end - SpritesDir.Length).ToUpperInvariant();
+                if (species.TryGetValue(constant, out int value) && value == speciesId) return speciesId - behind;
+            }
+            return -1;
         }
 
         /// <summary>A new species worked out against the checkout's text: its id, its constant and the full

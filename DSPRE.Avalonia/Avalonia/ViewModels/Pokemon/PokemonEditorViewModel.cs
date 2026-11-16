@@ -441,6 +441,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             OnPropertyChanged(nameof(MaxMonIndex));
             AppEvents.RaiseNamesChanged();
 
+            await DialogHelper.ShowWarningAsync(
+                $"Run python3 {HgEngineSpeciesExpansion.SpriteScript} in the checkout so pokegra.mk includes {name}.", "Add new Pokémon", _owner);
             return written.SpeciesId;
         }
 

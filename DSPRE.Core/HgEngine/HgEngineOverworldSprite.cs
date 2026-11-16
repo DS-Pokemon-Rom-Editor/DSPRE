@@ -23,7 +23,7 @@ namespace DSPRE.HgEngine
             Dictionary<int, string> map = LoadMap();
             if (map == null) return false;
 
-            int lookupId = HgEngineSpeciesExpansion.AdjustForPokegraMkLookup(speciesId);
+            int lookupId = HgEngineSpeciesExpansion.PokegraMkNumber(speciesId, n => map.GetValueOrDefault(n));
             if (lookupId < 0 || !map.TryGetValue(lookupId, out string relPath)) return false;
 
             string full = Path.Combine(HgEngineProject.RepoPathUnc, relPath.Replace('/', Path.DirectorySeparatorChar));
@@ -33,17 +33,31 @@ namespace DSPRE.HgEngine
             return true;
         }
 
+        /// <summary>True when pokegra.mk hasn't been generated again since a species was added.</summary>
+        public static bool MakefileIsBehind()
+        {
+            if (!HgEngineProject.IsLinked) return false;
+            if (!HgEngineSpeciesExpansion.TryGetCustomRange(out int first, out int count) || count == 0) return false;
+            Dictionary<int, string> map = LoadMap();
+            if (map == null) return false;
+            int firstForm = first + count;
+            return HgEngineSpeciesExpansion.PokegraMkNumber(firstForm, n => map.GetValueOrDefault(n)) != firstForm;
+        }
+
+        private static DateTime _cachedAt;
+
         private static Dictionary<int, string> LoadMap()
         {
             string repo = HgEngineProject.RepoPathUnc;
-            if (_cache != null && _cachedForRepo == repo) return _cache;
-
             string path = Path.Combine(repo, PokegraMkRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(path)) return null;
+            DateTime written = File.GetLastWriteTimeUtc(path);
+            if (_cache != null && _cachedForRepo == repo && _cachedAt == written) return _cache;
 
             Dictionary<int, string> map = ParseMap(File.ReadAllText(path));
             _cache = map;
             _cachedForRepo = repo;
+            _cachedAt = written;
             return map;
         }
 

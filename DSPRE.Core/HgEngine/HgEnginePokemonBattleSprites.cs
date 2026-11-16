@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System;
 
 namespace DSPRE.HgEngine
@@ -11,6 +12,7 @@ namespace DSPRE.HgEngine
 
         private static Dictionary<int, string[]> _cache;
         private static string _cachedForRepo;
+        private static DateTime _cachedAt;
 
         // A pose with art needs its .png.key; any seed works, so it takes the other gender's.
         public static void EnsurePoseKey(string[] poses, int slot)
@@ -29,7 +31,7 @@ namespace DSPRE.HgEngine
             Dictionary<int, string[]> map = LoadMap();
             if (map == null) return null;
 
-            int lookupId = HgEngineSpeciesExpansion.AdjustForPokegraMkLookup(speciesId);
+            int lookupId = HgEngineSpeciesExpansion.PokegraMkNumber(speciesId, n => map.GetValueOrDefault(n)?.FirstOrDefault(p => p != null));
             if (lookupId < 0 || !map.TryGetValue(lookupId, out string[] relPaths)) return null;
 
             string[] full = new string[4];
@@ -44,14 +46,15 @@ namespace DSPRE.HgEngine
         private static Dictionary<int, string[]> LoadMap()
         {
             string repo = HgEngineProject.RepoPathUnc;
-            if (_cache != null && _cachedForRepo == repo) return _cache;
-
             string path = Path.Combine(repo, PokegraMkRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(path)) return null;
+            DateTime written = File.GetLastWriteTimeUtc(path);
+            if (_cache != null && _cachedForRepo == repo && _cachedAt == written) return _cache;
 
             Dictionary<int, string[]> map = ParseMap(File.ReadAllText(path));
             _cache = map;
             _cachedForRepo = repo;
+            _cachedAt = written;
             return map;
         }
 

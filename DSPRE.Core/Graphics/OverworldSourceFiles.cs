@@ -20,6 +20,11 @@ namespace DSPRE.Graphics
             List<HgEngineOverworlds.Member> members = HgEngineOverworlds.Members(out string error);
             if (members == null) return error;
             if (member < 0 || member >= members.Count) return $"The checkout has no source for overworld texture {member}.";
+            // An old pokegra.mk points followers after an added species at the wrong files.
+            if (members[member].Name.StartsWith("3_", StringComparison.Ordinal) && HgEngineOverworldSprite.MakefileIsBehind()
+                && HgEngineSpeciesExpansion.TryGetCustomRange(out int firstAdded, out _)
+                && HgEngineMakeFile.NumberBetween(members[member].Name, "3_", ".btx0") >= firstAdded)
+                return $"pokegra.mk is out of date. Run {HgEngineSpeciesExpansion.SpriteScript} in the checkout first.";
             return Write(members[member], btx);
         }
 
