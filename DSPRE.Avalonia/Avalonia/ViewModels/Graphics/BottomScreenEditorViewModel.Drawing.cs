@@ -105,12 +105,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         // The frame and the Digital Watch draw the watch with its digits. Other apps get the casing.
         private byte[] PoketchShot()
         {
-            if (NoPoketchYet) { BankCount = 0; return _poketch.RenderUnavailable(); }
+            if (NoPoketchYet) { BankCount = 0; HasContents = false; return _poketch.RenderUnavailable(); }
 
             PoketchApps.App app = _app >= 1 && _app <= PoketchApps.All.Length ? PoketchApps.All[_app - 1] : null;
             if (app == null || app.Name == "Digital Watch")
             {
                 BankCount = 0;
+                HasContents = false;
                 return _poketch.RenderWatch(Female, Theme, Backlight, Hour, Minute,
                                             PoketchScreen.Look.Free, PoketchScreen.Look.Free);
             }
@@ -123,7 +124,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                                       CellBank,
                                       FillContents ? app.SpriteSlots : null,
                                       FillContents ? app.Fills : null,
-                                      _motion, app.BgLayer);
+                                      _motion, app.BgLayer, app.SlotLooks, app.Animation);
         }
     }
 }

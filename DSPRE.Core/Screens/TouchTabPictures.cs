@@ -84,7 +84,7 @@ namespace DSPRE.Screens
             if (screen == null) return null;
             PoketchApps.App shown = PoketchApps.All.FirstOrDefault(a => string.Equals(a.Name, app ?? "Digital watch", StringComparison.OrdinalIgnoreCase));
             if (shown == null || shown.Tiles < 0) return screen.RenderUnavailable();
-            return screen.RenderApp(false, 0, false, shown.Tiles, shown.Arrangement, shown.Sprites, shown.Cells, 0, shown.SpriteSlots, null, null, shown.BgLayer);
+            return screen.RenderApp(false, 0, false, shown.Tiles, shown.Arrangement, shown.Sprites, shown.Cells, 0, shown.SpriteSlots, null, null, shown.BgLayer, shown.SlotLooks, shown.Animation);
         }
     }
 }

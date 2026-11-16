@@ -35,6 +35,11 @@ namespace DSPRE.Screens
         /// <summary>The sheet loaded ahead of this screen's own, or -1 when there is none.</summary>
         public static int SharedSheetFor(App app) => app != null && app.UsesDigitSheet ? DigitSheetMember : -1;
 
+        public const int DigitCellsMember = 3, DigitAnimationMember = 4;
+
+        // The animations one sprite place switches between, starting on the first.
+        public sealed record SlotLook(int[] Animations, bool FlipV = false, bool Digit = false);
+
         /// <summary>
         /// The four colours of a theme row that the game addresses by number: text, icons and the Dot Artist
         /// canvas all pick from these, so changing them reaches far beyond one screen.
@@ -79,6 +84,7 @@ namespace DSPRE.Screens
             /// tables say so. Null means the position is buried in code and the preview has to guess.
             /// </summary>
             public (int X, int Y)[] SpriteSlots;
+            public SlotLook[] SlotLooks;    // one per SpriteSlots entry, or null when each shows the picked cell
 
             /// <summary>
             /// Rectangles the game fills flat, in screen pixels, with the colour of the theme it names.
@@ -100,6 +106,10 @@ namespace DSPRE.Screens
                 Sprites >= 0 && StockSheetTiles.TryGetValue(Sprites, out int stock)
                     ? TileCeiling - (SpriteTilesUsed - stock) : 0;
         }
+
+        private static readonly SlotLook KitchenTimerArrowUp = new SlotLook(new[] { 4 });
+        private static readonly SlotLook KitchenTimerArrowDown = new SlotLook(new[] { 4 }, FlipV: true);
+        private static readonly SlotLook KitchenTimerDigit = new SlotLook(new[] { 0 }, Digit: true);
 
         /// <summary>
         /// The apps in the order the Pokétch cycles through them. Two have no drawing in this archive,
@@ -207,7 +217,12 @@ namespace DSPRE.Screens
                       SpriteSlots = new[] { (48, 56), (176, 56), (48, 160), (112, 160), (176, 160),
                                             (80, 88), (96, 88), (128, 88), (144, 88),
                                             (80, 136), (96, 136), (128, 136), (144, 136),
-                                            (80, 112), (96, 112), (128, 112), (144, 112) } },
+                                            (80, 112), (96, 112), (128, 112), (144, 112) },
+                      SlotLooks = new[] { new SlotLook(new[] { 2, 3 }), new SlotLook(new[] { 0, 1 }),
+                                          new SlotLook(new[] { 5, 6 }), new SlotLook(new[] { 7, 8 }), new SlotLook(new[] { 9, 10 }),
+                                          KitchenTimerArrowUp, KitchenTimerArrowUp, KitchenTimerArrowUp, KitchenTimerArrowUp,
+                                          KitchenTimerArrowDown, KitchenTimerArrowDown, KitchenTimerArrowDown, KitchenTimerArrowDown,
+                                          KitchenTimerDigit, KitchenTimerDigit, KitchenTimerDigit, KitchenTimerDigit } },
             new App { Id = 21, Name = "Color Changer", Tiles = 66, Arrangement = 65, Sprites = 69, Cells = 67,
                       Animation = 68, TilesUsed = 96, SpriteTilesUsed = 16,
                       Warning = "This screen picks the theme colours every other app uses.",

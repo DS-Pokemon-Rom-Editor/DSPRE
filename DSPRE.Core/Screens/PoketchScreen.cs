@@ -150,7 +150,8 @@ namespace DSPRE.Screens
                                 int sprites = -1, int cells = -1, int bank = 0,
                                 (int X, int Y)[] slots = null,
                                 (int X, int Y, int W, int H, int Colour)[] fills = null,
-                                Motion? motion = null, int bgLayer = 2)
+                                Motion? motion = null, int bgLayer = 2,
+                                PoketchApps.SlotLook[] looks = null, int animation = -1, NanrFile edited = null)
         {
             DsBgScreen s = new DsBgScreen();
             int layer = bgLayer == 3 ? 3 : 2;
@@ -218,19 +219,73 @@ namespace DSPRE.Screens
                     // because its real place is unknown looks right and is wrong, which is worse than
                     // leaving it out.
                     Motion m = motion ?? Motion.Still;
-                    if (slots != null)
-                        foreach ((int sx, int sy) in slots)
+                    int picked = Math.Clamp(bank, 0, banks.Count - 1);
+                    NanrFile own = looks == null ? null : edited ?? (animation >= 0 ? NanrFile.Read(_member(animation)) : null);
+                    List<DsBgScreen.Oam[]> digitBanks = null;
+                    byte[] digitChars = null;
+                    NanrFile digits = null;
+                    for (int i = 0; slots != null && i < slots.Length; i++)
+                    {
+                        (int sx, int sy) = slots[i];
+                        DsBgScreen.Oam[] shown = cell;
+                        byte[] sheet = chars;
+                        bool still = !m.Moves;
+                        // The picked cell shows only at places whose animations use it.
+                        PoketchApps.SlotLook look = own != null && i < looks.Length ? looks[i] : null;
+                        if (look != null && look.Digit)
                         {
-                            if (m.Moves)
-                                DsBgScreen.DrawCellTurned(rgba, cell, chars, _ => colours,
-                                                          sx + m.ShiftX, sy + m.ShiftY,
-                                                          m.Degrees, m.ScaleX, m.ScaleY);
-                            else
-                                DsBgScreen.DrawCell(rgba, cell, chars, _ => colours, sx, sy);
+                            digitBanks ??= DsBgScreen.ReadCells(_member(PoketchApps.DigitCellsMember));
+                            digitChars ??= NitroBgCodec.ReadCharacters(_member(PoketchApps.DigitSheetMember));
+                            digits ??= NanrFile.Read(_member(PoketchApps.DigitAnimationMember));
+                            shown = CellAt(digitBanks, digits?.CellOf(look.Animations[0], 0) ?? 0);
+                            sheet = digitChars;
+                            still = true;
                         }
+                        else if (look != null && !Uses(own, look, picked))
+                        {
+                            shown = CellAt(banks, own.CellOf(look.Animations[0], 0));
+                            still = true;
+                        }
+                        if (look != null && look.FlipV) shown = TopToBottom(shown);
+
+                        if (still)
+                            DsBgScreen.DrawCell(rgba, shown, sheet, _ => colours, sx, sy);
+                        else
+                            DsBgScreen.DrawCellTurned(rgba, shown, sheet, _ => colours,
+                                                      sx + m.ShiftX, sy + m.ShiftY,
+                                                      m.Degrees, m.ScaleX, m.ScaleY);
+                    }
                 }
             }
             return rgba;
+        }
+
+        private static DsBgScreen.Oam[] CellAt(List<DsBgScreen.Oam[]> banks, int index)
+            => banks.Count == 0 ? null : banks[Math.Clamp(index, 0, banks.Count - 1)];
+
+        private static bool Uses(NanrFile file, PoketchApps.SlotLook look, int cell)
+        {
+            foreach (int sequence in look.Animations)
+                for (int frame = 0; sequence < file.Sequences.Count && frame < file.Sequences[sequence].Frames.Count; frame++)
+                    if (file.CellOf(sequence, frame) == cell) return true;
+            return false;
+        }
+
+        // The game's flip mirrors the whole cell about its origin.
+        private static DsBgScreen.Oam[] TopToBottom(DsBgScreen.Oam[] cell)
+        {
+            if (cell == null) return null;
+            DsBgScreen.Oam[] flipped = new DsBgScreen.Oam[cell.Length];
+            for (int k = 0; k < cell.Length; k++)
+            {
+                DsBgScreen.Oam s = cell[k];
+                flipped[k] = s == null ? null : new DsBgScreen.Oam
+                {
+                    X = s.X, Y = -(s.Y + s.Height), Width = s.Width, Height = s.Height,
+                    Tile = s.Tile, Palette = s.Palette, FlipH = s.FlipH, FlipV = !s.FlipV,
+                };
+            }
+            return flipped;
         }
 
         // A 15-bit colour opened out to the eight bits a screen wants.

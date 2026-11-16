@@ -35,7 +35,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     Preview = ImageConverter.FromRgba(_casing.RenderApp(
                         false, 0, false, _app.Tiles, _app.Arrangement, _app.Sprites, _app.Cells, cell,
                         slots, _app.Fills,
-                        new PoketchScreen.Motion(degrees, scaleX, scaleY, sx, sy), _app.BgLayer), DsBgScreen.Width, DsBgScreen.Height);
+                        new PoketchScreen.Motion(degrees, scaleX, scaleY, sx, sy), _app.BgLayer,
+                        _app.SpriteSlots == null ? null : _app.SlotLooks, _app.Animation, _file), DsBgScreen.Width, DsBgScreen.Height);
                     OnPropertyChanged(nameof(PlayingFrame));
                     if (_app.SpriteSlots == null && string.IsNullOrEmpty(StatusText))
                         StatusText = "Drawn in the middle, since the game sets its position in code.";
