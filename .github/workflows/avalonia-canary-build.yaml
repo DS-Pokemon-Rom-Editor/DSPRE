@@ -143,7 +143,6 @@ jobs:
           name: dspre-avalonia-linux-x64
           path: DSPRE-Avalonia-linux-x64-canary.tar.gz
 
-  # Experimental: a failure here doesn't hold back the Windows and Linux release.
   build-macos:
     if: github.repository == 'DS-Pokemon-Rom-Editor/DSPRE'
     strategy:

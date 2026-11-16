@@ -37,7 +37,7 @@ runs:
 
         built=Tools/rotom-src/target/x86_64-pc-windows-gnu/release
         mkdir -p "$OUTPUT_DIRECTORY"
-        cp "$built/rotom.exe" "$built/rotom-lsp.exe" "$built/nitroarc_ffi.dll" "$OUTPUT_DIRECTORY/"
+        cp "$built/rotom.exe" "$built/rotom-lsp.exe" "$built/build/nitroarc_ffi.dll" "$OUTPUT_DIRECTORY/"
 
     - name: Build rotom (Linux and macOS)
       if: runner.os != 'Windows'
@@ -60,11 +60,8 @@ runs:
 
         built=Tools/rotom-src/target/release
         mkdir -p "$OUTPUT_DIRECTORY"
-        cp "$built/rotom" "$OUTPUT_DIRECTORY/"
-        cp "$built/rotom-lsp" "$OUTPUT_DIRECTORY/"
-        ls $built
         lib_file=$(find $built -name "libnitroarc_ffi.*" \( -name "*.dylib" -o -name "*.so" \) | head -n 1)
-        cp "$lib_file" "$OUTPUT_DIRECTORY/"
+        cp "$built/rotom" "$built/rotom-lsp" "$lib_file" "$OUTPUT_DIRECTORY/"
 
         if [ "$RUNNER_OS" = "macOS" ]; then
           install_name_tool -add_rpath "@executable_path" "$OUTPUT_DIRECTORY/rotom"
