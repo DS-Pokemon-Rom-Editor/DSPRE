@@ -251,7 +251,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public void SaveChanges()
         {
             if (HasProblem) return;
-            _pending.Save();
+            if (!DialogHelper.TrySave(_pending.Save, UnsavedChangesDescription)) return;
             Refresh();
             SaveNotice.Saved(UnsavedChangesDescription);
         }

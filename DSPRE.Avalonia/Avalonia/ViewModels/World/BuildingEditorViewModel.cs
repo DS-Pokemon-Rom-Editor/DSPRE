@@ -78,7 +78,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void SaveChanges()
         {
             if (!_pending.IsDirty) return;
-            _pending.Save();
+            if (!DialogHelper.TrySave(_pending.Save, "Building models")) return;
             SaveNotice.Saved(UnsavedChangesDescription);
         }
         public void DiscardChanges() => _pending.Discard();

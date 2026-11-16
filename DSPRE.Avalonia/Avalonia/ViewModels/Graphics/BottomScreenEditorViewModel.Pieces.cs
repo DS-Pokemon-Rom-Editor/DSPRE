@@ -73,7 +73,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public void SaveChanges()
         {
             if (!HasUnsavedChanges) return;
-            Pending.Save();
+            if (!DialogHelper.TrySave(Pending.Save, UnsavedChangesDescription)) return;
             ReloadAfterImport();
             SaveNotice.Saved(UnsavedChangesDescription);
         }

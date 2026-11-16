@@ -701,7 +701,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public void SaveChanges()
         {
-            _pending.Save();
+            if (!DialogHelper.TrySave(_pending.Save, UnsavedChangesDescription)) return;
             SaveNotice.Saved(UnsavedChangesDescription);
             StatusText = "Saved.";
         }

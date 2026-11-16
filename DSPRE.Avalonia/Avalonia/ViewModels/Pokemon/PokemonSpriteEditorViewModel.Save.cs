@@ -37,7 +37,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return;
             }
 
-            _pending.Save();   // a copied gender's members first, so its poses have full-size members to go into
+            // A copied gender's members first, so its poses have full-size members to go into.
+            if (!DialogHelper.TrySave(_pending.Save, UnsavedChangesDescription)) return;
             PokemonBattleSpriteArchive narc = PokemonBattleSpriteArchive.Open(DirNames.PokemonBattleSprites);
             if (narc == null)
             {

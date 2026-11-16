@@ -102,7 +102,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public bool CanRedo => _pending.CanRedo;
         public void Undo() => _pending.Undo();
         public void Redo() => _pending.Redo();
-        public void SaveChanges() { _pending.Save(); SaveNotice.Saved(UnsavedChangesDescription); StatusText = "Saved."; }
+        public void SaveChanges()
+        {
+            if (!DialogHelper.TrySave(_pending.Save, UnsavedChangesDescription)) return;
+            SaveNotice.Saved(UnsavedChangesDescription);
+            StatusText = "Saved.";
+        }
         public void DiscardChanges() => _pending.Discard();
         public void Dispose() => _overlay.Dispose();
 

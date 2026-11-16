@@ -304,7 +304,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public void SaveChanges()
         {
             if (!_pending.IsDirty) return;
-            _pending.Save();
+            if (!DialogHelper.TrySave(_pending.Save, "Texture packs")) return;
             SaveNotice.Saved(UnsavedChangesDescription);
         }
         public void DiscardChanges() => _pending.Discard();

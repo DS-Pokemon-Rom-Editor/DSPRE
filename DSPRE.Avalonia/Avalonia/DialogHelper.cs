@@ -140,6 +140,18 @@ namespace DSPRE.Avalonia
             }
         }
 
+        // False when the save threw. Files written before the failure stay written.
+        public static bool TrySave(Action save, string what)
+        {
+            try { save(); return true; }
+            catch (Exception ex)
+            {
+                CrashReporter.LogHandled(ex);
+                Watch(ShowErrorAsync($"Couldn't finish saving {what}.\n{ex.Message}\n\nSave again to finish.", "Save failed"));
+                return false;
+            }
+        }
+
         /// <returns>true = Yes, false = No</returns>
         public static async Task<bool> AskYesNoAsync(string message, string title = "Confirm", Window owner = null)
         {
