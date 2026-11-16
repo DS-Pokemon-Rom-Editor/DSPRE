@@ -462,6 +462,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void ReloadLocationNames()
         {
             if (_headerListNames.Count == 0 || !AvaloniaEditorLauncher.IsRomLoaded) return;   // not set up yet
+            if (AvaloniaRomLoader.Loading) return;   // the folders are being swapped
             List<string> fresh = ReadLocationNames();
             if (fresh.SequenceEqual(LocationNames)) return;   // archive untouched: leave the combo alone
 
