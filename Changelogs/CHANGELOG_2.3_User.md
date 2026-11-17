@@ -4,6 +4,19 @@
 
 ---
 
+## 2.3.4.4
+- Fixed the 2.3.4.3 script repair emptying a few original game scripts (such as Platinum 101, 164
+  and 365) on save, even on unmodified ROMs.
+- If your project has scripts emptied this way, DSPRE now offers to restore them when you open it,
+  from your project files or from an older ROM or clean ROM you pick.
+- Original game scripts without a header end marker, such as the Sunyshore Market script, now show
+  their commands in the Script Editor instead of appearing empty.
+- Fixed saving a ROM crashing when the Script Editor hadn't been opened yet.
+- Fixed the Trainer Editor saving held items after "Items" was unticked, which broke the trainer
+  and crashed the editor. Trainers already saved this way open correctly again.
+
+---
+
 ## 2.3.4.3
 - Fixed the Level Script Editor saving new triggers into the wrong script file on some empty
   level scripts, which then crashed the Script Editor. Script files already damaged by this are
