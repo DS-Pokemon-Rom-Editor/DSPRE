@@ -389,6 +389,13 @@ namespace DSPRE.ROMFiles
         {
             var healed = new List<int>();
             var unhealable = new List<int>();
+
+            // The scripts NARC is only unpacked once the Script or Level Script editor has been opened.
+            if (string.IsNullOrWhiteSpace(Filesystem.scripts) || !Directory.Exists(Filesystem.scripts))
+            {
+                return (healed, unhealable);
+            }
+
             int scriptCount = Filesystem.GetScriptCount();
 
             for (int i = 0; i < scriptCount; i++)
