@@ -121,11 +121,25 @@ namespace DSPRE.ROMFiles
 
                 if (isLevelScript)
                 {
-                    return;
-                }
+                    br.BaseStream.Position = 0;
+                    byte[] raw = br.ReadBytes((int)br.BaseStream.Length);
+                    var markerlessOffsets = new List<long>();
+                    int markerlessEnd = FindMarkerlessHeaderEnd(raw, markerlessOffsets);
+                    if (markerlessEnd < 0)
+                    {
+                        return;
+                    }
 
-                // Skip the 0xFD13 marker
-                br.ReadUInt16();
+                    isLevelScript = false;
+                    scriptOffsets.Clear();
+                    scriptOffsets.AddRange(markerlessOffsets.Select(o => (int)o));
+                    br.BaseStream.Position = markerlessEnd;
+                }
+                else
+                {
+                    // Skip the 0xFD13 marker
+                    br.ReadUInt16();
+                }
 
                 // Valid offsets always point past the header and inside the file. Anything else means
                 // the header was overwritten (e.g. by the pre-2.3.4.3 Level Script Editor bug).
@@ -294,7 +308,30 @@ namespace DSPRE.ROMFiles
                 if (BitConverter.ToUInt16(data, pos) == 0xFD13) { return pos + 2; }
                 offsets.Add(value + pos + 4L);
             }
-            return -1;
+            offsets.Clear();
+            return FindMarkerlessHeaderEnd(data, offsets);
+        }
+
+        // A few vanilla DP/Pt scripts (e.g. Pt 101, 164, 365) were built without ScriptEntryEnd, so their header has no
+        // 0xFD13 and the first script starts right after the last entry. Level scripts never fit this shape: their
+        // first bytes are a trigger type plus a script ID, which as an offset points past the end of the file.
+        private static int FindMarkerlessHeaderEnd(byte[] data, List<long> offsets)
+        {
+            if (data.Length < 4 || BitConverter.ToUInt32(data, 0) == 0) { return -1; }
+
+            long firstScript = long.MaxValue;
+            int pos = 0;
+            while (pos < firstScript && pos + 4 <= data.Length)
+            {
+                long target = BitConverter.ToUInt32(data, pos) + pos + 4L;
+                if (target >= data.Length) { offsets.Clear(); return -1; }
+                offsets.Add(target);
+                firstScript = Math.Min(firstScript, target);
+                pos += 4;
+            }
+
+            if (pos != firstScript) { offsets.Clear(); return -1; }
+            return pos;
         }
 
         /// <summary>
@@ -352,6 +389,13 @@ namespace DSPRE.ROMFiles
         {
             var healed = new List<int>();
             var unhealable = new List<int>();
+
+            // The scripts NARC is only unpacked once the Script or Level Script editor has been opened.
+            if (string.IsNullOrWhiteSpace(Filesystem.scripts) || !Directory.Exists(Filesystem.scripts))
+            {
+                return (healed, unhealable);
+            }
+
             int scriptCount = Filesystem.GetScriptCount();
 
             for (int i = 0; i < scriptCount; i++)
@@ -365,9 +409,13 @@ namespace DSPRE.ROMFiles
                 if (!certain && !suspect) { continue; }
 
                 var fromText = new ScriptFile(new List<ScriptCommandContainer>(), new List<ScriptCommandContainer>(), new List<ScriptActionContainer>(), i);
+                // Vanilla DP/Pt ship a few real scripts without the 0xFD13 marker (e.g. Pt 101, 164, 365). DSPRE up to
+                // 2.3.4.3 read those as level scripts and exported them as an empty .script; projects can still hold such a
+                // copy, and it must never be used as a repair source.
                 bool haveScriptCopy = File.Exists(GetFilePaths(i).txtPath)
                     && fromText.TryReadPlainTextFileCore()
-                    && !fromText.isLevelScript;
+                    && !fromText.isLevelScript
+                    && fromText.allScripts != null && fromText.allScripts.Count > 0;
 
                 // A suspect is only treated as damaged when its plaintext copy shows it used to be a real script.
                 if (suspect && !haveScriptCopy) { continue; }
@@ -931,6 +979,26 @@ namespace DSPRE.ROMFiles
             }
         }
 
+        // DSPRE <= 2.3.4.3 read marker-less scripts as level scripts and exported them as an empty .script.
+        // Those copies hold no user edits, so they are re-exported now that the binary parses correctly.
+        private static bool IsEmptyExportOfMarkerlessScript(int fileID)
+        {
+            string binPath = Filesystem.GetScriptPath(fileID);
+            if (!File.Exists(binPath) || FindMarkerlessHeaderEnd(File.ReadAllBytes(binPath), new List<long>()) < 0)
+            {
+                return false;
+            }
+
+            var fromText = new ScriptFile(new List<ScriptCommandContainer>(), new List<ScriptCommandContainer>(), new List<ScriptActionContainer>(), fileID);
+            bool stale = fromText.TryReadPlainTextFileCore() && (fromText.allScripts == null || fromText.allScripts.Count == 0);
+            if (stale)
+            {
+                AppLogger.Warn($"Script file {fileID:D4}: replacing an empty plaintext copy left by an older DSPRE version.");
+                File.Delete(GetFilePaths(fileID).txtPath);
+            }
+            return stale;
+        }
+
         /// <summary>
         /// Exports all script files from the ROM to expanded/scripts/ on initial load
         /// This ensures the expanded directory is populated with plaintext versions
@@ -993,7 +1061,7 @@ namespace DSPRE.ROMFiles
                     {
                         string txtPath = GetFilePaths(i).txtPath;
 
-                        if (File.Exists(txtPath))
+                        if (File.Exists(txtPath) && !IsEmptyExportOfMarkerlessScript(i))
                         {
                             AppLogger.Debug($"Script {i:D4} plaintext already exists, skipping to preserve any edits.");
                             progressCallback?.Invoke(i + 1, scriptCount);
