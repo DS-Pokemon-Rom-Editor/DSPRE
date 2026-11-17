@@ -402,9 +402,13 @@ namespace DSPRE.ROMFiles
                 if (!certain && !suspect) { continue; }
 
                 var fromText = new ScriptFile(new List<ScriptCommandContainer>(), new List<ScriptCommandContainer>(), new List<ScriptActionContainer>(), i);
+                // Vanilla DP/Pt ship a few real scripts without the 0xFD13 marker (e.g. Pt 101, 164, 365). DSPRE up to
+                // 2.3.4.3 read those as level scripts and exported them as an empty .script; projects can still hold such a
+                // copy, and it must never be used as a repair source.
                 bool haveScriptCopy = File.Exists(GetFilePaths(i).txtPath)
                     && fromText.TryReadPlainTextFileCore()
-                    && !fromText.isLevelScript;
+                    && !fromText.isLevelScript
+                    && fromText.allScripts != null && fromText.allScripts.Count > 0;
 
                 // A suspect is only treated as damaged when its plaintext copy shows it used to be a real script.
                 if (suspect && !haveScriptCopy) { continue; }
