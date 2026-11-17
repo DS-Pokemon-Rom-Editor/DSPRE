@@ -1349,6 +1349,8 @@ namespace DSPRE
 
             ReadROMInitData();
             AppLogger.Info("ROM initialization data loaded.");
+
+            Editors.Utils.ScriptWipeRecovery.CheckOnProjectOpen(this);
         }
 
 
