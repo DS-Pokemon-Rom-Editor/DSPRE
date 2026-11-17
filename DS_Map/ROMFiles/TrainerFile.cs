@@ -216,6 +216,10 @@ namespace DSPRE.ROMFiles {
                         trp.partyCount = (byte)((flags & 28) >> 2);
                     }
 
+                    if (!readFirstByte) {
+                        RecoverItemFlagFromPartySize(partyData.Length);
+                    }
+
                     int dividend = 8;
 
                     if (trp.chooseMoves) {
@@ -267,6 +271,33 @@ namespace DSPRE.ROMFiles {
             }
         }
 
+        private int EntrySize(bool items, bool moves) {
+            int size = 6;
+            if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS || RomInfo.gameFamily == RomInfo.GameFamilies.Plat) {
+                size += sizeof(ushort);
+            }
+            if (items) {
+                size += sizeof(ushort);
+            }
+            if (moves) {
+                size += MOVES_PER_POKE * sizeof(ushort);
+            }
+            return size;
+        }
+
+        // DSPRE <= 2.3.4.3 kept writing held items after "Items" was unticked, leaving party data that no longer
+        // matches the trainer's flags. When the size only fits the other item setting, read it that way.
+        private void RecoverItemFlagFromPartySize(long length) {
+            if (trp.partyCount == 0 || length == trp.partyCount * EntrySize(trp.chooseItems, trp.chooseMoves)) {
+                return;
+            }
+            if (length == trp.partyCount * EntrySize(!trp.chooseItems, trp.chooseMoves)) {
+                trp.chooseItems = !trp.chooseItems;
+                AppLogger.Warn($"Trainer {trp.trainerID}: party data size doesn't match its held items flag; " +
+                    $"reading it with held items {(trp.chooseItems ? "on" : "off")}. Save the trainer to fix the file.");
+            }
+        }
+
         public PartyPokemon this[int index] {
             get {
                 return content[index];
@@ -313,6 +344,11 @@ namespace DSPRE.ROMFiles {
 
                 foreach (PartyPokemon poke in this.content) {
                     if (!poke.CheckEmpty()) {
+                        // The game sizes each entry from the trainer's flags, so the party data must follow them exactly.
+                        if (trp != null) {
+                            poke.heldItem = trp.chooseItems ? (poke.heldItem ?? 0) : (ushort?)null;
+                            poke.moves = trp.chooseMoves ? (poke.moves ?? new ushort[MOVES_PER_POKE]) : null;
+                        }
                         writer.Write(poke.ToByteArray());
                     }
                 }
