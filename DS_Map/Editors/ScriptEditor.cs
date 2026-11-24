@@ -1178,6 +1178,17 @@ namespace DSPRE.Editors
                     ActionTextArea.ReadOnly = false;
                 }
             }
+            else
+            {
+                // Left blank, level script files look like scripts that were wiped.
+                ScriptTextArea.Text =
+                    $"// Script file {currentScriptFile.fileID:D4} is a level script file." + Environment.NewLine +
+                    "// It only picks which scripts run when the map loads, so it has no script code to show here." + Environment.NewLine +
+                    "// Use \"View level script\" to edit it in the Level Script Editor.";
+                ScriptTextArea.ReadOnly = true;
+                FunctionTextArea.ReadOnly = true;
+                ActionTextArea.ReadOnly = true;
+            }
 
             ScriptEditorSetClean();
             Helpers.statusLabelMessage();

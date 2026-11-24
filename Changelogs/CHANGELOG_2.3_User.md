@@ -4,6 +4,13 @@
 
 ---
 
+## 2.3.4.5
+- Level script files (such as HeartGold 266–733 and Platinum 502–1050) no longer look like wiped
+  scripts in the Script Editor. It now says they are level script files and points you to
+  "View level script" to edit them.
+
+---
+
 ## 2.3.4.4
 - Fixed the 2.3.4.3 script repair emptying a few original game scripts (such as Platinum 101, 164
   and 365) on save, even on unmodified ROMs.
