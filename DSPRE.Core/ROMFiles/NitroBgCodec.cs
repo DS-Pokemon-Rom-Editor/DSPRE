@@ -341,22 +341,51 @@ namespace DSPRE.ROMFiles
             (byte r, byte g, byte b)[] colors, int palCount, int tile, int palNo, bool flipH, bool flipV,
             bool transparentZero, int dstTx, int dstTy, bool extended = false)
         {
-            int tbase = tileBytes + tile * (is8 ? 64 : 32);
             for (int py = 0; py < 8; py++)
                 for (int px = 0; px < 8; px++)
                 {
-                    int sx = flipH ? 7 - px : px, sy = flipV ? 7 - py : py;
-                    int idx;
-                    if (is8) { int off = tbase + sy * 8 + sx; idx = off < chr.Length ? chr[off] : 0; }
-                    else { int off = tbase + (sy * 8 + sx) / 2; int bb = off < chr.Length ? chr[off] : 0; idx = ((sx & 1) == 0) ? (bb & 0xF) : (bb >> 4); }
-                    if (transparentZero && idx == 0) continue;
-                    int ci = is8 ? (extended ? palNo * 256 + idx : idx) : palNo * 16 + idx;
-                    if (ci >= palCount) ci = idx;
-                    if (ci >= colors.Length) continue;
+                    int ci = ColourIndexAt(chr, tileBytes, is8, palCount, tile, palNo, flipH ? 7 - px : px, flipV ? 7 - py : py, transparentZero, extended);
+                    if (ci < 0 || ci >= colors.Length) continue;
                     (byte r, byte g, byte b) = colors[ci];
                     int dst = ((dstTy * 8 + py) * w + (dstTx * 8 + px)) * 4;
                     rgba[dst] = r; rgba[dst + 1] = g; rgba[dst + 2] = b; rgba[dst + 3] = 255;
                 }
+        }
+
+        private static int ColourIndexAt(byte[] chr, int tileBytes, bool is8, int palCount, int tile, int palNo, int sx, int sy,
+                                         bool transparentZero, bool extended)
+        {
+            int tbase = tileBytes + tile * (is8 ? 64 : 32);
+            int idx;
+            if (is8) { int off = tbase + sy * 8 + sx; idx = off < chr.Length ? chr[off] : 0; }
+            else { int off = tbase + (sy * 8 + sx) / 2; int bb = off < chr.Length ? chr[off] : 0; idx = ((sx & 1) == 0) ? (bb & 0xF) : (bb >> 4); }
+            if (transparentZero && idx == 0) return -1;
+            int ci = is8 ? (extended ? palNo * 256 + idx : idx) : palNo * 16 + idx;
+            return ci >= palCount ? idx : ci;
+        }
+
+        /// <summary>The colour slot each pixel of a screen reads; -1 where it is see-through.</summary>
+        public static short[] ColourIndices(byte[] chr, byte[] pal, byte[] scr, bool transparentZero = true, bool extended = false)
+        {
+            ReadPalette(pal, out int palCount);
+            ReadNcgrHeader(chr, out bool is8, out int tileBytes);
+            (int w, int h, int mapData) = ReadScreenHeader(scr);
+            int entryBytes = EntryBytes(scr);
+            short[] slots = new short[w * h];
+            Array.Fill(slots, (short)-1);
+            int cols = w / 8, rows = h / 8;
+            for (int ty = 0; ty < rows; ty++)
+                for (int tx = 0; tx < cols; tx++)
+                {
+                    int e = EntryAt(scr, mapData, SquareIndex(cols, tx, ty), entryBytes);
+                    if (e < 0) continue;
+                    bool flipH = ((e >> 10) & 1) != 0, flipV = ((e >> 11) & 1) != 0;
+                    for (int py = 0; py < 8; py++)
+                        for (int px = 0; px < 8; px++)
+                            slots[(ty * 8 + py) * w + tx * 8 + px] = (short)ColourIndexAt(chr, tileBytes, is8, palCount, e & 0x3FF,
+                                (e >> 12) & 0xF, flipH ? 7 - px : px, flipV ? 7 - py : py, transparentZero, extended);
+                }
+            return slots;
         }
 
         /// <param name="extended">A 256-colour drawing reads the palette file as 16 extended palettes.</param>

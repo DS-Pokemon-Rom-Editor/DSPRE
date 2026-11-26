@@ -47,6 +47,21 @@
           <Button Content="Import PNG…" controls:Icon.Key="import" Click="ImportPiece_Click"/>
           <Button Content="Export PNG…" controls:Icon.Key="export" Click="ExportPiece_Click"/>
         </StackPanel>
+        <ItemsControl ItemsSource="{Binding Swatches}" IsVisible="{Binding PieceIsColours}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel Orientation="Horizontal" Width="288"/>
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:BottomScreenSwatch">
+              <Border Width="18" Height="18" Background="{Binding Fill}"
+                      BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" ToolTip.Tip="{Binding Tip}"
+                      Tag="{Binding At}" PointerPressed="Swatch_Pressed" Cursor="Hand"
+                      PointerEntered="Swatch_PointerEntered" PointerExited="Swatch_PointerExited"/>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
         <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding PieceIsColours}">
           <Button Content="Import colours…" controls:Icon.Key="import" Click="ImportPalette_Click"/>
           <Button Content="Export colours…" controls:Icon.Key="export" Click="ExportPalette_Click"/>
@@ -69,6 +84,8 @@
             </Image>
             <Image Source="{Binding CopyrightPreview}" Width="512" Height="384" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"
                    IsVisible="{Binding CopyrightOnTop}"/>
+            <Image Source="{Binding Highlight}" Width="512" Height="384" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"
+                   IsHitTestVisible="False"/>
           </Grid>
         </Border>
         <TextBlock Text="Bottom screen" Classes="screenCaption" IsVisible="{Binding !CopyrightOnTop}"/>

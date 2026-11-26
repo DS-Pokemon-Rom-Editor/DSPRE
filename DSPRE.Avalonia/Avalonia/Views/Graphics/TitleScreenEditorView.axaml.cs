@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
@@ -89,6 +90,25 @@ namespace DSPRE.Avalonia.Views.Graphics
                 await DialogHelper.ShowErrorAsync($"Couldn't import: {error}", "Title screen", Owner);
             else SaveNotice.Imported(null, path);
         }
+
+        private void Swatch_Pressed(object sender, PointerPressedEventArgs e)
+        {
+            if (sender is not Control c || c.Tag is not int at) return;
+            Window owner = Owner;
+            if (owner == null) return;
+            PaletteColorEditorViewModel editor = new PaletteColorEditorViewModel(
+                _vm.PieceName + ", colour " + at, _vm.ColourAt(at), (argb, group) => _vm.SetColour(at, argb, group));
+
+            // Off the swatches so it can't eat the next click.
+            PaletteColorEditorView view = new PaletteColorEditorView(editor) { WindowStartupLocation = WindowStartupLocation.Manual };
+            view.Position = new global::Avalonia.PixelPoint(owner.Position.X + 48, owner.Position.Y + 140);
+            view.Show(owner);
+        }
+
+        private void Swatch_PointerEntered(object sender, PointerEventArgs e) =>
+            _vm.ShowColour((sender as Control)?.Tag is int at ? at : -1);
+
+        private void Swatch_PointerExited(object sender, PointerEventArgs e) => _vm.ShowColour(-1);
 
         private void Save_Click(object sender, RoutedEventArgs e) => _vm.SaveChanges();
 

@@ -1,7 +1,10 @@
 using DSPRE.Avalonia;
 using DSPRE.Avalonia.Data;
 using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
+using Avalonia.Media;
+using DSPRE.ROMFiles;
 using System.IO;
 using System.Runtime.CompilerServices;
 using AvaBitmap = Avalonia.Media.Imaging.Bitmap;
@@ -110,6 +113,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             BackgroundPreview = ImageConverter.ToAvaloniaBitmap(background);
             CopyrightPreview = ImageConverter.ToAvaloniaBitmap(copyright);
             BottomPreview = IsPlatinum ? ImageConverter.ToAvaloniaBitmap(Over(_graphics.ComposeBottomBorder(), copyright)) : null;
+            BuildSwatches();
+            _slots = _graphics.TopScreenSlots();
+            ShowColour(-1);
             StatusText = (logo == null || background == null || copyright == null)
                 ? "Couldn't decode the current title screen graphics." : string.Empty;
             OnPropertyChanged(nameof(HasChanges)); OnPropertyChanged(nameof(HasUnsavedChanges));
@@ -169,6 +175,44 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (bytes == null) return "Couldn't read the current palette.";
             try { PlainFiles.WriteBytes(nclrPath, bytes); return null; }
             catch (Exception ex) when (AppLogger.Noted("TitleScreenEditorViewModel.ExportPalette", ex)) { return ex.Message; }
+        }
+
+        public ObservableCollection<BottomScreenSwatch> Swatches { get; } = new ObservableCollection<BottomScreenSwatch>();
+
+        private void BuildSwatches()
+        {
+            Swatches.Clear();
+            ushort[] colours = NitroBgCodec.ReadColours(_graphics.ExportPaletteRaw());
+            for (int i = 0; i < colours.Length; i++)
+            {
+                (byte r, byte g, byte b) = NitroBgCodec.Colour(colours[i]);
+                uint argb = 0xFF000000u | ((uint)r << 16) | ((uint)g << 8) | b;
+                Swatches.Add(new BottomScreenSwatch { At = i, Argb = argb, Fill = new SolidColorBrush(Color.FromUInt32(argb)), Tip = $"Colour {i}" });
+            }
+        }
+
+        private short[] _slots;
+        private AvaBitmap _highlight;
+        /// <summary>Dims the top screen except pixels in the hovered colour.</summary>
+        public AvaBitmap Highlight { get => _highlight; private set => Set(ref _highlight, value); }
+
+        public void ShowColour(int at)
+        {
+            if (at < 0 || _slots == null) { Highlight = null; return; }
+            RawImage overlay = new RawImage(TitleScreenGraphics.LogoWidth, TitleScreenGraphics.LogoHeight);
+            for (int i = 0; i < _slots.Length; i++)
+                if (_slots[i] != at) overlay.Bgra[i * 4 + 3] = 190;
+            Highlight = ImageConverter.ToAvaloniaBitmap(overlay);
+        }
+
+        public uint ColourAt(int at) => at >= 0 && at < Swatches.Count ? Swatches[at].Argb : 0xFF000000u;
+
+        /// <summary>One undo step per popup (it passes itself as group).</summary>
+        public void SetColour(int at, uint argb, object group)
+        {
+            string error = _graphics.SetColour(at, argb, group);
+            if (error != null) { StatusText = error; return; }
+            RefreshPreviews();
         }
 
         // The copyright strip over the bottom border, both 256 by 192.

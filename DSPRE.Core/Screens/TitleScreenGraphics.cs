@@ -79,6 +79,48 @@ namespace DSPRE.Screens
             return ComposeVia(m.ncgr, m.nclr, m.nscr, transparentZero: true);
         }
 
+        /// <summary>Palette slot per top screen pixel; -1 where this palette isn't used.</summary>
+        public short[] TopScreenSlots()
+        {
+            using IDisposable reading = Pending.Reading();
+            if (!Available) return null;
+            short[] logo, under = null, over = null;
+            if (Pt)
+            {
+                (int ncgr, int nclr, int nscr) l = PlatinumTitleMembers.Logo;
+                logo = Slots(l.ncgr, l.nclr, l.nscr, transparentZero: true);
+            }
+            else
+            {
+                (int logo, int palette, int background, int logoNscr, int backgroundNscr) m = TitleScreenMembersFor(Version);
+                (int ncgr, int nclr, int nscr) c = TitleScreenCopyrightMembers;
+                logo = Slots(m.logo, m.palette, m.logoNscr, transparentZero: true);
+                under = Slots(m.background, m.palette, m.backgroundNscr, transparentZero: false);
+                over = Slots(c.ncgr, c.nclr, c.nscr, transparentZero: true);
+            }
+            int count = LogoWidth * LogoHeight;
+            if (logo == null || logo.Length < count) return null;
+            short[] shown = new short[count];
+            for (int i = 0; i < count; i++)
+            {
+                short s = logo[i];
+                if (s < 0 && under != null && i < under.Length) s = under[i];
+                if (over != null && i < over.Length && over[i] >= 0) s = -1;
+                shown[i] = s;
+            }
+            return shown;
+        }
+
+        private short[] Slots(int chrIdx, int palIdx, int scrIdx, bool transparentZero)
+        {
+            byte[] chr = NitroBgCodec.Inflate(_narc.Get(chrIdx));
+            byte[] pal = NitroBgCodec.Inflate(_narc.Get(palIdx));
+            byte[] scr = NitroBgCodec.Inflate(_narc.Get(scrIdx));
+            if (chr == null || pal == null || scr == null) return null;
+            try { return NitroBgCodec.ColourIndices(chr, pal, scr, transparentZero); }
+            catch (Exception ex) when (AppLogger.Noted("TitleScreenGraphics.Slots", ex)) { return null; }
+        }
+
         /// <summary>Platinum's bottom screen border, or null elsewhere.</summary>
         public RawImage ComposeBottomBorder() =>
             Pt ? ComposeVia(PlatinumTitleMembers.BottomBorder.Ncgr, PlatinumTitleMembers.BottomBorder.Nclr, PlatinumTitleMembers.BottomBorder.Nscr, transparentZero: false) : null;
@@ -306,6 +348,20 @@ namespace DSPRE.Screens
                 return "That isn't a colour file.";
             int id = Pt ? PlatinumTitleMembers.Logo.Nclr : TitleScreenMembersFor(Version).palette;
             _narc.Put(id, nclrBytes);
+            return null;
+        }
+
+        /// <summary>Calls with the same group undo as one step.</summary>
+        public string SetColour(int at, uint argb, object group = null)
+        {
+            if (!Available) return "This game doesn't have the title screen archive.";
+            int id = Pt ? PlatinumTitleMembers.Logo.Nclr : TitleScreenMembersFor(Version).palette;
+            byte[] pal;
+            using (Pending.Reading()) pal = NitroBgCodec.Inflate(Current(id));
+            if (pal == null) return "The colours couldn't be read.";
+            if (!NitroBgCodec.PutColour(pal, at, NitroBgCodec.ToBgr555((byte)(argb >> 16), (byte)(argb >> 8), (byte)argb)))
+                return $"Colour {at} isn't in the colour file.";
+            Pending.Change(step => step.Put(DirNames.TitleScreenGraphics, id, pal), group);
             return null;
         }
 
