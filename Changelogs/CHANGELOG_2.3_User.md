@@ -4,6 +4,11 @@
 
 ---
 
+## 2.3.4.6
+- Fixed wrong names (abilities, types, moves and more) on Japanese ROMs.
+
+---
+
 ## 2.3.4.5
 - Level script files (such as HeartGold 266–733 and Platinum 502–1050) no longer look like wiped
   scripts in the Script Editor. It now says they are level script files and points you to

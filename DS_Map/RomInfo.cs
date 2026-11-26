@@ -1371,15 +1371,15 @@ namespace DSPRE
             switch (gameFamily)
             {
                 case GameFamilies.DP:
-                    abilityNamesTextNumber = 552;
+                    abilityNamesTextNumber = gameLanguage == GameLanguages.Japanese ? 544 : 552;
                     break;
 
                 case GameFamilies.Plat:
-                    abilityNamesTextNumber = 610;
+                    abilityNamesTextNumber = gameLanguage == GameLanguages.Japanese ? 604 : 610;
                     break;
 
                 case GameFamilies.HGSS:
-                    abilityNamesTextNumber = 720;
+                    abilityNamesTextNumber = gameLanguage == GameLanguages.Japanese ? 711 : 720;
                     break;
 
                 default:
@@ -1392,11 +1392,11 @@ namespace DSPRE
             switch (gameFamily)
             {
                 case GameFamilies.DP:
-                    attackNamesTextNumber = 588;
+                    attackNamesTextNumber = gameLanguage == GameLanguages.Japanese ? 575 : 588;
                     break;
 
                 case GameFamilies.Plat:
-                    attackNamesTextNumber = 647;
+                    attackNamesTextNumber = gameLanguage == GameLanguages.Japanese ? 636 : 647;
                     break;
 
                 default:
@@ -1411,17 +1411,17 @@ namespace DSPRE
             {
                 case GameFamilies.DP:
                     itemNamesTextNumber = gameLanguage == GameLanguages.Japanese ? 341 : 344;
-                    itemDescriptionsTextNumber = 0;
+                    itemDescriptionsTextNumber = gameLanguage == GameLanguages.Japanese ? 340 : 343;
                     break;
 
                 case GameFamilies.Plat:
-                    itemNamesTextNumber = 392;
-                    itemDescriptionsTextNumber = 0;
+                    itemNamesTextNumber = gameLanguage == GameLanguages.Japanese ? 390 : 392;
+                    itemDescriptionsTextNumber = gameLanguage == GameLanguages.Japanese ? 389 : 391;
                     break;
 
                 default:
                     itemNamesTextNumber = gameLanguage == GameLanguages.Japanese ? 219 : 222;
-                    itemDescriptionsTextNumber = 221;
+                    itemDescriptionsTextNumber = gameLanguage == GameLanguages.Japanese ? 218 : 221;
                     break;
             }
         }
@@ -1431,11 +1431,11 @@ namespace DSPRE
             switch (gameFamily)
             {
                 case GameFamilies.DP:
-                    locationNamesTextNumber = 382;
+                    locationNamesTextNumber = gameLanguage == GameLanguages.Japanese ? 374 : 382;
                     break;
 
                 case GameFamilies.Plat:
-                    locationNamesTextNumber = 433;
+                    locationNamesTextNumber = gameLanguage == GameLanguages.Japanese ? 427 : 433;
                     break;
 
                 default:
@@ -1449,11 +1449,11 @@ namespace DSPRE
             switch (gameFamily)
             {
                 case GameFamilies.DP:
-                    pokemonNamesTextNumbers = new int[2] { 362, 363 };
+                    pokemonNamesTextNumbers = gameLanguage == GameLanguages.Japanese ? new int[1] { 356 } : new int[2] { 362, 363 };
                     break;
 
                 case GameFamilies.Plat:
-                    pokemonNamesTextNumbers = new int[7] { 412, 413, 712, 713, 714, 715, 716 }; //413?
+                    pokemonNamesTextNumbers = gameLanguage == GameLanguages.Japanese ? new int[1] { 408 } : new int[7] { 412, 413, 712, 713, 714, 715, 716 }; //413?
                     break;
 
                 case GameFamilies.HGSS:
@@ -1475,7 +1475,7 @@ namespace DSPRE
                     break;
 
                 case GameFamilies.Plat:
-                    trainerNamesMessageNumber = 618;
+                    trainerNamesMessageNumber = gameLanguage == GameLanguages.Japanese ? 611 : 618;
                     break;
 
                 default:
@@ -1501,7 +1501,7 @@ namespace DSPRE
                     break;
 
                 case GameFamilies.Plat:
-                    trainerClassMessageNumber = 619;
+                    trainerClassMessageNumber = gameLanguage == GameLanguages.Japanese ? 612 : 619;
                     if (gameLanguage.Equals(GameLanguages.English))
                     {
                         trainerClassDescriptionMessageNumber = 620;
@@ -1756,24 +1756,24 @@ namespace DSPRE
             }
         }
 
-        // US-version text archive numbers only; not yet confirmed for other localizations.
+        // Japanese numbers checked on the Japanese ROMs; the others are the US numbers, not yet confirmed for European versions.
         private static void SetBattleTowerTextNumbers()
         {
             switch (gameFamily)
             {
                 case GameFamilies.DP:
-                    battleTowerTrainerNamesMessageNumber = 16;
-                    battleTowerTrainerMessagesNumber = 555;
+                    battleTowerTrainerNamesMessageNumber = gameLanguage == GameLanguages.Japanese ? 15 : 16;
+                    battleTowerTrainerMessagesNumber = gameLanguage == GameLanguages.Japanese ? 546 : 555;
                     break;
 
                 case GameFamilies.Plat:
-                    battleTowerTrainerNamesMessageNumber = 21;
-                    battleTowerTrainerMessagesNumber = 614;
+                    battleTowerTrainerNamesMessageNumber = gameLanguage == GameLanguages.Japanese ? 20 : 21;
+                    battleTowerTrainerMessagesNumber = gameLanguage == GameLanguages.Japanese ? 607 : 614;
                     break;
 
                 case GameFamilies.HGSS:
-                    battleTowerTrainerNamesMessageNumber = 27;
-                    battleTowerTrainerMessagesNumber = 724;
+                    battleTowerTrainerNamesMessageNumber = gameLanguage == GameLanguages.Japanese ? 26 : 27;
+                    battleTowerTrainerMessagesNumber = gameLanguage == GameLanguages.Japanese ? 714 : 724;
                     break;
             }
         }
@@ -1782,17 +1782,17 @@ namespace DSPRE
             switch (gameFamily)
             {
                 case GameFamilies.DP:
-                    moveDescriptionsTextNumbers = 587;
-                    moveNamesTextNumbers = 588;
+                    moveDescriptionsTextNumbers = gameLanguage == GameLanguages.Japanese ? 574 : 587;
+                    moveNamesTextNumbers = gameLanguage == GameLanguages.Japanese ? 575 : 588;
                     break;
                 case GameFamilies.Plat:
-                    moveDescriptionsTextNumbers = 646;
-                    moveNamesTextNumbers = 647;
+                    moveDescriptionsTextNumbers = gameLanguage == GameLanguages.Japanese ? 635 : 646;
+                    moveNamesTextNumbers = gameLanguage == GameLanguages.Japanese ? 636 : 647;
                     break;
 
                 case GameFamilies.HGSS:
-                    moveDescriptionsTextNumbers = 749;
-                    moveNamesTextNumbers = 750;
+                    moveDescriptionsTextNumbers = gameLanguage == GameLanguages.Japanese ? 738 : 749;
+                    moveNamesTextNumbers = gameLanguage == GameLanguages.Japanese ? 739 : 750;
                     break;
             }
         }
@@ -1820,13 +1820,13 @@ namespace DSPRE
             switch (gameFamily)
             {
                 case GameFamilies.DP:
-                    typesTextNumber = 565;
+                    typesTextNumber = gameLanguage == GameLanguages.Japanese ? 555 : 565;
                     break;
                 case GameFamilies.Plat:
-                    typesTextNumber = 624;
+                    typesTextNumber = gameLanguage == GameLanguages.Japanese ? 616 : 624;
                     break;
                 case GameFamilies.HGSS:
-                    typesTextNumber = 735;
+                    typesTextNumber = gameLanguage == GameLanguages.Japanese ? 724 : 735;
                     break;
             }
         }
@@ -1839,7 +1839,7 @@ namespace DSPRE
                     trainerMessageTextNumber = gameLanguage == GameLanguages.Japanese ? 549 : 558;
                     break;
                 case GameFamilies.Plat:
-                    trainerMessageTextNumber = 617;
+                    trainerMessageTextNumber = gameLanguage == GameLanguages.Japanese ? 610 : 617;
                     break;
                 case GameFamilies.HGSS:
                     trainerMessageTextNumber = gameLanguage == GameLanguages.Japanese ? 718 : 728;
