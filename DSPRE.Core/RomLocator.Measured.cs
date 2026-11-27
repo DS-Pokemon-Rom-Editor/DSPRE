@@ -368,20 +368,20 @@ namespace DSPRE
         {
             GameVersions.HeartGold => language switch
             {
-                GameLanguages.English when revision == 10 => new FollowerTableSites(0xFF088, 0xFE8D4, 0xFECAE, 0x6A30C, 0x6A334, 0x6A35C),   // Europe
-                GameLanguages.English => new FollowerTableSites(0xFF088, 0xFE8D4, 0xFECAE, 0x6A30C, 0x6A334, 0x6A35C),   // US, and any English revision not listed
+                GameLanguages.English when revision == 10 => new FollowerTableSites(0xFF088, 0xFE8D4, 0xFECAE),   // Europe
+                GameLanguages.English => new FollowerTableSites(0xFF088, 0xFE8D4, 0xFECAE),   // US, and any English revision not listed
                 GameLanguages.Japanese => new FollowerTableSites(0xFE808, 0xFE054, 0xFE42E),
                 GameLanguages.French => new FollowerTableSites(0xFF06C, 0xFE8B8, 0xFEC92),   // needs verifying: measured on a dump that is not a known good dump
                 GameLanguages.German => new FollowerTableSites(0xFF03C, 0xFE888, 0xFEC62),
-                GameLanguages.Italian => new FollowerTableSites(0xFF000, 0xFE84C, 0xFEC26, 0x6A30C, 0x6A334, 0x6A35C),
+                GameLanguages.Italian => new FollowerTableSites(0xFF000, 0xFE84C, 0xFEC26),
                 GameLanguages.Spanish => new FollowerTableSites(0xFF070, 0xFE8BC, 0xFEC96),   // needs verifying: measured on a dump that is not a known good dump
                 GameLanguages.Korean => new FollowerTableSites(0xFF734, 0xFEF80, 0xFF35A),
                 _ => null,
             },
             GameVersions.SoulSilver => language switch
             {
-                GameLanguages.English when revision == 10 => new FollowerTableSites(0xFF088, 0xFE8D4, 0xFECAE, 0x6A30C, 0x6A334, 0x6A35C),   // Europe
-                GameLanguages.English => new FollowerTableSites(0xFF088, 0xFE8D4, 0xFECAE, 0x6A30C, 0x6A334, 0x6A35C),   // US, and any English revision not listed
+                GameLanguages.English when revision == 10 => new FollowerTableSites(0xFF088, 0xFE8D4, 0xFECAE),   // Europe
+                GameLanguages.English => new FollowerTableSites(0xFF088, 0xFE8D4, 0xFECAE),   // US, and any English revision not listed
                 GameLanguages.Japanese => new FollowerTableSites(0xFE808, 0xFE054, 0xFE42E),
                 GameLanguages.French => new FollowerTableSites(0xFF06C, 0xFE8B8, 0xFEC92),   // needs verifying: measured on a dump that is not a known good dump
                 GameLanguages.German => new FollowerTableSites(0xFF03C, 0xFE888, 0xFEC62),

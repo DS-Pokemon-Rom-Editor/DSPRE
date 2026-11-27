@@ -407,10 +407,8 @@ namespace DSPRE
         /// <summary>
         /// HGSS arm9 file offsets of the follower tables read by SpeciesToOverworldModelIndexOffset,
         /// OverworldModelLookupFormCount and OverworldModelLookupHasFemaleForm.
-        /// Pointer fields are ARM9 literal offsets; zero retains the fixed-table fallback.
         /// </summary>
-        public sealed record FollowerTableSites(int Models, int FormCounts, int Female,
-            int ModelsPointer = 0, int FormCountsPointer = 0, int FemalePointer = 0);
+        public sealed record FollowerTableSites(int Models, int FormCounts, int Female);
 
         /// <summary>The trainer class prize multipliers: overlay, pointer literal there (0 when none is known), table, length.</summary>
         public sealed record TrainerPrizeTable(int Overlay, uint Pointer, uint Table, int Count, bool Paired);
@@ -1528,21 +1526,21 @@ namespace DSPRE
                         }
 
                         string ov131path = OverlayUtils.GetPath(131);
-                        long ov131Length = File.Exists(ov131path) ? new FileInfo(ov131path).Length : 0;
-                        (int region, int offset) = RamAddress.Find(ramAddressOfTable, 6,
-                            RamAddress.Arm9(new FileInfo(Arm9Path).Length),
-                            RamAddress.Synthetic(File.Exists(Filesystem.ExpArmPath) ? new FileInfo(Filesystem.ExpArmPath).Length : 0),
-                            new RamAddress.Region("overlay 131", ov131Length > 0 ? OverlayUtils.OverlayTable.GetRAMAddress(131) : 0, ov131Length),
-                            new RamAddress.Region("overlay 1", ov1Address, new FileInfo(ov1Path).Length));
-                        OWtablePath = region switch
+                        if (File.Exists(ov131path))
                         {
-                            0 => Arm9Path,
-                            1 => Filesystem.ExpArmPath,
-                            2 => ov131path,
-                            3 => ov1Path,
-                            _ => throw new InvalidDataException($"The overworld table points to 0x{ramAddressOfTable:X8}, which DSPRE can't read."),
-                        };
-                        OWTableOffset = (uint)offset;
+                            OWTableOffset = ramAddressOfTable - OverlayUtils.OverlayTable.GetRAMAddress(131);
+                            OWtablePath = ov131path;
+                        }
+                        else if (ramAddressOfTable >= RomInfo.SynthOverlayLoadAddress)
+                        {
+                            OWTableOffset = ramAddressOfTable - RomInfo.SynthOverlayLoadAddress;
+                            OWtablePath = Filesystem.ExpArmPath;
+                        }
+                        else
+                        {
+                            OWTableOffset = ramAddressOfTable - ov1Address;
+                            OWtablePath = ov1Path;
+                        }
                     }
                     break;
             }

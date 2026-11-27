@@ -60,39 +60,19 @@ namespace DSPRE.ROMFiles
             FollowerTableSites tables = RomLocator.FollowerTables;
             if (tables == null || !File.Exists(Arm9Path)) return "The follower tables weren't found.";
             if (ARM9.IsStillCompressed()) return "The ARM9 is still compressed.";
-            try
-            {
-                ushort[] models = Lut(tables.Models, SpeciesCount + 1, tables.ModelsPointer);
-                ushort[] forms = Lut(tables.FormCounts, SpeciesCount, tables.FormCountsPointer);
-                ushort[] female = Lut(tables.Female, SpeciesCount, tables.FemalePointer);
-                // Keep the retail guard for versions whose pointer sites are not yet known.
-                if (tables.ModelsPointer == 0 && (models[0] != 0 || models[1] != 0 || models[2] != 1 || models[3] != 2
-                    || forms[200] != 27 || female[2] != 1)) return "The follower tables have been moved.";
-            }
-            catch (Exception e) when (e is IOException || e is InvalidDataException) { return e.Message; }
+            // The tables must still read as the retail ones: Bulbasaur 0, Ivysaur 1, Venusaur 2 with a female model, Unown 27 forms.
+            if (Lut(tables.Models, 4) is not [0, 0, 1, 2]
+                || Lut(tables.FormCounts + 200 * 2, 1)[0] != 27
+                || Lut(tables.Female + 2 * 2, 1)[0] != 1) return "The follower tables have been moved.";
             // A path kept from the last ROM would point at its table.
             SetOWtable();
             if (RowOffset(FirstSprite) < 0) return "Follower sprites are missing from the overworld table.";
             return null;
         }
 
-        private static ushort[] Lut(int offset, int count, int pointer, int index = 0)
+        private static ushort[] Lut(int offset, int count)
         {
-            string path = Arm9Path;
-            if (pointer != 0)
-            {
-                byte[] literal = DSUtils.ReadFromFile(Arm9Path, pointer, 4);
-                if (literal.Length != 4) throw new InvalidDataException("A follower table pointer is outside ARM9.");
-                uint address = BitConverter.ToUInt32(literal, 0);
-                (int region, int at) = RamAddress.Find(address, (index + count) * 2,
-                    RamAddress.Arm9(new FileInfo(Arm9Path).Length),
-                    RamAddress.Synthetic(File.Exists(Filesystem.ExpArmPath) ? new FileInfo(Filesystem.ExpArmPath).Length : 0));
-                if (region < 0) throw new InvalidDataException($"A follower table points to 0x{address:X8}, which DSPRE can't read.");
-                path = region == 0 ? Arm9Path : Filesystem.ExpArmPath;
-                offset = at;
-            }
-            byte[] bytes = DSUtils.ReadFromFile(path, offset + index * 2, count * 2);
-            if (bytes.Length != count * 2) throw new InvalidDataException("A follower table extends beyond its file.");
+            byte[] bytes = DSUtils.ReadFromFile(Arm9Path, offset, count * 2);
             ushort[] values = new ushort[count];
             for (int i = 0; i < count; i++) values[i] = BitConverter.ToUInt16(bytes, i * 2);
             return values;
@@ -111,14 +91,14 @@ namespace DSPRE.ROMFiles
             List<(int, string)> list = new List<(int, string)>();
             FollowerTableSites tables = RomLocator.FollowerTables;
             if (tables == null || species < 1 || species > SpeciesCount) return list;
-            int first = Lut(tables.Models, 1, tables.ModelsPointer, species)[0];
+            int first = Lut(tables.Models + species * 2, 1)[0];
             // The form models follow the game's form numbers, so they take the species' form names.
             string[] names = PokemonForms.NamesOf(species);
             string NameOf(int form) => names != null && form < names.Length ? names[form] : form == 0 ? "Normal" : $"Form {form}";
             list.Add((first, NameOf(0)));
-            if (Lut(tables.Female, 1, tables.FemalePointer, species - 1)[0] != 0) list.Add((first + 1, FemaleLabel));
+            if (Lut(tables.Female + (species - 1) * 2, 1)[0] != 0) list.Add((first + 1, FemaleLabel));
             else
-                for (int f = 1, forms = Lut(tables.FormCounts, 1, tables.FormCountsPointer, species - 1)[0]; f <= forms; f++)
+                for (int f = 1, forms = Lut(tables.FormCounts + (species - 1) * 2, 1)[0]; f <= forms; f++)
                     list.Add((first + f, NameOf(f)));
             return list;
         }
